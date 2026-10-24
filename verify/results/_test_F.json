@@ -1,0 +1,223 @@
+{
+  "generatedAt": "2026-10-24T02:46:21.309Z",
+  "target": {
+    "path": "C:\\Users\\shadowmoon\\Desktop\\test\\verify\\baseline\\physics-baseline.js",
+    "sha256": "79a8333953e92f8747ae0512f03fcaf6cd258be72fbf80c5f8921e81164279b7",
+    "bytes": 23263,
+    "missingInternals": [
+      "REPORT",
+      "SHELL_CFG"
+    ]
+  },
+  "sections": [
+    {
+      "section": "F",
+      "title": "性能（Node 原生计时 + 浏览器 FPS）",
+      "rows": [
+        "F1. 原生 Node 计时（预热后 5 次取最小）：simulate(420 破片) 总计 14.84 ms = 弹道+采样 8.78 ms + 破片 6.06 ms（破片占 41%，单枚约 14.4 μs；同机多次测量有 ±20% 负载噪声）。",
+        "F2. 积分步数：弹道 46585 步 × 4 次 deriv = 186340 次（每次 deriv 都调用 atmosphere() 且分配对象/数组）；破片总计约 147746 步（每步调用 atmosphere() 并分配临时对象）=> 每次 simulate 约 334,086 次大气函数调用/对象分配。",
+        "F3. 弹道 dt 减半的耗时增长（fragCount=420，含破片固定成本）：",
+        "    dt(ms)   总耗时(ms)  相对 1ms",
+        "      2.000         9.60     0.78x",
+        "      1.000        12.23     1.00x",
+        "      0.500        20.88     1.71x",
+        "      0.250        35.67     2.92x",
+        "    => dt 每减半总耗时约 +71%（弹道部分接近线性 ×2；破片成本不变）。若为真实自转把 dt 降到 2e-4，总耗时预计 47~65 ms 量级（仍可交互）。",
+        "F4. 破片 dt 减半耗时：",
+        "    fragDt=  0.01s  总耗时    14.24 ms",
+        "    fragDt= 0.005s  总耗时    16.75 ms",
+        "    fragDt=0.0025s  总耗时    25.12 ms",
+        "F5. 浏览器（headless Chrome, 1680x1020, file://120mm_ballistics.html）：控制台错误 0，页面异常 0，FPS 飞行段 60.6 / 破片段 60.6（vsync 60 上限），DOM 完整（6 图 / 8 HUD 项 / canvas 1288x880），UI 显示 “SOLVED 35ms”。",
+        "    单文件包同步性：physics.js 与源文件不一致（内联 hash 与磁盘源码不同）=> 升级后必须重跑 node _build.js 重新打包！",
+        "    极值参数（v0=550, angle=70°）实测 maxAlt=5889 m（仍在 ISA 对流层内）。",
+        "F6. 可优化点（不改物理结果）：① atmosphere() 每次 deriv 分配 {rho,a} 对象、aeroAt() 分配数组、破片循环每步分配临时对象——可缓存/复用，预计省 10–20%；② 破片积分用固定 dt=0.01 + 每步 Math.pow 面积预先算好（Aref 已可预计算）、path 数组复用；③ 弹道采样 20ms 足够，render/Charts 每帧全量重绘 6 图（浏览器 60fps 下无压力，但可 dirty-rect）；④ 破片 R90 若需统计稳定，建议 N≥2000 或固定种子+多次平均。"
+      ],
+      "data": {
+        "F1": {
+          "totalMs": 14.8368,
+          "ballisticMs": 8.7785,
+          "fragmentsMs": 6.058300000000001,
+          "fragShare": 0.4083292893346275,
+          "fragCount": 420,
+          "perFragmentUs": 14.424523809523812
+        },
+        "F2": {
+          "flightSteps": 46585,
+          "derivCalls": 186340,
+          "fragSteps": 147746,
+          "atmosCalls": 334086
+        },
+        "F3": [
+          {
+            "dt": 0.002,
+            "ms": 9.5952
+          },
+          {
+            "dt": 0.001,
+            "ms": 12.2285
+          },
+          {
+            "dt": 0.0005,
+            "ms": 20.8824
+          },
+          {
+            "dt": 0.00025,
+            "ms": 35.6662
+          }
+        ],
+        "F4": [
+          {
+            "fragDt": 0.01,
+            "ms": 14.2356
+          },
+          {
+            "fragDt": 0.005,
+            "ms": 16.7517
+          },
+          {
+            "fragDt": 0.0025,
+            "ms": 25.1241
+          }
+        ],
+        "F5": {
+          "url": "file:///C:/Users/shadowmoon/Desktop/test/120mm_ballistics.html",
+          "startedAt": "2026-10-24T02:37:33.522Z",
+          "bundleSync": {
+            "physics.js": {
+              "same": false,
+              "embeddedSha": "4d6652706f9d2a60",
+              "sourceSha": "db946cbdddbe372b"
+            },
+            "render3d.js": {
+              "same": true,
+              "embeddedSha": "5d2536c8f714a415",
+              "sourceSha": "5d2536c8f714a415"
+            },
+            "charts.js": {
+              "same": true,
+              "embeddedSha": "f40e83c4ce68a066",
+              "sourceSha": "f40e83c4ce68a066"
+            },
+            "main.js": {
+              "same": true,
+              "embeddedSha": "3473d602026f8ecd",
+              "sourceSha": "3473d602026f8ecd"
+            }
+          },
+          "consoleErrors": [],
+          "pageErrors": [],
+          "warnings": [],
+          "statusCode0": "SOLVED 35ms",
+          "dom": {
+            "charts": 6,
+            "chartCanvases": 6,
+            "chartReadouts": 6,
+            "hudItems": 8,
+            "camButtons": 3,
+            "speedButtons": 4,
+            "sliders": 3,
+            "canvasW": 1288,
+            "canvasH": 880,
+            "hasScene3D": true,
+            "hasCharts": true,
+            "hasBallistics": true
+          },
+          "fpsFlight": {
+            "frames": 182,
+            "ms": 3002.0999999999767,
+            "fps": 60.62422970587302
+          },
+          "hudAtBurst": {
+            "t": "46.64",
+            "h": "12.0",
+            "v": "246",
+            "mach": "0.72",
+            "alpha": "-0.04",
+            "spin": "6.3",
+            "toast": "动爆 · 起爆高度 12 m · 破片 420 枚 · 落点纵向 +816 / −482 m · R90 449 m",
+            "r90": "449 m",
+            "alt": "2737 m",
+            "fragModel": "MOTT μ 12.5 g · 均值 25.0 g · GURNEY 1254 m/s"
+          },
+          "fpsFragments": {
+            "frames": 152,
+            "ms": 2509.4000000001397,
+            "fps": 60.57224834621485
+          },
+          "realSecondsToFinish8x": 0.002,
+          "hudFinal": {
+            "t": "65.47",
+            "status": "仿真完成",
+            "toast": "动爆 · 起爆高度 12 m · 破片 420 枚 · 落点纵向 +816 / −482 m · R90 449 m"
+          },
+          "extreme": {
+            "statusCode": "SOLVED 36ms",
+            "alt": "5889 m",
+            "mach": "1.62",
+            "r90": "472 m",
+            "valV0": "550",
+            "valAngle": "70",
+            "valBoom": "80",
+            "hudT": "4.13",
+            "statusAfter": "SYS.READY"
+          },
+          "afterResize": {
+            "canvasW": 1288,
+            "canvasH": 880,
+            "chartCells": 6
+          },
+          "errorsTotal": 0
+        }
+      },
+      "issues": [
+        {
+          "level": "P2",
+          "id": "F1",
+          "text": "性能分解：simulate 总耗时 14.8ms，其中破片约 6.1ms（41%），弹道 RK4 约 8.8ms。浏览器状态栏显示 “SOLVED 35ms”（含 JIT 首次编译）。优化优先级：破片 > 大气/气动函数分配 > 弹道。"
+        },
+        {
+          "level": "P2",
+          "id": "F3",
+          "text": "dt 线性缩放：0.5/0.25ms 时总耗时分别为 1ms 的 1.8x/3.4x（实测见 F3 表）。若因真实自转把 dt 降到 2e-4，simulate 仍约 47ms，可接受；但需同时优化破片和大气函数分配。"
+        },
+        {
+          "level": "P1",
+          "id": "F5",
+          "text": "120mm_ballistics.html 与源文件不同步：physics.js 的内联脚本 hash 与磁盘源码不一致（Lead 正在升级 physics.js 时尤其如此）。用户直接打开单文件会看到旧内核；每次改完 physics.js/UI 必须重跑 node _build.js，并在最终验收时校验 inline hash。"
+        },
+        {
+          "level": "P3",
+          "id": "F5b",
+          "text": "浏览器冒烟测试无控制台错误/页面异常，FPS 60（headless），DOM 与 HUD/图表齐全，截图见 verify/shots/01–07。"
+        }
+      ],
+      "elapsedMs": 1346
+    }
+  ],
+  "issues": [
+    {
+      "section": "F",
+      "level": "P1",
+      "id": "F5",
+      "text": "120mm_ballistics.html 与源文件不同步：physics.js 的内联脚本 hash 与磁盘源码不一致（Lead 正在升级 physics.js 时尤其如此）。用户直接打开单文件会看到旧内核；每次改完 physics.js/UI 必须重跑 node _build.js，并在最终验收时校验 inline hash。"
+    },
+    {
+      "section": "F",
+      "level": "P2",
+      "id": "F1",
+      "text": "性能分解：simulate 总耗时 14.8ms，其中破片约 6.1ms（41%），弹道 RK4 约 8.8ms。浏览器状态栏显示 “SOLVED 35ms”（含 JIT 首次编译）。优化优先级：破片 > 大气/气动函数分配 > 弹道。"
+    },
+    {
+      "section": "F",
+      "level": "P2",
+      "id": "F3",
+      "text": "dt 线性缩放：0.5/0.25ms 时总耗时分别为 1ms 的 1.8x/3.4x（实测见 F3 表）。若因真实自转把 dt 降到 2e-4，simulate 仍约 47ms，可接受；但需同时优化破片和大气函数分配。"
+    },
+    {
+      "section": "F",
+      "level": "P3",
+      "id": "F5b",
+      "text": "浏览器冒烟测试无控制台错误/页面异常，FPS 60（headless），DOM 与 HUD/图表齐全，截图见 verify/shots/01–07。"
+    }
+  ]
+}

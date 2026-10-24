@@ -1,0 +1,8239 @@
+
+
+===== PAGE 1 =====
+Modelling the external ballistics of
+tranquilliser darts
+by
+Aldert Johan Cilliers
+Thesis presented in partial fulﬁlment of the requirements for
+the degree of Master of Engineering (Mechanical) in the
+Faculty of Engineering at Stellenbosch University
+Supervisor:
+Dr. D.N.J. Els
+March 2021
+
+
+===== PAGE 2 =====
+Declaration
+By submitting this thesis electronically, I declare that the entirety of the work
+contained therein is my own, original work, that I am the sole author thereof
+(save to the extent explicitly otherwise stated), that reproduction and pub-
+lication thereof by Stellenbosch University will not infringe any third party
+rights and that I have not previously in its entirety or in part submitted it for
+obtaining any qualiﬁcation.
+2021/01/15
+Date:
+. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+Copyright © 2021 Stellenbosch University
+All rights reserved.
+i
+Stellenbosch University https://scholar.sun.ac.za
+
+
+===== PAGE 3 =====
+Abstract
+Modelling the external ballistics of tranquilliser darts
+A.J. Cilliers
+Department of Mechanical and Mechatronic Engineering,
+University of Stellenbosch,
+Private Bag X1, Matieland 7602, South Africa.
+Thesis: MEng (Mech)
+March 2021
+To facilitate the design of tranquilliser darts, several ballistic models are in-
+vestigated, derived, implemented and veriﬁed. Sensitivity analysis showed the 
+required model ﬁdelity and parameter accuracies are signiﬁcantly less stringent 
+for subsonic, ﬂat trajectories. This agrees with doppler radar measurements 
+suggesting drag stabilised darts have a near constant drag coeﬃcient. This is 
+further corroborated by computational ﬂuid dynamics (CFD) analysis: aerody-
+namic coeﬃcients are independent of velocity but sensitive to angle of attack. 
+The tailpiece however ensures there is little to no pitching and/or yawing, elim-
+inating non-linearities due to instability (the angle of attack). Consequently, a 
+single CFD analysis at an average velocity can suﬃciently estimate the aero-
+dynamic forces and moments. For the same reasons, Point-mass and Modiﬁed 
+point-mass approximations are qualitatively on par with Rigid-body approxi-
+mations (in most cases).
+Due to drag stabilisation by the tailpiece, the drag coeﬃcients measured and 
+simulated are high (CD >= 0.9). Future designs' aerodynamic eﬃciency can 
+be improved by rather using spin stabilisation. Point-mass and Modiﬁed point-
+mass approximations are however unable to account for instabilities. If consid-
+ered, Rigid-body approximations are recommended to conﬁrm initial stability.
+ii
+Stellenbosch University https://scholar.sun.ac.za
+
+
+===== PAGE 4 =====
+Uittreksel
+Modellering van die eksterne ballistiek van
+verdowingspyle
+(“Modelling the external ballistics of tranquilliser darts ”)
+A.J. Cilliers
+Departement Meganiese en Megatroniese Ingenieurswese,
+Universiteit van Stellenbosch,
+Privaatsak X1, Matieland 7602, Suid Afrika.
+Tesis: MIng (Meg)
+Maart 2021
+Om die ontwerp van verdowingspyle te vergemaklik, is verskeie ballistiese mo-
+delle ondersoek, geïmplementeer en geveriﬁeer. Sensitiwiteitsanalise toon mo-
+delgetrouheid asook dat parameterakkuraatheid minder streng is vir kort en 
+plat trajekte. Dit stem ooreen met doppler radar metings waar die verdo-
+wingspyl se sleur koëﬃsiënt konstant is. Berekenings vloeimeganika (BVM) 
+toon dat die verskeie koëﬃsiënte onafhanklik is van snelheid maar sensitief vir 
+invalshoek. Die stert verseker 'n klein invalshoek en bevorder sodoende die 
+konstante geaardheid van die koëﬃsiënte. Gevolglik sal 'n eenmalige BVM si-
+mulasie, by 'n gemiddelde snelheid voldoende wees om die aerodinamise kragte 
+en momente te bepaal. Vir soortgelyke redes is Puntmassa en Gemodiﬁseerde-
+puntmassa analises kwalitatief gelykstaande aan Rigiede-liggaam analises.
+As gevolg van die stert, is die sleur koëﬃsiënt hoog (CD >= 0.9). Aerodinamies 
+kan verdowingspyle vebeter word deur eerder gebruik te maak van spin stabi-
+lisasie. Puntmassa en Gemodiﬁseerde-puntmassa neem aan die verdowingspyl 
+is stabiel, wat nie noodwendig die geval is nie. Indien spin stabilisasie oorweeg 
+word, stel ons Rigiede-liggaam simulasie voor as 'n grondslag om stabiliteit te 
+bevestig.
+iii
+Stellenbosch University https://scholar.sun.ac.za
+
+
+===== PAGE 5 =====
+Acknowledgements
+I would like to express deepest gratitude to my supervisor Dr. Danie Els for
+his relentless support these past few years. His innate passion and curiosity
+for the ﬁeld of engineering has been an inspiration throughout my studies and
+research.
+iv
+Stellenbosch University https://scholar.sun.ac.za
+
+
+===== PAGE 6 =====
+Dedications
+Hierdie tesis word opgedra aan my familie. Sonder hulle ondersteuning sou
+ek nie dié eindpunt bereik nie.
+v
+Stellenbosch University https://scholar.sun.ac.za
+
+
+===== PAGE 7 =====
+Contents
+Declaration
+i
+Abstract
+ii
+Uittreksel
+iii
+Acknowledgements
+iv
+Dedications
+v
+Contents
+vi
+List of Figures
+viii
+List of Tables
+x
+Nomenclature
+xi
+1
+Introduction
+1
+1.1
+Background . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+1
+1.2
+Aeroballistics
+. . . . . . . . . . . . . . . . . . . . . . . . . . . .
+4
+1.3
+Aerodynamic forces and moments . . . . . . . . . . . . . . . . .
+6
+1.4
+Liquid payloads . . . . . . . . . . . . . . . . . . . . . . . . . . . 12
+1.5
+Linearised projectile motion . . . . . . . . . . . . . . . . . . . . 13
+2
+Projectile model
+21
+2.1
+Point-mass . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 22
+2.2
+Rigid-body
+. . . . . . . . . . . . . . . . . . . . . . . . . . . . . 23
+2.3
+Modiﬁed point-mass
+. . . . . . . . . . . . . . . . . . . . . . . . 34
+3
+Trajectory simulation
+37
+3.1
+World frame . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 37
+3.2
+Initial conditions
+. . . . . . . . . . . . . . . . . . . . . . . . . . 38
+3.3
+Integration . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 41
+3.4
+Termination criteria . . . . . . . . . . . . . . . . . . . . . . . . . 45
+3.5
+Dense output
+. . . . . . . . . . . . . . . . . . . . . . . . . . . . 46
+vi
+Stellenbosch University https://scholar.sun.ac.za
+
+
+===== PAGE 8 =====
+CONTENTS
+vii
+3.6
+Program sample calculation
+. . . . . . . . . . . . . . . . . . . . 47
+4
+Evaluation
+49
+4.1
+Benchmarking . . . . . . . . . . . . . . . . . . . . . . . . . . . . 50
+4.2
+Uncertainty and sensitivity analysis . . . . . . . . . . . . . . . . 55
+5
+Dart aerodynamic properties
+63
+5.1
+Doppler radar measurements . . . . . . . . . . . . . . . . . . . . 63
+5.2
+Computational ﬂuid dynamics . . . . . . . . . . . . . . . . . . . 65
+5.3
+Results . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 70
+6
+Conclusion
+73
+Appendices
+75
+A Atmospheric model
+76
+A.1 ICAO
+. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 76
+B Earth model
+79
+B.1 Gravity
+. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 80
+B.2 Coriolis eﬀect . . . . . . . . . . . . . . . . . . . . . . . . . . . . 80
+B.3 Curvature correction . . . . . . . . . . . . . . . . . . . . . . . . 81
+C Projectile properties
+82
+C.1 M107 artillery projectile . . . . . . . . . . . . . . . . . . . . . . 82
+C.2 Mortar . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 83
+C.3 Sierra international bullet
+. . . . . . . . . . . . . . . . . . . . . 84
+C.4 M1 artillery projectile
+. . . . . . . . . . . . . . . . . . . . . . . 85
+D Algorithm sample outputs
+87
+E Sensitivity/uncertainty analysis results
+91
+E.1
+Subsonic, QE = 45 study . . . . . . . . . . . . . . . . . . . . . . 92
+E.2
+Subsonic, QE = 70 study . . . . . . . . . . . . . . . . . . . . . . 98
+E.3
+Supersonic, QE = 45 study . . . . . . . . . . . . . . . . . . . . . 104
+E.4
+Supersonic, QE = 70 study . . . . . . . . . . . . . . . . . . . . . 110
+List of References
+117
+Stellenbosch University https://scholar.sun.ac.za
+
+
+===== PAGE 9 =====
+List of Figures
+1.1
+G2 X-Calibre gauged projector (Pneu-Dart, 2020) . . . . . . . . . .
+1
+1.2
+Pneu-Dart Type C (Pneu-Dart, 2020) . . . . . . . . . . . . . . . . .
+2
+1.3
+Injection angle
+. . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+3
+1.4
+Drag . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+8
+1.5
+Lift . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+8
+1.6
+Overturning moment . . . . . . . . . . . . . . . . . . . . . . . . . .
+9
+1.7
+Pitching force and moment . . . . . . . . . . . . . . . . . . . . . . . 10
+1.8
+Roll damping moment . . . . . . . . . . . . . . . . . . . . . . . . . 11
+1.9
+Rolling moment . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 11
+1.10 Magnus force and moment . . . . . . . . . . . . . . . . . . . . . . . 12
+1.11 Linearised pitch and yaw . . . . . . . . . . . . . . . . . . . . . . . . 15
+1.12 Stability regions . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 17
+1.13 Dynamically unbalanced dart
+. . . . . . . . . . . . . . . . . . . . . 18
+1.14 Statically unbalanced dart . . . . . . . . . . . . . . . . . . . . . . . 19
+1.15 Over stabilisation . . . . . . . . . . . . . . . . . . . . . . . . . . . . 19
+2.1
+Sierra international bullet
+. . . . . . . . . . . . . . . . . . . . . . . 21
+2.2
+Point-mass: Analytical vs Numerical . . . . . . . . . . . . . . . . . 23
+2.3
+Frames of reference . . . . . . . . . . . . . . . . . . . . . . . . . . . 25
+2.4
+Modelling error of 5-DOF model . . . . . . . . . . . . . . . . . . . . 31
+2.5
+Rigid body: Analytical vs Numerical . . . . . . . . . . . . . . . . . 33
+2.6
+Modiﬁed point-mass: Analytical vs Numerical . . . . . . . . . . . . 36
+3.1
+World frame orientation . . . . . . . . . . . . . . . . . . . . . . . . 37
+3.2
+Barrel frame . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 38
+3.3
+Lateral throw oﬀ. . . . . . . . . . . . . . . . . . . . . . . . . . . . 39
+3.4
+Normalised wall-clock time of classic Runge-Kutta . . . . . . . . . . 42
+3.5
+Embedded Runge-Kutta 5(4) runtime wall-clock time . . . . . . . . 43
+3.6
+Comparison of 5-DOF and 6-DOF relative error . . . . . . . . . . . 44
+3.7
+Termination criteria overshoot . . . . . . . . . . . . . . . . . . . . . 45
+3.8
+Pitch and yaw Hermite interpolation . . . . . . . . . . . . . . . . . 46
+3.9
+Trajectory algorithm: block diagram
+. . . . . . . . . . . . . . . . . 48
+4.1
+Mortar (120 mm) . . . . . . . . . . . . . . . . . . . . . . . . . . . . 50
+viii
+Stellenbosch University https://scholar.sun.ac.za
+
+
+===== PAGE 10 =====
+LIST OF FIGURES
+ix
+4.2
+Mortar pitching (Vm = 105 m/s) . . . . . . . . . . . . . . . . . . . . 51
+4.3
+M1 artillery projectile
+. . . . . . . . . . . . . . . . . . . . . . . . . 52
+4.4
+M1 projectile: Pitch and yaw (Subsonic, QE = 70°) . . . . . . . . . 53
+4.5
+M107 artillery projectile . . . . . . . . . . . . . . . . . . . . . . . . 54
+4.6
+Relative average deviation . . . . . . . . . . . . . . . . . . . . . . . 58
+4.7
+Position sensitivity to initial conditions (Subsonic, QE = 45°)
+. . . 59
+4.8
+Position sensitivity to ambient conditions (Subsonic, QE = 45°) . . 60
+4.9
+Position sensitivity to aerodynamic coeﬃcients (Subsonic, QE = 45°) 61
+4.10 Position sensitivity to aerodynamic coeﬃcients (Subsonic, QE = 70°) 61
+5.1
+Professional wildlife equipment darts . . . . . . . . . . . . . . . . . 63
+5.2
+Curve ﬁtted to doppler radar measurements: 0.5 cc dart
+. . . . . . 64
+5.3
+Curve ﬁtted to doppler radar measurements: 1 cc dart
+. . . . . . . 64
+5.4
+Curve ﬁtted to doppler radar measurements: 1.5 cc dart
+. . . . . . 65
+5.5
+Needle mesh after geometry reﬁnement . . . . . . . . . . . . . . . . 66
+5.6
+Symmetry plane
+. . . . . . . . . . . . . . . . . . . . . . . . . . . . 66
+5.7
+Mesh . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 67
+5.8
+Dart pressure contours and ﬂuid streamlines . . . . . . . . . . . . . 68
+5.9
+Mesh independence . . . . . . . . . . . . . . . . . . . . . . . . . . . 69
+5.10 Variation with velocity . . . . . . . . . . . . . . . . . . . . . . . . . 70
+5.11 Variation with angle of attack . . . . . . . . . . . . . . . . . . . . . 71
+5.12 PM model predicted velocity and trajectory . . . . . . . . . . . . . 71
+5.13 RB model predicted velocity and trajectory
+. . . . . . . . . . . . . 72
+Stellenbosch University https://scholar.sun.ac.za
+
+
+===== PAGE 11 =====
+List of Tables
+1.1
+Classic aerodynamic force equations . . . . . . . . . . . . . . . . . .
+6
+1.2
+Classic aerodynamic moment equations . . . . . . . . . . . . . . . .
+7
+2.1
+Body frame expanded aerodynamic force equations . . . . . . . . . 29
+2.2
+Body frame expanded aerodynamic moment equations
+. . . . . . . 30
+2.3
+Aerodynamic force and moment equations for MPM . . . . . . . . . 35
+3.1
+Struct supplied to algorithm (“Settings”) . . . . . . . . . . . . . . . 47
+4.1
+Mortar test cases . . . . . . . . . . . . . . . . . . . . . . . . . . . . 50
+4.2
+Mortar trajectory relative error . . . . . . . . . . . . . . . . . . . . 51
+4.3
+M1 artillery projectile test cases . . . . . . . . . . . . . . . . . . . . 52
+4.4
+M1 artillery projectile relative error . . . . . . . . . . . . . . . . . . 53
+4.5
+M107 artillery projectile cases . . . . . . . . . . . . . . . . . . . . . 54
+4.6
+M107 artillery projectile RB relative errors . . . . . . . . . . . . . . 54
+4.7
+M107 artillery projectile MPM relative error . . . . . . . . . . . . . 55
+4.8
+M107 artillery projectile PM relative error . . . . . . . . . . . . . . 55
+4.9
+M1 artillery projectile, sensitivity analysis cases . . . . . . . . . . . 56
+5.1
+Drag coeﬃcients (↵t = 0°) . . . . . . . . . . . . . . . . . . . . . . . 69
+x
+Stellenbosch University https://scholar.sun.ac.za
+
+
+===== PAGE 12 =====
+Nomenclature
+Roman symbols
+A
+Characteristic area . . . . . . . . . . . . . . . . . . . . . . . [ m2 ]
+A
+Sets of output parameters
+. . . . . . . . . . . . . . . . . . [ ]
+AL
+Altitude
+. . . . . . . . . . . . . . . . . . . . . . . . . . . . . [ m ]
+AZ
+Azimuth
+. . . . . . . . . . . . . . . . . . . . . . . . . . . . . [ deg ]
+a
+Speed of sound
+. . . . . . . . . . . . . . . . . . . . . . . . . [ m/s ]
+B
+Sets of input parameters
+. . . . . . . . . . . . . . . . . . . [ ]
+DC
+Drift correction
+. . . . . . . . . . . . . . . . . . . . . . . . [ rad ]
+d
+Projectile diameter . . . . . . . . . . . . . . . . . . . . . . . [ ]
+E
+Transformation matrix
+. . . . . . . . . . . . . . . . . . . . [ ]
+E313
+Euler angle transformation matrix (z-x-z)
+. . . . . . . . [ ]
+E321
+Euler angle transformation matrix (z-y-x)
+. . . . . . . . [ ]
+ex, ey, ez
+Body frame axes (unit vectors)
+. . . . . . . . . . . . [ ]
+eX, eY , eZ
+World frame axes (unit vectors)
+. . . . . . . . . . . [ ]
+F
+Sets of output functions
+. . . . . . . . . . . . . . . . . . . [ ]
+FD
+Drag force
+. . . . . . . . . . . . . . . . . . . . . . . . . . . . [ N ]
+FL
+Lift force
+. . . . . . . . . . . . . . . . . . . . . . . . . . . . [ N ]
+FNP
+Magnus force
+. . . . . . . . . . . . . . . . . . . . . . . . . . [ N ]
+FN ˙↵+q
+Pitching force
+. . . . . . . . . . . . . . . . . . . . . . . . . [ N ]
+g
+Gravitational acceleration
+. . . . . . . . . . . . . . . . . . [ m/s2 ]
+LA
+Latitude
+. . . . . . . . . . . . . . . . . . . . . . . . . . . . . [ deg ]
+M↵
+Overturning moment
+. . . . . . . . . . . . . . . . . . . . . [ N·m ]
+MLP
+Roll dampening moment
+. . . . . . . . . . . . . . . . . . . [ N·m ]
+MLS
+Rolling moment
+. . . . . . . . . . . . . . . . . . . . . . . . [ N·m ]
+MNP
+Magnus moment
+. . . . . . . . . . . . . . . . . . . . . . . . [ N·m ]
+M ˙↵+q
+Pitching moment
+. . . . . . . . . . . . . . . . . . . . . . . [ N·m ]
+P
+Pressure
+. . . . . . . . . . . . . . . . . . . . . . . . . . . . . [ Pa ]
+Ps
+Saturation pressure
+. . . . . . . . . . . . . . . . . . . . . . [ Pa ]
+q0
+Euler parameter scalar component
+. . . . . . . . . . . . . [ ]
+xi
+Stellenbosch University https://scholar.sun.ac.za
+
+
+===== PAGE 13 =====
+NOMENCLATURE
+xii
+q =
+⇥
+q1
+q2
+q3
+⇤
+Euler parameter vector component
+. . . . . . [ ]
+QE
+Quadrant elevation
+. . . . . . . . . . . . . . . . . . . . . . [ rad ]
+Rx
+Elemental rotation around x axis
+. . . . . . . . . . . . . . [ ]
+Ry
+Elemental rotation around y axis
+. . . . . . . . . . . . . . [ ]
+Rz
+Elemental rotation around z axis
+. . . . . . . . . . . . . . [ ]
+Re
+Reynolds number (diameter) . . . . . . . . . . . . . . . . . [ ]
+Recrit
+Critical Reynolds number
+. . . . . . . . . . . . . . . . . . [ ]
+RH
+Relative humidity
+. . . . . . . . . . . . . . . . . . . . . . . [ % ]
+r
+Earth radius
+. . . . . . . . . . . . . . . . . . . . . . . . . . [ m ]
+Sd
+Dynamic stability factor
+. . . . . . . . . . . . . . . . . . . [ ]
+Sg
+Gyroscopic stability factor
+. . . . . . . . . . . . . . . . . . [ ]
+s
+Dimensionless arc length
+. . . . . . . . . . . . . . . . . . . [ ]
+T
+Temperature
+. . . . . . . . . . . . . . . . . . . . . . . . . . [ K ]
+Tw
+Riﬄing twist rate
+. . . . . . . . . . . . . . . . . . . . . . . [ Cal/turn ]
+V
+Relative projectile velocity
+. . . . . . . . . . . . . . . . . . [ m/s ]
+V1
+Free stream velocity (wind) . . . . . . . . . . . . . . . . . . [ m/s ]
+Vm
+Muzzle velocity
+. . . . . . . . . . . . . . . . . . . . . . . . . [ m/s ]
+VWX
+Down range wind
+. . . . . . . . . . . . . . . . . . . . . . . [ m/s ]
+VWY
+Cross range wind
+. . . . . . . . . . . . . . . . . . . . . . . [ m/s ]
+x
+Projectile location: Cartesian coordinates
+. . . . . . . . [ m ]
+˙x
+Translation velocity
+. . . . . . . . . . . . . . . . . . . . . . [ m/s ]
+¨x
+Translation acceleration
+. . . . . . . . . . . . . . . . . . . [ m/s2 ]
+˙xc
+Earth curvature correction velocity
+. . . . . . . . . . . . [ m/s ]
+Y
+Projectile state vector
+. . . . . . . . . . . . . . . . . . . . [ deg ]
+y+
+Dimensionless wall distance
+. . . . . . . . . . . . . . . . . [ ]
+Greek symbols
+↵
+Pitch
+. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . [ rad ]
+↵0
+Initial pitch (relative to barrel)
+. . . . . . . . . . . . . . . [ rad ]
+↵t
+Angle of attack
+. . . . . . . . . . . . . . . . . . . . . . . . . [ rad ]
+β
+Yaw
+. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . [ rad ]
+β0
+Initial yaw (relative to barrel)
+. . . . . . . . . . . . . . . . [ rad ]
+βR
+Yaw of repose
+. . . . . . . . . . . . . . . . . . . . . . . . . [ rad ]
+γ =
+⇥
+φ, ✓, 
+⇤
+Euler angles
+. . . . . . . . . . . . . . . . . . . . . . [ rad ]
+δ
+Relative error
+. . . . . . . . . . . . . . . . . . . . . . . . . . [ ]
+δa
+Humidity correction factor for speed of sound
+. . . . . . [ ]
+Stellenbosch University https://scholar.sun.ac.za
+
+
+===== PAGE 14 =====
+NOMENCLATURE
+xiii
+δ⇢
+Humidity correction factor for air density
+. . . . . . . . . [ ]
+✓throw
+Lateral throw oﬀangle
+. . . . . . . . . . . . . . . . . . . [ rad ]
+✓C
+Lateral throw oﬀ, radial direction
+. . . . . . . . . . . . . [ rad ]
+✓roll
+Initial roll angle
+. . . . . . . . . . . . . . . . . . . . . . . . [ rad ]
+⇤
+Coriolis acceleration
+. . . . . . . . . . . . . . . . . . . . . . [ m/s2 ]
+λ
+Heat capacity ratio of air
+. . . . . . . . . . . . . . . . . . [ ]
+µ
+Air viscosity . . . . . . . . . . . . . . . . . . . . . . . . . . . [ Pa·s ]
+µ⇤
+Revised mean of elementary eﬀects
+. . . . . . . . . . . . [ ]
+⇢
+Air density . . . . . . . . . . . . . . . . . . . . . . . . . . . . [ kg/m3 ]
+⌦E
+Earth angular velocity
+. . . . . . . . . . . . . . . . . . . . [ rad/s ]
+!
+Angular velocity
+. . . . . . . . . . . . . . . . . . . . . . . . [ rad/s ]
+˙!
+Angular acceleration
+. . . . . . . . . . . . . . . . . . . . . [ rad/s2 ]
+⇠
+Pitch and yaw as single complex number
+. . . . . . . . . [ rad ]
+Superscripts
+E
+Curved earth frame
+b
+Barrel frame
+r0
+Rotating body frame
+r
+Body frame
+s
+World frame
+Abbreviations
+BS
+Bulirsch-Stöer
+CFA
+Computational ﬂuid analysis
+CFD
+Computational ﬂuid dynamics
+ICAO
+International Civil Aviation Organisation
+RAD
+Relative average deviation
+RB
+Rigid-body
+RDDS
+Remote drug delivery system
+RK4
+Runga-Kutta 4th order
+RK54
+Dorman-Prince embedded 5th order Runga-Kutta
+MPM
+Modiﬁed point-mass
+PM
+Point-mass
+Stellenbosch University https://scholar.sun.ac.za
+
+
+===== PAGE 15 =====
+Chapter 1
+Introduction
+Remote Drug Delivery Systems (RDDS) allow long distance (> 15 m) ad-
+ministration of veterinary medication. The basic premise is as follows: a riﬂe
+launches a tranquilliser dart injecting its medication upon impact.
+RDDS
+made animal ﬁeld studies and medical intervention routine procedure. Conse-
+quently advances in zoological/veterinary research are directly related to the
+reﬁnement of RDDS (Bush, 1992).
+1.1
+Background
+Riﬂes are either cartridge ﬁred or gas based (PneuDart, 2020). Compressed
+gas riﬂes can vary their muzzle velocity by adjusting the gauge pressure. While
+useful to control impact velocity, aim (holdover) must also be adjusted accord-
+ingly. Figure 1.1 shows the compressed gas riﬂe manufactured by Pneu-Darts.
+Figure 1.1: G2 X-Calibre gauged projector (Pneu-Dart, 2020)
+1
+Stellenbosch University https://scholar.sun.ac.za
+
+
+===== PAGE 16 =====
+CHAPTER 1. INTRODUCTION
+2
+Darts come in a wide array of designs and sizes (ﬁgure 1.2). They are routinely
+categorised based on injection method. The most common are air pressurised
+and percussion caps. Air pressurised darts are reusable, contrasting percussion
+caps that use an explosive charge and are thus single use (Rosenﬁeld, 2017).
+No injection method is superior and choice depends on the operator's personal
+preference and cost.
+Figure 1.2: Pneu-Dart Type C (Pneu-Dart, 2020)
+The quality of the RDDS and skill of the operator can be measured using
+ethical distance.
+Stellenbosch University https://scholar.sun.ac.za
+
+
+===== PAGE 17 =====
+CHAPTER 1. INTRODUCTION
+3
+1.1.1
+Ethical distance
+Reiterating the deﬁnition provided in Caudell et al. (2009) for more general
+applicability, ethical distance is the maximum range where impact is guaran-
+teed to conform to preset constraints (in Caudell's case a humane kill). For
+RDDS, the criteria are successful injection and acceptable ballistic trauma.
+Estimating this range is diﬃcult as each shot represents a unique event: type
+of dart, range, ambient conditions and animal all vary.
+Injection
+Upon impact, dart orientation and velocity must allow the needle to perforate
+the external epidermal layer. A perpendicular impact is preferred as intra-
+muscular injection yields the fastest response. If the impact angle is sharp,
+perforation might be too shallow.
+In extreme cases the dart can ricochet,
+possibly inﬂicting greater injury (Rosenﬁeld, 2017). Since trajectories are rel-
+atively ﬂat, the impact angle is mostly dependent on the impact surface and
+dart stability.
+Epidermal layer
+Subcutaneous tissue
+Muscle tissue
+Figure 1.3: Injection angle
+Ballistic trauma
+RDDS are inherently intended to be non-lethal. Life threatening debilitation
+and/or death are however underestimated possibilities (Koene et al., 2008).
+To regulate the impact energy, the target must be an appropriate distance
+from the RDDS operator. Too close and the physical trauma might be severe,
+too far and vulnerable areas such as eyes and joints become possible collateral
+damage (Hampton et al., 2016). To facilitate this daunting task, manufacturers
+provide extensive tables with recommended pressures (muzzle velocities) and
+holdovers for various dosages and distances (Rosenﬁeld, 2017).
+Stellenbosch University https://scholar.sun.ac.za
+
+
+===== PAGE 18 =====
+CHAPTER 1. INTRODUCTION
+4
+1.2
+Aeroballistics
+Given suﬃcient information regarding the dart, it is possible to predict its ﬂight
+behaviour. This entails quantifying the dart's interaction with the enveloping
+air: aerodynamic forces and moments.
+1.2.1
+Fluid: Ambient air
+When the dart is in motion relative to the free stream, it forcefully displaces
+surrounding air. As per the Navier Stokes momentum equation, a change in
+ﬂuid momentum implies the presence of forces (usually split into shear and
+pressure forces). As seen in equation 1.2, ﬂuid density ⇢and viscosity µ are
+needed to deﬁne ﬂuid momentum (Schobeiri, 2010).
+V = x˙ −V1 6= 0
+(1.1)
+⇢DV
+Dt = −rp + ⇢g + µr2V
+(1.2)
+To quantify these properties the ambient temperature, pressure and relative
+humidity at the projectile's location must be known (Gkritzapis et al., 2007).
+For most practical applications, the free stream ﬂow ﬁeld is assumed to exclu-
+sively translate (V1). The relative velocity (V ) is calculated using equation
+1.1.
+Stellenbosch University https://scholar.sun.ac.za
+
+
+===== PAGE 19 =====
+CHAPTER 1. INTRODUCTION
+5
+Flow regimes
+Darts introduce disturbances that propagate throughout the free stream ﬂow
+ﬁeld at the speed of sound (a).
+When the propagation pattern is free of
+stochastic motion, the ﬂow is laminar.
+When fully stochastic, the ﬂow is
+turbulent. The regime is predicted using the Reynolds number, suﬃciently
+high (> Recrit) and the ﬂow is fully turbulent. Close to Recrit, the ﬂow has
+an “intermittent characteristic”: exhibits bursts of turbulence as the laminar
+motion becomes unstable (White, 2010).
+Re = ⇢V d
+µ
+(1.3)
+The characteristic length is the maximum external diameter (in this case,
+d = 12.7 mm). Most darts operate between 50 m s−1 and 90 m s−1. At mean
+sea level ambient conditions, darts have an average Re of 5 ⇥104. Darts are
+thus prototypical transitional or “low Reynolds number” problems (Anderson,
+2009).
+Transitional ﬂow
+At lower Reynolds numbers ( 104 < Re < 105) the boundary layer is laminar
+and thus prone to separate. When ﬂow separation occurs, the already unstable
+ﬂow becomes turbulent. The newly introduced shear stresses energise the ﬂow,
+counteracting the pressure gradient and possibly reattaching the ﬂow: known
+as a laminar separation bubble (Anderson, 2009). This makes transitional ﬂow
+regimes diﬃcult to accurately model using computational ﬂuid analysis (CFA).
+Stellenbosch University https://scholar.sun.ac.za
+
+
+===== PAGE 20 =====
+CHAPTER 1. INTRODUCTION
+6
+1.2.2
+Projectile: Dart
+The dart geometry dictates how the enveloping ﬂuid is displaced. Darts are
+fairly blunt (excluding the needle) to distribute impact energy. This degrades
+aerodynamic performance by exacerbating drag and reducing ﬂight stability.
+A stable projectile has a more predictable ﬂight path as the angle of attack re-
+mains small: aerodynamic forces and moments are complex when instabilities
+are present.
+1.3
+Aerodynamic forces and moments
+Aeroballisticians generally have the leisure of working with axis-symmetric pro-
+jectiles. Taking advantage of this, the classical aeroballistic force and moment
+equations (tables 1.1 and 1.2) were developed (McCoy, 1999). Sections 1.3.1
+through 1.3.7 elaborates on each individual force and moment.
+For most practical applications, perfect axis-symmetry is a reasonable assump-
+tion. Ignoring the possibility of asymmetries would be remiss as they can eﬀect
+on the trajectory. Section 1.5.5 discusses the possible consequences of asym-
+metries.
+Table 1.1: Classic aerodynamic force equations
+Force
+Equation
+Drag
+FD = −CD⇢A
+2
+V V
+Lift
+FL = CL⇢A
+2
+(V ⇥(ex ⇥V ))
+Pitching
+FNq+ ˙↵= CNq+ ˙↵⇢A
+2
+d V ex˙
+Magnus
+FNP = CNP ⇢A
+2
+d (! · ex)(V ⇥ex)
+Stellenbosch University https://scholar.sun.ac.za
+
+
+===== PAGE 21 =====
+CHAPTER 1. INTRODUCTION
+7
+Table 1.2: Classic aerodynamic moment equations
+Moment
+Equation
+Overturning
+M↵= CM↵⇢A
+2
+d V (V ⇥ex)
+Pitching
+MMq+ ˙↵= CMq+ ˙↵⇢A
+2
+d2 V (ex ⇥ex˙ )
+Roll dampening
+MLP = CLP ⇢A
+2
+d2 V (! · ex) ex
+Rolling
+MLS = CLS⇢A
+2
+d2 V 2 ex
+Magnus
+MMP = CMP ⇢A
+2
+d2 (! · ex)(ex ⇥(V ⇥ex))
+Coeﬃcients
+The eﬀects of geometry, inertia and ﬂow regime are consolidated into the
+aeroballistic coeﬃcients. The equations listed in tables 1.1 and 1.2 construe
+the fact that the coeﬃcients are comprised of intricate non-linear relationships.
+Traditionally this relationship is expressed as a function of Mach number and
+angle of attack (↵t): equation 1.6 is commonly used to describe the non linear-
+inﬂuence of ↵t at a set Mach number (Chaves et al. (2019), McCoy (1999)).
+C0 = f(Ma)
+(1.4)
+C2 = f(Ma)
+(1.5)
+C = C0 + C2 sin(↵t)2 + C4 sin(↵t)4...
+(1.6)
+Characteristics area
+It can be any convenient value as long as it is clearly stated during the quantiﬁ-
+cation of the aeroballistic coeﬃcients. For axis-symmetric darts the accepted
+convention is to use the largest external diameter (d) to calculate the circular
+cross section.
+A = ⇡d2
+4
+(1.7)
+Stellenbosch University https://scholar.sun.ac.za
+
+
+===== PAGE 22 =====
+CHAPTER 1. INTRODUCTION
+8
+1.3.1
+Drag
+Drag is responsible for the dart's decrease in linear momentum. When small,
+a dart maintains its velocity and further distances are viable. Minimising drag
+is thus a primary concern when developing high performance projectiles.
+FD = −CD⇢A V
+2
+V
+(1.8)
+ex
+FD
+V
+↵t
+Figure 1.4: Drag
+1.3.2
+Lift
+Asymmetric distribution of shear and pressure eﬀects result in a force perpen-
+dicular to the relative free stream. This causes the dart to deﬂect laterally
+based on the dart's orientation. Lift is the largest contributor towards drift.
+FL = CL⇢A
+2
+(V ⇥(ex ⇥V ))
+(1.9)
+ex
+FL
+V
+↵t
+Figure 1.5: Lift
+Stellenbosch University https://scholar.sun.ac.za
+
+
+===== PAGE 23 =====
+CHAPTER 1. INTRODUCTION
+9
+1.3.3
+Overturning moment
+As stated previously, surface shear and pressure eﬀects are asymmetric. Ad-
+ditional to lift, the overturning moment is generated around the mass centre.
+When positive, the dart is considered statically unstable: will overturn without
+spin stabilisation (Tsien, 2012).
+M↵= CM↵⇢A d V
+2
+(V ⇥ex)
+(1.10)
+ex
+M↵
+V
+↵t
+Figure 1.6: Overturning moment
+To guarantee a negative value, darts are equipped with tailpieces (drag stabil-
+isation). For high performance projectiles this is not viable as the additional
+drag is too severe. Spin stabilisation is more aerodynamically eﬃcient but can
+be impractical if too high a spin rate is required (or when dart is dynamically
+unstable). Stability is discussed thoroughly in section 1.5.4.
+Stellenbosch University https://scholar.sun.ac.za
+
+
+===== PAGE 24 =====
+CHAPTER 1. INTRODUCTION
+10
+1.3.4
+Pitching force and moment
+The dart “mixes” the surrounding air due to rapid changes in its symmetry
+axis (pitching and yawing). This motion is expressed by the derivative (ex˙ ) of
+the symmetry axis's unit vector. This is synonymous to a tangent line on the
+surface of a unit sphere (see ﬁgure 1.7). Air exercises a counteracting force and
+moment that dampen the motion. Both the force and moment are evaluated
+in the body frame using the Coriolis theorem: ex˙ becomes a function of the
+dart's pitching and yawing (!y, !z) (Hibbeler, 2010).
+FNq+ ˙↵= CNq+ ˙↵⇢A d V
+2
+ex˙
+(1.11)
+MMq+ ˙↵= CMq+ ˙↵⇢A d2 V
+2
+(ex ⇥ex˙ )
+(1.12)
+ex
+ex˙
+ex ⇥ex˙
+ex
+Figure 1.7: Pitching force and moment
+Stellenbosch University https://scholar.sun.ac.za
+
+
+===== PAGE 25 =====
+CHAPTER 1. INTRODUCTION
+11
+1.3.5
+Roll damping moment
+This moment decreases the angular momentum around the symmetry axis.
+While not explicitly signiﬁcant, spin stabilised darts can become unstable if
+the spin rate drops too low (gyroscopic stability).
+MLP = CLP ⇢A d2 V
+2
+(! · ex) ex
+(1.13)
+ex
+and
+MLP
+!
+Figure 1.8: Roll damping moment
+1.3.6
+Rolling moment
+If a dart needs to maintain axial spin, it can be equipped with ﬁns. Fins induce
+a moment that increases axial momentum: accelerates spin.
+MLS = CLS⇢A d2 V 2
+2
+ex
+(1.14)
+ex
+and
+MLS
+Figure 1.9: Rolling moment
+Stellenbosch University https://scholar.sun.ac.za
+
+
+===== PAGE 26 =====
+CHAPTER 1. INTRODUCTION
+12
+1.3.7
+Magnus force and moment
+A rotating dart in a cross ﬂow experiences perpendicular force and moment
+due to the Magnus eﬀect. The axial spin deﬂects the cross ﬂow laterally due
+to relative velocity diﬀerences on the dart's surface (Schobeiri, 2010).
+FNP = CNP ⇢A d
+2
+(! · ex)(V ⇥ex)
+(1.15)
+MMP = CMP ⇢A d2
+2
+(! · ex)(ex ⇥(V ⇥ex))
+(1.16)
+ex
+MMP
+V
+↵t
+!
+FNP
+Figure 1.10: Magnus force and moment
+1.4
+Liquid payloads
+A liquid payload exerts shear and pressure forces on the inner walls of the
+housing cavity, producing external moments on the dart. An axial moment is
+generated due to liquid spin up and a transverse moment from the sloshing
+eﬀect: inertial waves propagate and collide with cavity walls. When these
+waves match the pitching and yawing motion of the housing, liquid resonance
+occurs and can cause catastrophic destabilisation. This is largely avoided by
+making sure there are no air cavities.
+Several articles have been published that attempt to quantify these moments
+for axis-symmetric projectiles. Cooper and Costello (2011) used a well-developed
+spatial eigenvalue theory to generate liquid moment coeﬃcients and incorpo-
+rated them into a 6-DOF ﬂight model. The analysis assumed that the projec-
+tile undergoes quasi-steady coning motion, which enables calculation of liquid
+moment coeﬃcients as a function of Re and coning frequency. Rogers et al.
+(2013) improved on that concept by using a dual-spin projectile model to cap-
+ture liquid spin-up after launch. Their validity is however questionable as no
+veriﬁcation studies have been performed.
+Stellenbosch University https://scholar.sun.ac.za
+
+
+===== PAGE 27 =====
+CHAPTER 1. INTRODUCTION
+13
+Due to its complexity, the eﬀect of the liquid payload is assumed negligibly
+small and thus not taken into account for the remainder of this thesis.
+1.5
+Linearised projectile motion
+Evident from the previous sections, a dart's equations of motion consist of
+highly non-linear diﬀerential equations. If the aerodynamic resistances and
+initial conditions are accurately known, an essentially exact solution is numer-
+ically available. Being simply a table of numbers, knowing how to improve a
+design is based on educated guesses. Alone, this approach can be very ineﬃ-
+cient. Having access to a simpliﬁed closed form solution is recommended as
+each variable's contribution is stated explicitly: what must be changed to alter
+the dart's ﬂight behaviour (stability criteria).
+These analytical solutions have several other uses; conﬁrm numerically so-
+lution is solved correctly; regression with experimental data to estimate co-
+eﬃcients. They are thoroughly documented in multiple publications (Chaves
+et al. (2019), McCoy (1999)).
+1.5.1
+Translational velocity
+The full derivation for linearised velocity is given to show the application of
+dimensionless arc length (s). Only the ﬁnal solutions for pitch, yaw and spin
+rate are presented.
+s = 1
+d
+Z
+˙x
+(1.17)
+For relatively short, windless (V1 = 0) distances the trajectory can be assumed
+straight and the drag coeﬃcient (CD) constant. Since the ﬂight path is straight,
+gravity and lateral forces are negligible.
+F = FD = −CD⇢A ˙x2
+2
+= m¨x
+(1.18)
+Stellenbosch University https://scholar.sun.ac.za
+
+
+===== PAGE 28 =====
+CHAPTER 1. INTRODUCTION
+14
+Linearising equation 1.18 in terms of s, it is solved using elementary 1st order
+diﬀerential equation solution methods. The solution (equation 1.19) suggests
+velocity decreases exponentially with distance traveled. Consequently small
+reductions in drag can exponentially improve maximum viable range.
+s = 1
+d
+Z
+˙x dt
+ds
+dt = 1
+d ˙x
+dt = d
+˙xds
+C⇤
+D = CD
+⇢A d
+2m
+¨x = −CD
+⇢A
+2m ˙x2
+˙x = −CD
+⇢A
+2m
+Z
+˙x2 dt
+˙x = −CD
+⇢A d
+2m
+Z
+˙x ds
+˙x = −C⇤
+D
+Z
+˙x ds
+˙x = ˙x0 e−C⇤
+D s
+(1.19)
+The alternative solution as a function of time is:
+¨x = −CD
+⇢A
+2m ˙x2
+˙x−2d ˙x
+dt = −CD
+⇢A
+2m
+1
+˙x −1
+˙x0
+=
+✓
+CD
+⇢A
+2m
+◆
+⇥t
+1
+˙x =
+✓
+CD
+⇢A
+2m
+◆
+⇥t + 1
+˙x0
+(1.20)
+1.5.2
+Axial spin
+The analytical solution for axial spin is derived in a similar fashion to equation
+1.19. The result (equation 1.23) show that spin rate decays exponentially with
+distance traveled.
+k−2
+x
+= md2
+Ix
+(1.21)
+Kp = −
+⇥
+k−2
+x C⇤
+LP + C⇤
+D
+⇤
+(1.22)
+✓!xd
+˙x
+◆
+=
+✓!xd
+˙x
+◆&&&&
+0
+e−Kps
+(1.23)
+Stellenbosch University https://scholar.sun.ac.za
+
+
+===== PAGE 29 =====
+CHAPTER 1. INTRODUCTION
+15
+1.5.3
+Yaw and Pitch
+Both pitch and yaw are collectively deﬁned in terms of a single complex variable
+(⇠). Where β represents yaw and ↵pitch.
+⇠= ↵+ βi
+(1.24)
+Through lengthly algebra the following equation is obtained. See either Chaves
+et al. (2019) or McCoy (1999) for its full derivation.
+⇠= KF0eλF +i(φ0
+F s+φF ) + KS0eλS+i(φ0
+Ss+φS) + iβR
+(1.25)
+Equation 1.25 indicates the symmetry axis traces an epicyclic pattern: two
+arms (KF,KS) each rotating at a unique frequency (φ0
+F, φ0
+S). Figure 1.11 is a
+visual representation of these components.
+If there is no spin KF and KS are ﬁxed in space. Lift then acts in a con-
+stant direction and produces a lateral deﬂection that increases quadratically
+with downrange distance. It is thus recommended to apply spin even if a dart
+is statically stable: lateral deﬂection primarily becomes a consequence of yaw
+of repose (βR).
+↵Pitch
+β Yaw
+βR
+KS
+KF
+φ0
+S
+φ0
+F
+Flight direction (into page)
+Figure 1.11: Linearised pitch and yaw
+Stellenbosch University https://scholar.sun.ac.za
+
+
+===== PAGE 30 =====
+CHAPTER 1. INTRODUCTION
+16
+The performance of a dart is largely synonymous to its stability. When stable,
+aerodynamic resistance is less intricate resulting in a more predictable trajec-
+tory. Knowing how to achieve stability is thus of interest when developing a
+new dart. From equation 1.25, the classical ﬂight stability criteria are derived.
+When presented in literature, authors are often presumptuous and assume the
+projectiles being investigated are statically unstable. The criteria are diﬀerent
+based on static stability. Current tranquilliser dart's design are predominantly
+statically stable. If a more eﬃcient design were investigated (spin stabilisation,
+tailpiece omitted) the dart will likely be statically unstable.
+1.5.4
+Stability
+The exponents in equation 1.25 can cause the analytical pitch and yaw to
+grow without bound (instability). This forms the basis for the gyroscopic and
+dynamic stability criteria.
+Gyroscopic stability
+If the frequency exponents (φ0
+F, φ0
+S) in equation 1.25 contain imaginary vari-
+ables, ⇠will grow without bound. The gyroscopic stability criteria ensure the
+frequency exponents are real. It is customary to present the criteria in terms
+the gyroscopic stability factor Sg. The factor and criteria as found in Murphy
+(1954):
+Sg =
+I2
+x!x2
+2⇢d IyACM↵˙x2
+(1.26)
+Gyroscopic stability criteria
+(
+Sg > 1,
+for CM↵> 0
+Sg < 1,
+for CM↵< 0
+(1.27)
+It is worth noting that a statically stable dart is always gyroscopically stable
+regardless of spin: Sg is always negative (CM↵< 0, Sg < 0). Being gyroscopi-
+cally stable does not guarantee stability, simply that φ0
+F and φ0
+S will not cause
+destabilisation. If the damping coeﬃcients λS or λF are positive, ⇠will still
+grow without bounds regardless of gyroscopic stability.
+Stellenbosch University https://scholar.sun.ac.za
+
+
+===== PAGE 31 =====
+CHAPTER 1. INTRODUCTION
+17
+Dynamic stabiliy
+To ensure damping coeﬃcients are negative, the dynamic stability criteria must
+be met. Criteria in terms of dynamic stability factor (Sd) as found in Murphy
+(1954):
+Sd(2 −Sd) > 1
+Sg
+(1.28)
+Sd =
+2 (CL + k−2
+x CMP )
+CL −CD −k−2
+y
+(
+CMq + CMa
+)
+(1.29)
+Figure 1.12 is a visual representation of both stability criteria (equations 1.27
+and 1.28). It highlights that a statically unstable dart can only be stabilised
+if the dynamic stability factor is within 0 < Sd < 2. The closer Sd is to 1, the
+easier the dart is to stabilise. When the dynamic stability factor is Sd < 0 or
+Sd > 2, too much spin will cause a statically stable dart to destabilise. Without
+information regarding a dart's dynamic stability factor, overzealously applying
+spin might thus be detrimental. When designing a new dart, the dynamic and
+gyroscopic stability criteria are guides on how to improve ﬂight performance.
+−1.0
+−0.5
+0.0
+0.5
+1.0
+1.5
+2.0
+2.5
+3.0
+Sd
+0
+1
+2
+3
+4
+5
+|Sg|
+Only if CM↵< 0
+Always stable
+Figure 1.12: Stability regions
+Stellenbosch University https://scholar.sun.ac.za
+
+
+===== PAGE 32 =====
+CHAPTER 1. INTRODUCTION
+18
+1.5.5
+Limitations of stability criteria
+The dynamic and gyroscopic stability criteria are derived for a perfectly rigid
+axis-symmetric projectile with a short and straight trajectory. They become
+less reliable when projectiles are asymmetric, over-stabilised, have liquid pay-
+loads or subjected to high ordinance trajectories.
+Asymmetries
+Spin stabilisation is a delicate phenomena that must be used with care. Con-
+sider a rigid body whose principal moments of inertia are I1 < I2 < I3. It
+is mathematically shown it can be spin stabilised around one of its extrema
+principle axes (I1 or I3) (Wie, 2008). Spin around any intermediate axis is
+always unstable.
+The dart is assumed axis-symmetric for the stability criteria (I2 = I3). The
+symmetry axis is then automatically an extrema principle axis (I1). However
+darts are never perfectly axis-symmetric. In ﬂight the spin axis will migrate
+to the true extrema principle inertia axis. When the true axes are parallel
+to the symmetry axes, the dart is statically unbalanced. When tilted, it is
+dynamically unbalanced. These states are not mutually exclusive and tend to
+occur together. Figures 1.13 and 1.14 show the implications of both instances
+during ﬂight.
+I1
+I3
+CG
+Unstable
+!
+I1
+I3
+CG
+Spin axis migrates
+!
+I1
+I3
+CG
+Stable
+!
+Figure 1.13: Dynamically unbalanced dart
+Stellenbosch University https://scholar.sun.ac.za
+
+
+===== PAGE 33 =====
+CHAPTER 1. INTRODUCTION
+19
+Unstable
+!
+I1
+I3
+CG
+I1
+I3
+CG
+Stable
+!
+Figure 1.14: Statically unbalanced dart
+Over stabilisation
+There is a common misconception that a high spin rate is always beneﬁcial.
+Excessive spin gyroscopically ﬁxes the angular momentum vector, preventing
+the dart' s nose from following the ﬂight arc. Since dart's trajectories are fairly
+straight, over stabilisation is less relevant in comparison to high ordinance pro-
+jectiles.
+Range
+Height
+Figure 1.15: Over stabilisation
+Stellenbosch University https://scholar.sun.ac.za
+
+
+===== PAGE 34 =====
+CHAPTER 1. INTRODUCTION
+20
+Liquid payloads
+Despite being outside the scope of this thesis, its implications should be ac-
+knowledged. The stability criteria assume a dart is suﬃciently presented by
+a rigid body. Liquid payloads inherently violate this assumption. The dart
+might be stable at the beginning of its trajectory but become unstable due to
+liquid resonance or gyroscopic/dynamic instability. Liquid resonance occurs
+when the sloshing of the liquid payload, matches the pitching and yawing of
+the housings. This can be avoided by conﬁrmation that there are little to no
+air cavities.
+Stellenbosch University https://scholar.sun.ac.za
+
+
+===== PAGE 35 =====
+Chapter 2
+Projectile model
+Several viable dart approximations exist with varying ﬁdelity and data re-
+quirements. They are routinely split into three categories; Point-mass (PM);
+Modiﬁed point-mass (MPM) and Rigid body (RB) (Baranowski et al. (2016),
+Khalil et al. (2015), McCoy (1999)).
+Sections 2.1-2.3 give the derivation of their equations of motion. The speciﬁcs
+of the numerical algorithm such as initial conditions, integration techniques,
+dense output and their implementation are discussed in chapter 3.
+Y =
+⇥
+u1
+u2
+u3
+...
+⇤T
+(2.1)
+˙Y =
+⇥
+˙u1
+˙u2
+˙u3
+...
+⇤T
+(2.2)
+These are generalised equations and thus not exclusive to darts. Given the
+availability, all validations are done with the high speed, spin stabilised Sierra
+international bullet, as deﬁned in appendix C, at mean sea level atmospheric
+conditions, with the following initial conditions; Vm = 792.48 m s−1; !z =
+25 rad s−1; Tw = 12 cal/turn.
+Figure 2.1: Sierra international bullet
+21
+Stellenbosch University https://scholar.sun.ac.za
+
+
+===== PAGE 36 =====
+CHAPTER 2. PROJECTILE MODEL
+22
+2.1
+Point-mass
+When approximating a dart as a PM, it is assumed to have no characteristic
+orientation or rotational inertia: equation of motion is derived using only
+conservation of linear momentum (Elsaadany and Wen-Jun, 2014) .
+2.1.1
+Equation of motion
+Euler's 1st law of motion states linear momentum remains constant unless
+compelled to change by external forces (Hibbeler, 2010).
+F = L˙
+(2.3)
+Substituting the linear momentum deﬁnition (L = mx˙ ) the result is Newton's
+2nd law of motion.
+F = mx¨
+(2.4)
+2.1.2
+Aeroballistic forces
+Without orientation or angular velocity, only drag, gravity, Coriolis eﬀect and
+the earth's curvature eﬀects can be applied. This exempliﬁes the advantage and
+disadvantage of using PM: easy to quantify but other potentially signiﬁcant
+phenomena are neglected (modelling error).
+2.1.3
+State vector representation
+When implemented numerically, the equations of motion are consolidated into
+state vectors. This promotes modularity and simpliﬁes numerical integration
+and interpolation.
+State vector:
+YPM
+=
+xE
+x˙ s
++
+(2.5)
+˙YPM
+=
+x˙ E
+x¨ s
++
+=
+
+x˙ s
+m−1F
+s
++
++
+xc˙ s
+0
++
+(2.6)
+PM forces:
+F
+s = FD
+s + m gs + m⇤
+s
+(2.7)
+Stellenbosch University https://scholar.sun.ac.za
+
+
+===== PAGE 37 =====
+CHAPTER 2. PROJECTILE MODEL
+23
+2.1.4
+Veriﬁcation
+In section 1.5, a projectile's velocity is expressed analytically (equation 1.19).
+This solution is colloquially referred to as a 1-DOF approximation: straight
+trajectory. Replicating this scenario in the numerical model, the drag coef-
+ﬁcient is made constant and all other forces and inﬂuences are ignored (g =
+0, ⇤= 0, xc = 0) . The identical results (ﬁgure 2.2), indicate that the PM
+approximation is implemented correctly.
+0
+200
+400
+600
+800
+1000
+Distance (m)
+400
+500
+600
+700
+800
+Velocity (m/s)
+Analytical
+Numerical
+Figure 2.2: Point-mass: Analytical vs Numerical
+2.2
+Rigid-body
+This sophisticated model expands on the PM approximation by also consider-
+ing angular momentum. Quantifying angular momentum is far more laborious
+than its linear counterpart (H = I · !).
+2.2.1
+Equation of motion
+Euler's 2nd law of motion indicates angular momentum remains constant unless
+compelled to change by an external moment (Hibbeler, 2010).
+M = H˙
+(2.8)
+H˙ = M = ˙I · ! + I · !˙
+(2.9)
+An inertia tensor deﬁned in a stationary frame (I
+r) changes as the body ro-
+tates ( ˙I
+r 6= 0). The Coriolis theorem circumvents the need to calculate this
+derivative.
+Stellenbosch University https://scholar.sun.ac.za
+
+
+===== PAGE 38 =====
+CHAPTER 2. PROJECTILE MODEL
+24
+Coriolis theorem states the time derivative of a vector observed from a ﬁxed
+inertial frame (x˙ r), is equal to the rate of change of the same vector as observed
+from a rotating frame (x˙ r0) and adding the change resulting from the frame's
+angular velocity as observed from the inertial frame ⌦
+r (Hibbeler, 2010).
+Applying the Coriolis theorem to the angular momentum derivative:
+H˙ r = H˙ r0 + ⌦
+r ⇥H
+r
+(2.10)
+Substituting the angular momentum deﬁnition (H = I · !):
+M
+r = ( ˙I · ! + I · !˙ )
+&&&&
+r0
++ (⌦⇥I · !)
+&&&&
+r
+(2.11)
+The rotating frame's angular velocity (⌦
+r), can be meticulously chosen to keep
+the inertia tensor constant.
+˙I
+r0 = 0
+(2.12)
+M
+r = (I · !˙ )
+&&&&
+r0
++ (⌦⇥I · !)
+&&&&
+r
+(2.13)
+Having the ﬁxed inertial and rotating frame coincide, the equation reduces to
+the vector form of Euler’s classic rigid body equation of motion.
+M
+r = (I · !˙ + ⌦⇥I · !)
+&&&&
+r
+(2.14)
+When truly modelling a rigid body, the rotating frame follows the body exactly
+(⌦= !). This substitution is however not performed as darts have symmetri-
+cal properties that can be exploited for numerical eﬃciency. This is explored
+later in this section.
+Stellenbosch University https://scholar.sun.ac.za
+
+
+===== PAGE 39 =====
+CHAPTER 2. PROJECTILE MODEL
+25
+Frames of reference
+The dart's orientation cannot be directly solved from equation 2.14 as it is ex-
+pressed in the body frame and information is only available in the world frame.
+Both concerns are addressed using an appropriate transformation matrix E.
+Per deﬁnition, a transformation matrix consists of orthonormal vectors. These
+unit vector are principle axes of the intended frame relative to the current
+frame.
+E
+s
+r =
+⇥
+exs
+ey s
+ez s⇤
+(2.15)
+E
+r
+s =
+⇥
+eX r
+eY r
+eZ r⇤
+(2.16)
+eX s
+eY s
+eZ s
+exr
+ey r
+ez r
+Figure 2.3: Frames of reference
+The inverse of a transformation matrix is the backwards transformation ma-
+trix. Being orthonormal, the inverse matrix is simply its transpose.
+E
+r
+s · xs = xr
+(2.17)
+⇥
+E
+⇤−1 =
+⇥
+E
+⇤T
+E
+r
+s =
+⇥
+E
+s
+r
+⇤T
+(2.18)
+In order to integrate the body's angular velocity, many parametrisation meth-
+ods have been devised to deﬁne the attitude of the ﬁxed body frame E
+r
+s relative
+to the world frame E
+s
+r. The most noteworthy options being Euler symmetric
+parameters and Euler angles (Henderson, 1977).
+Euler angles are intuitive and simple to apply but not numerically robust.
+The Euler symmetric parameters are numerically robust but conceptually ab-
+stract. Having access to both is advisable for validation and versatility.
+Stellenbosch University https://scholar.sun.ac.za
+
+
+===== PAGE 40 =====
+CHAPTER 2. PROJECTILE MODEL
+26
+Euler angles
+Composed of three sequential rotations, the Euler angles describe the orienta-
+tion of the body frame with respect to the world frame. Generally denoted as
+φ, ✓, .
+γ =
+⇥
+φ
+✓
+ 
+⇤T
+(2.19)
+Each angle corresponds to a 3-dimensional rotation around a principle axis.
+The Euler angles are not unique and depend on the sequence of the elemental
+rotations around the x, y and z axes. Each rotation is mathematical computed
+using a corresponding elemental transformation matrix (Henderson, 1977).
+Rotation around x axis:
+Rx(x) =
+2
+4
+1
+0
+0
+0
+cos(x)
+−sin(x)
+0
+sin(x)
+cos(x)
+3
+5
+(2.20)
+Rotation around y axis:
+Ry(x) =
+2
+4
+cos(x)
+0
+sin(x)
+0
+1
+0
+−sin(x)
+0
+cos(x)
+3
+5
+(2.21)
+Rotation around z axis:
+Rz(x) =
+2
+4
+cos(x)
+−sin(x)
+0
+sin(x)
+cos(x)
+0
+0
+0
+1
+3
+5
+(2.22)
+Stellenbosch University https://scholar.sun.ac.za
+
+
+===== PAGE 41 =====
+CHAPTER 2. PROJECTILE MODEL
+27
+The transformation matrix E313, is comprised of three rotations. The sub-
+script 3-1-3 intuitively implies elemental rotations around the z, x and z axes.
+Abbreviating cos as c and sin as s the cumulative transformation matrix is:
+E313
+s
+r(φ, ✓, ) = Rz(φ) · Rx(✓) · Rz( )
+=
+2
+4
+c(φ)c( ) −s(φ)c(✓)s( )
+−c(φ)s( ) −s(φ)c(✓)c( )
+s(φ)s(✓)
+s(φ)c( ) + c(φ)c(✓)s( )
+−s(φ)s( ) + c(φ)c(✓)c( )
+−c(φ)s(✓)
+s(✓)s( )
+s(✓)c( )
+c(✓)
+3
+5
+(2.23)
+Since the “ﬁxed ” body frame orientation changes with time, the Euler angles
+must change accordingly (Greenwood, 2003). The corresponding derivative:
+˙γ =
+2
+4
+˙φ
+˙✓
+˙ 
+3
+5 = B313
+r · ⌦
+r
+(2.24)
+B313
+r =
+1
+sin(✓)
+2
+4
+sin( )
+cos( )
+0
+sin(✓) cos( )
+−sin(✓) sin( )
+0
+−cos(✓) sin( )
+−cos(✓) cos( )
+sin(✓)
+3
+5
+(2.25)
+Equation 2.24 must be used with care as it is susceptible to numerical insta-
+bility: as ✓approaches 0, equation B313
+rencroaches on a numerical singularity
+(tends towards inﬁnity). This can be circumvented by switching to a diﬀerent
+Euler angle parameterisation.
+Stellenbosch University https://scholar.sun.ac.za
+
+
+===== PAGE 42 =====
+CHAPTER 2. PROJECTILE MODEL
+28
+Euler symmetric parameters: Unit quaternions
+The Euler symmetric parameters are a 4-dimensional extension of complex
+numbers consisting of a scaler (q0) and vector (q) component. They are a
+convenient alternative to Euler angles since they are devoid of singularities.
+(q0, q) = q0 + q1 i + q2 j + q3 k
+(2.26)
+q = q1i + q2j + q3k
+(2.27)
+Three dimensional vectors are simply pure quaternions: zero scalar value (0,q).
+This pure quaternion is rotated using a triple Hamilton product.
+V
+s = (q0, q) ⇧(V
+r) ⇧(q0, q) −1
+(2.28)
+The Hamilton product as deﬁned in Crassidis and Markley (2003):
+(a0, a) ⇧(b0, b) =
+(
+a0b0 −a · b, a0b + b0a + a ⇥b
+)
+(2.29)
+Inverse of a unit quaternion as deﬁned in Crassidis and Markley (2003):
+(q0, q) −1 = (q0, −q )
+(2.30)
+Rewriting the arithmetic of equation 2.28 in terms of a rotation matrix E
+s
+r.
+E
+s
+r =
+2
+4
+2q2
+0 + 2q2
+1 −1
+2 (q1q2 −q3q0)
+2 (q1q3 + q2q0)
+2 (q1q2 + q3q0)
+2q2
+0 + 2q2
+2 −1
+2 (q2q3 −q1q0)
+2 (q1q3 −q2q0)
+2 (q2q3 + q1q0)
+2q2
+0 + 2q2
+3 −1
+3
+5
+(2.31)
+Similar to the change in Euler angles, the change in quaternion values are a
+function of the body frame's angular velocity.
+( ˙q0, q˙ ) = 1
+2(q0, q) ⇧(0, ⌦
+r)
+(2.32)
+Unit quaternions deviate from representing rotations when they lose their unit
+length. Being inevitable during numerical integration, regular normalisation
+is required. A computationally eﬃcient approach is outlined in Greenwood
+(2003):
+✏
+=
+q2
+0 + q2
+1 + q2
+2 + q2
+3 −1 6= 0
+(2.33)
+fq
+=
+−✏
+2 (q0, q)
+(2.34)
+Normalised quaternion
+=
+fq + (q0, q)
+(2.35)
+Stellenbosch University https://scholar.sun.ac.za
+
+
+===== PAGE 43 =====
+CHAPTER 2. PROJECTILE MODEL
+29
+2.2.2
+Rigid-body aeroballistic forces and moments
+The standardised aerodynamic forces and moments provided in tables 1.1 and
+1.2 can be redeﬁned to take advantage of the body frame (E
+r
+s). The projectile
+geometrical symmetry axis exr, is aligned with the x axis. Its derivative ex˙ r
+is then only a function of transverse rotation (the Coriolis theorem).
+The resulting body frame equations are listed in tables 2.1 and 2.2 .
+The
+complete absence of ⌦x indicates that both F
+r and M
+r are independent of
+the body frame's axial rotation. Consequently, for axis-symmetric darts, ⌦x
+can be disregarded without introducing modelling error. While rarely perfectly
+axis-symmetric, the assumption has substantial numerical beneﬁts.
+Table 2.1: Body frame expanded aerodynamic force equations
+Force
+Equation
+Drag
+FD
+r = −CD⇢A
+2
+V V
+r
+Lift
+FL
+r = CL⇢A
+2
+⇣⇥
+V 2
+0
+0
+⇤T −VxV
+⌘&&&&
+r
+Magnus
+FNP
+r = CNP ⇢A
+2
+d
+⇣
+!x
+⇥
+0
+Vz
+−Vy
+⇤T⌘&&&&
+r
+Pitch damping
+FNq+ ˙↵
+r = CNq+ ˙↵⇢A
+2
+d V
+⇣⇥
+0
+⌦z
+−⌦y
+⇤T⌘&&&&
+r
+Stellenbosch University https://scholar.sun.ac.za
+
+
+===== PAGE 44 =====
+CHAPTER 2. PROJECTILE MODEL
+30
+Table 2.2: Body frame expanded aerodynamic moment equations
+Moment
+Equation
+Overturning
+M↵
+r = CM↵⇢A
+2
+d V
+⇣⇥
+0
+Vz
+−Vy
+⇤T⌘&&&&
+r
+Pitching
+MMq+ ˙↵
+r = CMq+ ˙↵⇢A
+2
+d2 V
+⇣⇥
+0
+⌦y
+⌦z
+⇤T⌘&&&&
+r
+Roll damping
+MLP
+r = CLP ⇢A
+2
+d2 V
+⇣⇥
+!x
+0
+0
+⇤T⌘&&&&
+r
+Rolling
+MLS
+r = CLS⇢A
+2
+d2 V
+⇣⇥
+1
+0
+0
+⇤T⌘
+Magnus
+MMP
+r = CMP ⇢A
+2
+d2 ⇣
+!x
+⇥
+0
+Vy
+Vz
+⇤T⌘&&&&
+r
+Axis-symmetric dart
+If a dart is perfectly axis-symmetric, the inertia tensor is preserved in the body
+frame ( ˙I
+r = 0) regardless of the frame's orientation about the symmetry axis:
+⌦x can be included or disregarded interchangeably. The former is however
+computationally more eﬃcient. For spin stabilised projectiles, !x is easily 3
+orders of magnitude larger than !y or !z. Thus when ⌦x = 0 , equations 2.24
+and 2.32 are signiﬁcantly less stiﬀ: needs fewer integration steps. When this
+simpliﬁcation is enforced, it is known as a 5-DOF approximation.
+⌦
+r =
+8
+>
+>
+<
+>
+>
+:
+!r
+Asymmetric (6-DOF)
+h
+0
+!y
+!z
+iT
+Axis-symmetric (5-DOF)
+(2.36)
+It is interesting to note that for a perfectly spherical projectile, the inertia
+tensor is preserved regardless of ⌦: the rotating body frame's orientation can
+be stationary without introducing modelling error .
+⌦
+r =
+⇥
+0
+0
+0
+⇤T
+(2.37)
+Stellenbosch University https://scholar.sun.ac.za
+
+
+===== PAGE 45 =====
+CHAPTER 2. PROJECTILE MODEL
+31
+For the high velocity spin stabilised Sierra projectile, a 5-DOF simulation
+is on average 8 times faster. This decrease in computation time is invaluable
+for parametric analysis where several trajectories are evaluated. If not spin
+stabilised, the 5-DOF approximation does not yield the same computational
+beneﬁt since !x (and thus ⌦x) is already 0. The 6-DOF approximation can
+thus be used without exacerbating computation time or error.
+5-DOF approximation
+If signiﬁcant asymmetries are present, the inertia tensor is only preserved in the
+body body frame when ⌦
+r matches the body's angular velocity, !r (6-DOF).
+⌦
+r =
+⇥
+!x
+!y
+!z
+⇤T
+(2.38)
+To illustrate the modelling error, a slightly asymmetric, Sierra International
+bullet is simulated using both 5 and 6-DOF approximations. Figure 2.4 shows
+how the tricyclic wobble is replaced with an epicyclic motion when using the
+5-DOF approach. In this case the asymmetries have minor eﬀects on the tra-
+jectory and the 5-DOF model delivers qualitatively adequate results.
+Initial conditions; Vm = 792.48 m s−1; !z = 25 rad s−1; Tw = 12 cal/turn.
+Inertia tensor for asymmetric Sierra International bullet:
+I
+r =
+2
+4
+7.228e−1
+−3e−3
+−5e−4
+−3e−3
+5.379
+−1e−3
+−5e−4
+−1e−3
+5.379
+3
+5 ⇥e−7 kg m2
+(2.39)
+0.0
+2.5
+5.0
+7.5
+10.0
+12.5
+15.0
+17.5
+20.0
+time (ms)
+0.0
+0.5
+1.0
+1.5
+2.0
+Angle of attack (degrees)
+5-dof
+6-dof
+Figure 2.4: Modelling error of 5-DOF model
+Stellenbosch University https://scholar.sun.ac.za
+
+
+===== PAGE 46 =====
+CHAPTER 2. PROJECTILE MODEL
+32
+2.2.3
+State vector representation
+Consolidating the equations presented for the RB approximation, the following
+state vectors are concatenated. They can be numerically integrated to yield
+the dart's position, velocity, angular velocity and orientation.
+State vector:
+YRB =
+2
+6664
+xE
+x˙ s
+γ or (q0, q)
+!r
+3
+7775
+(2.40)
+˙YRB =
+2
+6664
+x˙ E
+x¨ s
+˙γ or ( ˙q0, q˙ )
+!˙ r
+3
+7775 =
+2
+6666666664
+x˙ s
+m−1F
+s
+B313
+r · ⌦
+r or 1
+2(q0, q) ⇧(0, ⌦
+r)
+I
+−1 (
+M −⌦⇥I!
+) &&&&
+r
+3
+7777777775
++
+"
+xc˙ s
+0
+#
+(2.41)
+The body frame's rotation is adjusted based on the darts geometry.
+⌦
+r =
+8
+>
+>
+>
+>
+>
+>
+>
+>
+<
+>
+>
+>
+>
+>
+>
+>
+>
+:
+!r
+Asymmetric (6-DOF)
+h
+0
+!y
+!z
+iT
+Axis-symmetric (5-DOF)
+h
+0
+0
+0
+iT
+Sphere
+(2.42)
+RB force and moments:
+F
+s
+=
+E
+s
+r
+(
+FD
+r + FL
+r + FNq+ ˙↵
+r + FNP
+r)
++ mgs + m⇤
+s
+(2.43)
+M
+r
+=
+M↵
+r + MMq+ ˙↵
+r + MMP
+r + MLP
+r + MLS
+r
+(2.44)
+Stellenbosch University https://scholar.sun.ac.za
+
+
+===== PAGE 47 =====
+CHAPTER 2. PROJECTILE MODEL
+33
+Veriﬁcation
+To conﬁrm the model is correctly implemented and mathematically sound,
+its numerically predicted yaw and pitch are compared to the analytical ap-
+proximation (equation 1.25).
+The same simpliﬁcations are imposed on the
+numerical model; trajectory is straight; velocity is constant; spin is constant;
+aeroballistic coeﬃcients are constant; only select forces and moments are rel-
+evant (FL, M↵, M ˙↵, MNP ). The analytical and numerical solution yield nearly
+identical results (see ﬁgure 2.5).
+−1.5
+−1.0
+−0.5
+0.0
+0.5
+1.0
+1.5
+β (degrees)
+−1.5
+−1.0
+−0.5
+0.0
+0.5
+1.0
+1.5
+↵(degrees)
+Analytical
+Numerical
+Figure 2.5: Rigid body: Analytical vs Numerical
+Stellenbosch University https://scholar.sun.ac.za
+
+
+===== PAGE 48 =====
+CHAPTER 2. PROJECTILE MODEL
+34
+2.3
+Modiﬁed point-mass
+After the initial transient pitching and yawing dampen out, the nearly im-
+perceptible yaw of repose becomes visible. The dart's orientation lags behind
+the ﬂight curve causing the spin axis to tilt towards the overturning moment
+vector (Bradly, 1990).
+If the transient phase is considered inﬁnitesimally small, the dart's orientation
+is suﬃciently deﬁned by the yaw of repose. The MPM method takes advan-
+tage of this, resulting in a computationally eﬃcient projectile model that can
+approximate lateral forces such as lift and Magnus eﬀect.
+2.3.1
+Yaw of repose
+Substantial research is readily available on how to approximate the yaw of
+repose. The original expression published in Lieske and Reiter (1966) has un-
+dergone several iterations in the past few decades.
+Original expression from Lieske and Reiter (1966).
+s
+βR = −2Ix!xCL
+(
+V
+s ⇥x¨ s)
+−2md2!xCMP
+(
+V
+s ⇥(x¨ s −gs)
+)
+⇢AdV 2 (V 2CLCM↵+ !x2d2CNP CMP )
+(2.45)
+A more eﬃcient method was later devised by Bradly (1990):
+s
+βR = 2Ix!x(gs ⇥V
+s)
+⇢AdV 4CMa
+(2.46)
+2.3.2
+Equation of motion
+MPM assumes the inﬂuence of pitching and yawing is minute. Consequently,
+in addition to translation, only axial spin needs to be quantiﬁed. MPM models
+are thus often referred to as 4-DOF models.
+˙Hx = Ix ˙!x = M
+˙!x = I−1
+x M
+(2.47)
+Stellenbosch University https://scholar.sun.ac.za
+
+
+===== PAGE 49 =====
+CHAPTER 2. PROJECTILE MODEL
+35
+2.3.3
+Aeroballistic forces and moments
+The classic aeroballistic forces and moments have unique expressions based
+on the yaw of repose. Despite not being listed in this table, the overturning
+moment is used to calculate the yaw of repose.
+Table 2.3: Aerodynamic force and moment equations for MPM
+Force
+Equation
+Drag
+FD
+s = −CD⇢A
+2
+V V
+s
+Lift
+FL
+s = CL⇢A
+2
+V 2
+s
+βR
+Magnus
+FNP
+s = CNP ⇢A
+2
+d !x(V
+s ⇥
+s
+βR)
+Moment
+Equation
+Roll damping
+MLP = CLP ⇢A
+2
+d2 V !x
+Rolling
+MLS = CLS⇢A
+2
+d2V
+Stellenbosch University https://scholar.sun.ac.za
+
+
+===== PAGE 50 =====
+CHAPTER 2. PROJECTILE MODEL
+36
+2.3.4
+State vector representation
+Consolidating all the relevant equations, the state vectors for MPM are:
+YMPM
+=
+2
+64
+xE
+x˙ s
+!x
+3
+75
+(2.48)
+˙YMPM
+=
+2
+64
+x˙ E
+x¨ s
+˙!x
+3
+75 =
+2
+64
+x˙ s
+m−1F
+s
+I−1
+x M
+3
+75 +
+"
+xc˙ s
+0
+#
+(2.49)
+MPM forces and moments:
+F
+s = FD
+s + FL
+s + FNP
+s + mgs + m⇤
+s
+(2.50)
+M = MLP + MLS
+(2.51)
+Veriﬁcation
+As part of the linearised pitch and yaw solution presented in section 1.5, the
+yaw of repose is expressed analytically (equation 1.25). By imposing the same
+restrictions of the analytical solution on the numerical model, their solutions
+become comparable; aerodynamic coeﬃcients constant; only FD, g, FL, MLP
+are relevant.
+The numerical and analytical solutions give identical results
+(ﬁgure 2.6). This indicates MPM is correctly implemented and mathematically
+sound.
+0
+200
+400
+600
+800
+1000
+Distance (m)
+0.005
+0.010
+0.015
+0.020
+Yaw of repose (degrees)
+Analytical
+Numerical
+Figure 2.6: Modiﬁed point-mass: Analytical vs Numerical
+Stellenbosch University https://scholar.sun.ac.za
+
+
+===== PAGE 51 =====
+Chapter 3
+Trajectory simulation
+A trajectory is simply a sequence state vectors, every point expressed by equa-
+tion 3.1. With the appropriate initial conditions, numerical integration and
+termination criteria, entire trajectories are readily available. This chapter dis-
+cusses the routines used to accomplish these aspects.
+Y
+&&&&
+t
+= Y
+&&&&
+t=0
++
+Z t
+0
+˙Y
+(3.1)
+3.1
+World frame
+Before any initial conditions can be quantiﬁed, the world frame origin and
+orientation must be concluded. The only prerequisite is an axis perpendicular
+to the Earth's surface: needed to deﬁne the gravity vector. For practicality
+the origin coincides with the riﬂe muzzle and eX points downrange towards
+the target.
+eX s
+eY s
+eZ s
+target
+Figure 3.1: World frame orientation
+37
+Stellenbosch University https://scholar.sun.ac.za
+
+
+===== PAGE 52 =====
+CHAPTER 3. TRAJECTORY SIMULATION
+38
+3.2
+Initial conditions
+The predominant factors that deﬁne the dart's initial state are quadrant eleva-
+tion, drift correction, twist rate and muzzle velocity (QE, DC, Tw, Vm). They
+deﬁne the launch state as intended by the operator (barrel orientation). From
+this barrel frame, additional considerations such as initial yaw, pitch and lat-
+eral throw-oﬀcan be seamlessly incorporated.
+Barrel frame
+The barrel's symmetry axis (exb) is deﬁned by quadrant elevation (QE) and
+drift correction (DC). Applying them to a 3-2-1 Euler anlge transformation
+the barrel frame (E
+s
+b) is deﬁned. Despite having no rotation around the x axis,
+the component is retained to provide versatility.
+E
+s
+b = E321
+s
+b = f(DC, −QE, 0) =
+⇥
+exb
+s
+eyb
+s
+ezb
+s⇤
+(3.2)
+eX s
+eY s
+eZ s
+exb
+s
+exb
+s
+exb
+s
+QE
+DC
+Figure 3.2: Barrel frame
+E321
+s
+b =
+2
+4
+c(✓2)c(✓1)
+−c(✓2)s(✓1)
+s(✓2)
+c(✓3)s(✓1) + c(✓1)s(✓3)s(✓2)
+c(✓3)c(✓1) −s(✓3)s(✓2)s(✓1)
+−c(✓2)s(✓3)
+s(✓3)s(✓1) −c(✓3)c(✓1)s(✓2)
+c(✓1)s(✓3) + c(✓3)s(✓2)s(✓1)
+c(✓3)c(✓2)
+3
+5
+(3.3)
+3.2.1
+Position: x
+Since the muzzle is the world frame origin, the initial condition is simply 0.
+x0 = 0
+(3.4)
+Stellenbosch University https://scholar.sun.ac.za
+
+
+===== PAGE 53 =====
+CHAPTER 3. TRAJECTORY SIMULATION
+39
+3.2.2
+Velocity: x˙ s
+For most applications the velocity vector is assumed collinear with the barrel.
+Deviation is possible due to static unbalance and manufacturing error. As
+the dart spins inside a riﬂed barrel, the axis of rotation is constrained to the
+geometrical symmetry axis. The gravity centre traces a helical pattern as the
+dart moves forward. When the dart exits the barrel, it literally ﬂies oﬀon a
+tangent. This phenomenon is known as lateral throw-oﬀ(Chaves et al., 2019).
+The resulting velocity vector is extracted from an adjusted barrel frame (3-2-1
+Euler transformation). There is no standardised way to deﬁne these changes,
+it is however convenient to use a throw and roll angle (✓throw, ✓C).
+arctan Vt
+Vx
+= ✓throw
+(3.5)
+x˙ s = Vm E321(DC + ✓throw, −QE, ✓C) · [1, 0, 0]T
+(3.6)
+ez b
+ey b
+Vt
+b
+✓C
+Vx
+Vt
+˙x0
+✓throw
+Figure 3.3: Lateral throw oﬀ
+Stellenbosch University https://scholar.sun.ac.za
+
+
+===== PAGE 54 =====
+CHAPTER 3. TRAJECTORY SIMULATION
+40
+3.2.3
+Orientation: γ and (q, q)
+Ideally the dart's orientation matches the barrel (E
+s
+b = E
+s
+r). It can be nec-
+essary to specify an initial yaw, pitch or roll angle (β0, ↵0, ✓roll). Similar to
+the velocity vector, the dart's orientation (body frame) is determined from an
+adjusted barrel frame (3-2-1 Euler transformation). The result (equation 3.7)
+is used to deﬁne the initial Euler angles or parameters.
+E
+s
+r
+&&&&
+0
+=
+
+E321(DC + β0, −(QE + ↵0), ✓roll)
++T
+(3.7)
+Initial 3-1-3 Euler angles
+tan(φ0)
+=
+E13
+−E23
+(3.8)
+cos(✓0)
+=
+E33
+(3.9)
+tan( 0)
+=
+E31
+E32
+(3.10)
+Initial Euler parameters
+|2q0|
+= p1 + E11 + E22 + E33
+(3.11)
+|2q1|
+= p1 + E11 −E22 −E33
+(3.12)
+|2q2|
+= p1 −E11 + E22 −E33
+(3.13)
+|2q3|
+= p1 −E11 −E22 + E33
+(3.14)
+For numerical accuracy, it is best to recalculate the Euler parameter based on
+the largest (absolute value) parameter found from E
+s
+r (Greenwood, 2003).
+2
+664
+q0
+q1
+q2
+q3
+3
+775 =
+2
+6664
+b2q0|
+2
+E32−E23
+2|2q0|
+E13−E31
+2|2q0|
+E21−E12
+2|2q0|
+3
+7775 or
+2
+6664
+E32−E23
+2|2q1|
+|2q1|
+2
+E12+E21
+2|2q1|
+E13+E31
+2|2q1|
+3
+7775 or
+2
+6664
+E13−E31
+2|2q2|
+E12+E21
+2|2q2|
+|2q2|
+2
+E23+E32
+2|2q2|
+3
+7775 or
+2
+6664
+E21−E12
+2|2q3|
+E13+E31
+2|2q3|
+E23+E32
+2|2q3|
+|2q3|
+2
+3
+7775
+(3.15)
+Stellenbosch University https://scholar.sun.ac.za
+
+
+===== PAGE 55 =====
+CHAPTER 3. TRAJECTORY SIMULATION
+41
+3.2.4
+Angular velocity: !r
+Angular velocity is dictated by riﬂing twist rate, Tw (equation 3.16). Trans-
+verse rotation (!y, !z) is possible due to blow by, dynamic unbalance or a
+poor quality muzzle. Neither !y or !z are explicitly known and are usually
+estimated to achieve the maximum pitch/yaw measured experimentally. By
+deﬁnition they are pre-deﬁned in the body frame.
+!x = ˙x0
+2⇡
+Tw d
+(3.16)
+3.3
+Integration
+Initial conditions are propagated forward in time through numerical inte-
+gration. Two major types are explored, namely Runge-Kutta methods and
+Richardson extrapolation. Runge-Kutta methods combine information from
+several Euler-style steps to complete a higher order Taylor series expansion.
+They tend to outperform most methods when accuracy requirements are not
+ultra stringent (< 10−8) (Press and Teukolsky (1992),Sandvik (2018)).
+3.3.1
+Classic 4th order Runge-Kutta
+The classic 4th order Runge-Kutta (RK4) is still used in many modern ballistic
+models: such as those seen in Elsaadany and Wen-Jun (2014), Gkritzapis and
+Kaimakamis (2008) and Hainz and Costello (2005). This section explores why
+RK4 has retained its prevalence despite not being the most eﬃcient or accurate
+approach. The algorithm is implemented as outlined in Press et al. (2007).
+Performance evaluation
+To gauge the performance of RK4, the Sierra international bullet's (as deﬁned
+in appendix C) ﬁrst 100 m of ﬂight is simulated with the following initial con-
+ditions; Vm = 792.48 m s−1; !z = 25 rad s−1; Tw = 12 cal/turn. Both runtime
+and result are compared to a high tolerance (tol = 1e−15) Bulirsch Stöer ex-
+trapolation (BS).
+Relative error = f(h) = max
+✓|YRK4(h) −YBS|
+|YBS|
+◆
+(3.17)
+Normalised wall-clock time = f(h) =
+tRK4(h)
+tBS(tol = 1e−15)
+(3.18)
+There is clear convergence with increase runtime (ﬁgure 3.4). Thus, while per-
+fectly adequate results can be obtained with RK4, without a convergence study
+the reliability of the results are unknown. Errors can be large when underes-
+timating the needed step size but being overly conservative disproportionally
+exacerbates computational costs.
+Stellenbosch University https://scholar.sun.ac.za
+
+
+===== PAGE 56 =====
+CHAPTER 3. TRAJECTORY SIMULATION
+42
+For the same amount of wall-clock time as BS (tol = 1e−15), RK4 achieved a
+relative error of 1e−5 (ﬁgure 3.4). For most aeroballistic problems, uncertainty
+overshadows numerical integration error (shown in section 4.2). Consequently
+if accuracy is the primary concern, reﬁning the model inputs supersede the
+integration algorithm: hence why it is often acceptable to use RK4. If compu-
+tational eﬃciency is of interest (such as parametric studies), it is worth having
+access to more eﬃcient algorithms. To ﬁll this need, Embedded Runge-Kutta
+5(4) (RK54) and BS are useful alternatives depending on the needed accuracy.
+10−1
+100
+101
+102
+Normalised wall-clock time
+10−9
+10−7
+10−5
+10−3
+10−1
+Relalitive error
+Figure 3.4: Normalised wall-clock time of classic Runge-Kutta
+3.3.2
+Embedded Runge-Kutta 5(4)
+In order to address some of the computational and accuracy restrictions of
+RK4, adaptive step size control is usually implemented.
+Small meticulous
+steps crawl around “corners” while a great strides speed through smooth re-
+gions. Adaptive step size control requires the algorithm to gauge its perfor-
+mance: comparing the results of a higher and lower order Runge-Kutta. The
+preposition “embedded” refers to the lower order Runge-Kutta being extracted
+from the higher order Runge-Kutta.
+Stellenbosch University https://scholar.sun.ac.za
+
+
+===== PAGE 57 =====
+CHAPTER 3. TRAJECTORY SIMULATION
+43
+This variant (Dormand-prince) increases its computational eﬃciency by
+applying “ﬁrst same as last” (FSAL): the ﬁnal function evaluation is also the
+ﬁrst evaluation of the following step. Since it would have been evaluated in
+any case, it costs nothing. The algorithm is implemented as outlined in Press
+et al. (2007).
+Adaptive step size can however be counterintuitive due to equation stiﬀness:
+steps need to be small to prevent numerical instabilities. The result is a dispro-
+portionate increase in function evaluations, computation time and numerical
+error.
+Performance evaluation
+RK54 outperforms BS when step tolerances larger than 10−10 are acceptable.
+The same case study used in RK4, is evaluated using incrementally smaller
+tolerances with both BS and RK54. Figure 3.5 shows that for higher accuracies
+BS was 4 times faster.
+Wall-clock time ratio = f(tol) = tRK54(tol)
+tBS(tol)
+(3.19)
+10−15
+10−13
+10−11
+10−9
+10−7
+Step tolerance
+10−1
+100
+101
+Wall-clock time ratio
+Figure 3.5: Embedded Runge-Kutta 5(4) runtime wall-clock time
+Stellenbosch University https://scholar.sun.ac.za
+
+
+===== PAGE 58 =====
+CHAPTER 3. TRAJECTORY SIMULATION
+44
+3.3.3
+Bulirsch-Stöer extrapolation
+These methods use the idea of extrapolating the value that would be obtained
+if the step size was smaller than it actually is. In particular, extrapolation to a
+zero step size. Initial estimates are made using the modiﬁed midpoint method.
+The hypothetical zero step size state vector is then extrapolated using the
+Aitkens-Neville algorithm. The integrator is implemented as advised by Press
+et al. (2007).
+Performance evaluation
+BS excels when accuracy constraints are stringent. This can become necessary
+when working with particularly complex 6-DOF trajectories. To illustrate the
+complications, the previous Sierra international bullet case study is investi-
+gated using both 5-DOF and 6-DOF approximations. Being an axisymmetric
+projectile, both should yield identical results: diﬀerences are the result of nu-
+merical error.
+Relative error = f(tol) = max
+✓|Y (tol) −Y5DOF(tol = 1e−15)|
+|Y5DOF(tol = 1e−15)|
+◆
+(3.20)
+Figure 3.6 shows the relative error is 2 orders of magnitude larger when us-
+ing the 6-DOF model. The error can be attributed to equation stiﬀness. This
+suggests that a 6-DOF simulation should be avoided unless the situation specif-
+ically requires it: such as investigating the inﬂuence of asymmetries.
+10−15
+10−13
+10−11
+10−9
+10−7
+10−5
+10−3
+Step tolerance
+10−10
+10−8
+10−6
+10−4
+10−2
+100
+102
+Relalitive error
+5-DOF
+6-DOF
+Figure 3.6: Comparison of 5-DOF and 6-DOF relative error
+Stellenbosch University https://scholar.sun.ac.za
+
+
+===== PAGE 59 =====
+CHAPTER 3. TRAJECTORY SIMULATION
+45
+3.4
+Termination criteria
+When simulating a trajectory it is usually not explicitly known how far to
+integrate. The algorithm marches along till the state vector (Y ) conforms to
+some predetermined constraint: the moment of impact. Termination criteria
+as an inequality:
+||xtarget|| < ||xi||
+(3.21)
+The state vector that conforms to the constraint might actually have signif-
+icant “overshoot” , especially when adaptive step size is employed. For most
+uses, this is acceptable, however if the dart's state at the exact moment of
+impact is needed (if investigating impact angle), some form of interpolation is
+necessitated.
+xn−3
+xn−2
+xn−1
+xtarget
+xn
+Figure 3.7: Termination criteria overshoot
+To preserve the integration algorithm's order of accuracy, Press et al. (2007)
+recommends rewriting the last integration step as function of which the opti-
+mal step size is the root. Any root-ﬁnding algorithm such as Bisection, Newton
+or Secant can then be used to solve the optimal step size.
+Stellenbosch University https://scholar.sun.ac.za
+
+
+===== PAGE 60 =====
+CHAPTER 3. TRAJECTORY SIMULATION
+46
+3.5
+Dense output
+While the points provided by the integration algorithm is usually suﬃcient, it
+is often desirable to be able to deﬁne any arbitrary point along the trajectory.
+This is especially necessary for BS where steps are extremely large due to the
+high orders invoked. While the root ﬁnding approach discussed previously is
+feasible for arbitrary points along the trajectory, it is computationally expen-
+sive and therefore should be reserved for the point of impact.
+Press et al. (2007) suggests using cubic Hermite interpolation as it matches
+a function in both observed value and derivative (Y , ˙Y ). Any method will
+suﬃce given enough points but Hermite interpolation excels even when steps
+are sparse. Figure 3.8 shows the dense output obtained with BS. Interpolation
+algorithms do not natively preserve the unity of Euler parameters, for better
+accuracies the interpolated values must be normalised.
+−6
+−4
+−2
+0
+2
+4
+6
+8
+Yaw (degrees)
+−6
+−4
+−2
+0
+2
+4
+6
+Pitch (degrees)
+Hermite spline
+Numerical solution: 23 Steps
+Figure 3.8: Pitch and yaw Hermite interpolation
+Stellenbosch University https://scholar.sun.ac.za
+
+
+===== PAGE 61 =====
+CHAPTER 3. TRAJECTORY SIMULATION
+47
+3.6
+Program sample calculation
+The program is implemented as a python package (named BallisticsAJC) for
+versatility and ease of use. The algorithm performing the simulation (named
+Trajectory) is given a struct (Settings) detailing needed values and numerical
+routines. Trajectory is implemented with modularity in mind: most entries
+in struct represent ﬁles containing the necessary information. This allows al-
+ternative parameters, models, forces and moments to be seamlessly explored
+without performing major code revisions. Table 3.1 shows a sample “Settings”
+struct. The python script that initiates the simulation:
+from BallisticsAJC import Trajectory
+Trajectory(**Settings)
+Table 3.1: Struct supplied to algorithm (“Settings”)
+Projectile model
+RB
+Atmosphere model
+ICAO
+Earth model
+Flat
+Vb (m/s), DC (deg), QE (deg)
+[200.
+0.
+45.]
+Adv initial conditions
+Twist_rate_18
+Geodetic location
+West
+Ambient conditions
+Mean
+Projectile
+M1
+Transformation method
+Quat
+Stepping algorithm
+BS
+First step size (sec)
+0.01
+Relative tolerance
+1e-12
+Absolute tolerance
+1e-10
+Target distance (m)
+1000
+Force & moment equations
+Classic
+Forces
+All
+Moments
+All
+Dense output
+False
+Save name
+testing
+Figures
+All
+Figure format
+pgf
+Stellenbosch University https://scholar.sun.ac.za
+
+
+===== PAGE 62 =====
+CHAPTER 3. TRAJECTORY SIMULATION
+48
+If the struct contains a “Savename” , the algorithm will write and save
+several text ﬁles documenting the settings, computation time, state vectors
+and state vector derivatives. This allows independent repeating of simulations
+or data processing. The simpliﬁed procedure performed by “Trajectory” is
+outlined in the block diagram, ﬁgure 3.9. For convenience BallisticsAJC is
+equipped with an “Illustrate” routine. It natively produces several common
+ﬁgures, such as height vs range, drift vs range, pitch vs yaw and angle of attack
+vs time, (if the model allows it). See appendix D for relevent information and
+sample outputs.
+         No 
+ 
+     Yes 
+Setup:  
+Ambient conditions, geodetic 
+location, launch parameters, 
+projectile properties 
+Compile initial 
+state vector  
+Projectile 
+model: compile 
+state vector 
+derivative 
+(PM,MPM,RB)  
+Atmosphere 
+model: Mach 1, 
+air density  
+(ICAO) 
+Earth model: 
+Gravity, Coriolis 
+and curvature 
+(Sphere, Flat)  
+Integrate: 
+(BS, RK4, RK54)  
+Impact? 
+Process results: 
+Dense output, impact state 
+vector, figures, txt files for 
+independent processing 
+Figure 3.9: Trajectory algorithm: block diagram
+Stellenbosch University https://scholar.sun.ac.za
+
+
+===== PAGE 63 =====
+Chapter 4
+Evaluation
+The ideal numerical model is computationally inexpensive and provides suf-
+ﬁciently accurate results from a minimal data set. The optimal solution for
+a situation is however not easily realised. Results can be compromised by:
+model, parameter and initial state errors (Fresconi et al., 2011).
+Model error
+Model error is the compromise for simplifying or disregarding factors that
+deﬁne physical reality such as liquid payloads, asymmetries, forces or degrees
+of freedom.
+Parameter error
+The cumulative eﬀects of erroneous values compromise the model output.
+Hence “high ﬁdelity” models such as RB do not necessary entail superior pre-
+cision or accuracy to MPM or PM.
+Initial state error
+Uncertainty in the initial state vector propagates throughout the solution: un-
+der or over estimation of muzzle velocity can cause the projectile to fall short
+or ﬂy over the true impact point.
+Due to the pervasive and stochastic nature of modelling error and uncertainty,
+numerical models can not be proven “true” . They can only be extensively cor-
+roborated. This can be facilitated by uncertainty analysis, sensitivity analysis,
+benchmarking and experimental results (Saltelli et al., 2008).
+49
+Stellenbosch University https://scholar.sun.ac.za
+
+
+===== PAGE 64 =====
+CHAPTER 4. EVALUATION
+50
+4.1
+Benchmarking
+While the models presented are intended for tranquilliser darts, they are valid
+for any projectile. Benchmarking can thus be done against high ordinance
+artillery trajectories for which there are several documented simulations. The
+atmosphere and earth models used to incorporate the Coriolis eﬀect, earth's
+curvature, variation in pressure and temperature are outlined in appendices A
+and B.
+McCoy (1999) presents the analysis for the M1 artillery projectile and a stan-
+dard mortar. Replicating these cases and comparing the results is an indication
+of the model's validity. Additionally to McCoy, a comparative study is done
+with commercial ballistics software PRODAS V3. This software has been val-
+idated with experimental results and used internationally. The aeroballistic
+properties of the projectiles are given in appendix C.
+4.1.1
+Mortar
+A total of six trajectories are investigated to include a wide array of situations.
+The inputs and expected results as listed in McCoy (1999) are presented in
+table 4.1.
+Figure 4.1: Mortar (120 mm)
+Table 4.1: Mortar test cases
+Run
+Number
+Vm
+(m/s)
+QE
+(deg)
+!y0
+(rad/sec)
+Range
+R (m)
+Apogee
+H (m)
+1
+102
+45
+0.913
+1010
+260
+2
+102
+65
+0.913
+770
+420
+3
+102
+85
+0.913
+165
+510
+4
+318
+45
+1.795
+7315
+2100
+5
+318
+65
+1.795
+5570
+3380
+6
+318
+85
+1.795
+1275
+4070
+Stellenbosch University https://scholar.sun.ac.za
+
+
+===== PAGE 65 =====
+CHAPTER 4. EVALUATION
+51
+Results
+The models yield similar results: RB's errors are consistently less that 1% (see
+table 4.2). For a steep QE, PM and MPM have notable range errors. This
+can be attributed to pronounced pitching and yawing. Near the apogee the
+mortar's pitch reach values up to 40° (see ﬁgure 4.2). Only RB takes into
+account the corresponding increase in aerodynamic resistance.
+Relative error = δX = |X −XMcCoy|
+|XMcCoy|
+(4.1)
+Table 4.2: Mortar trajectory relative error
+Run
+Number
+RB
+MPM
+PM
+δR%
+δH%
+δR%
+δH%
+δR%
+δH%
+1
+0.3
+0.2
+0.4
+0.34
+0.4
+0.34
+2
+0.19
+1.13
+0.62
+0.95
+0.62
+0.95
+3
+0.08
+0.17
+6.88
+0.37
+6.88
+0.37
+4
+0.1
+0.27
+0.12
+0.15
+0.12
+0.15
+5
+0.15
+0.15
+0.31
+0.12
+0.31
+0.12
+6
+0.01
+0.11
+1.78
+0.16
+1.78
+0.16
+0.0
+2.5
+5.0
+7.5
+10.0
+12.5
+15.0
+17.5
+20.0
+Time (s)
+−40
+−20
+0
+20
+40
+Pitch (degrees)
+QE = 45◦
+QE = 85◦
+Figure 4.2: Mortar pitching (Vm = 105 m/s)
+Stellenbosch University https://scholar.sun.ac.za
+
+
+===== PAGE 66 =====
+CHAPTER 4. EVALUATION
+52
+4.1.2
+M1 artillery projectile
+A total of 8 simulations are performed with the inputs and expected results as
+found in McCoy (1999) listed in table 4.3.
+Figure 4.3: M1 artillery projectile
+Table 4.3: M1 artillery projectile test cases
+Run
+Number
+Twist
+(Cal/turn)
+Vm
+(m/s)
+QE
+(deg)
+!y0
+(rad/s)
+Range
+R (m)
+Apogee
+H (m)
+Drift
+D (m)
+1
+18
+205
+45
+1.44
+3775
+992
+91
+2
+18
+205
+70
+1.47
+2360
+1746
+181
+3
+18
+493
+45
+3.61
+11494
+3508
+292
+4
+18
+493
+70
+3.64
+7408
+6040
+725
+5
+25
+205
+45
+0.76
+3770
+992
+66
+6
+25
+205
+70
+0.79
+2370
+1746
+137
+7
+25
+493
+45
+1.97
+11476
+3508
+213
+8
+25
+493
+70
+1.98
+7448
+6040
+522
+Results
+The RB model shows minor deviation with largest relative errors incurred
+from drift (close to 4%, see table 4.4).
+This is misleading as drift's order
+of magnitude is several times smaller than range and apogee. Similar to the
+mortar, MPM and PM have noteworthy range errors if QE is steep. The cause
+is slightly diﬀerent from the mortar. Near the apogee the overturning moment
+and spin cause the yaw (speciﬁcally the yaw of repose) to engorge: reaching
+almost 25° (see ﬁgure 4.4).
+Past the apogee an angle of attack around 7.5° is sustained for the remaining
+ﬂight. This increases the overall complexity and magnitude of the aerodynamic
+forces and moments.
+Relative error = δX = |X −XMcCoy|
+|XMcCoy|
+(4.2)
+.
+Stellenbosch University https://scholar.sun.ac.za
+
+
+===== PAGE 67 =====
+CHAPTER 4. EVALUATION
+53
+Table 4.4: M1 artillery projectile relative error
+Run
+Number
+RB
+MPM
+PM
+δR %
+δH %
+δD %
+δR %
+δH %
+δD %
+δR %
+δH %
+δD %
+1
+0.22
+1.06
+3.68
+0.48
+1.15
+3.92
+0.42
+1.07
+N/A
+2
+0.67
+0.4
+0.29
+2.54
+0.36
+9.69
+2.7
+0.3
+N/A
+3
+0.61
+0.75
+3.52
+0.75
+0.64
+4.32
+0.63
+0.78
+N/A
+4
+0.89
+0.22
+0.79
+2.46
+0.17
+3.39
+2.72
+0.06
+N/A
+5
+0.39
+1.02
+3.41
+0.59
+1.11
+3.59
+0.56
+1.07
+N/A
+6
+0.13
+0.29
+3.88
+2.18
+0.33
+5.2
+2.27
+0.3
+N/A
+7
+0.76
+0.81
+2.34
+0.86
+0.71
+2.95
+0.8
+0.78
+N/A
+8
+0.08
+0.1
+2.78
+2.04
+0.12
+3.2
+2.18
+0.06
+N/A
+−5
+0
+5
+10
+15
+20
+25
+Yaw (degrees)
+−10
+−5
+0
+5
+10
+15
+20
+Pitch (degrees)
+Hermite spline
+Figure 4.4: M1 projectile: Pitch and yaw (Subsonic, QE = 70°)
+Stellenbosch University https://scholar.sun.ac.za
+
+
+===== PAGE 68 =====
+CHAPTER 4. EVALUATION
+54
+4.1.3
+M107 artillery projectile
+The inputs as found in Altufayl (2019) are listed in table 4.5 (constant twist
+rate, Tw = 20 cal/turn).
+Figure 4.5: M107 artillery projectile
+Table 4.5: M107 artillery projectile cases
+Run
+Number
+Vm
+(m/s)
+QE
+(deg)
+Range
+R (m)
+Apogee
+H (m)
+Drift
+D (m)
+Vel
+V (m/s)
+1
+580
+20
+10837
+1293
+134.3
+297.8
+2
+580
+45
+14851
+4654
+517.7
+320.3
+3
+580
+60
+13056
+6863
+827.5
+331.3
+4
+950
+20
+19099
+2680
+326.6
+315.6
+5
+950
+45
+25642
+9297
+1186
+335.9
+6
+950
+60
+24106
+13914
+1822
+349.3
+Results
+MPM is qualitatively on par with RB: both yield highly accurate results with
+largest relative errors relating to drift, δD = 6.08% (see tables 4.6-4.8). Similar
+to the M1 artillery projectile, this is misleading as the magnitude of range is
+several orders larger than drift.
+Table 4.6: M107 artillery projectile RB relative errors
+Run
+Number
+RB
+δR %
+δH %
+δD %
+δV %
+1
+0.47
+0.5
+4.86
+0.78
+2
+0.44
+0.57
+0.98
+0.69
+3
+0.65
+0.56
+1.08
+0.69
+4
+0.12
+0.32
+3.49
+0.91
+5
+0.18
+0.22
+3.32
+0.32
+6
+0.89
+0.25
+1.49
+2.27
+Stellenbosch University https://scholar.sun.ac.za
+
+
+===== PAGE 69 =====
+CHAPTER 4. EVALUATION
+55
+Table 4.7: M107 artillery projectile MPM relative error
+Run
+Number
+MPM
+δR %
+δH %
+δD %
+δV %
+1
+0.39
+0.37
+5.73
+0.75
+2
+0.43
+0.45
+0.38
+0.68
+3
+0.93
+0.42
+1.78
+0.69
+4
+0.02
+0.18
+2.47
+0.9
+5
+0.13
+0.05
+1.4
+0.31
+6
+1.49
+0.02
+6.08
+2.22
+Table 4.8: M107 artillery projectile PM relative error
+Run
+Number
+PM
+δR %
+δH %
+δD %
+δV %
+1
+0.14
+0.14
+N/A
+0.69
+2
+0.23
+0.17
+N/A
+0.68
+3
+0.96
+0.12
+N/A
+0.69
+4
+0.21
+0.02
+N/A
+0.87
+5
+0.12
+0.21
+N/A
+0.32
+6
+1.53
+0.29
+N/A
+2.22
+4.2
+Uncertainty and sensitivity analysis
+The previous sections conﬁrmed that given correct inputs, the models yield
+accurate results. This does not imply they are “ﬁt for purpose”. Input values
+are never truly correct: models must retain their validity even when presented
+with uncertainty (Saltelli et al., 2008).
+Uncertainty and sensitivity analysis are nearly always performed in tandem;
+latter quantiﬁes all possible outputs based on global parameter variation; the
+former apportions the overall output variance to each input parameter. Both
+are paramount when developing models capable of surviving scientiﬁc inquiry
+as they answer the following questions:
+• How robust is the model?
+• What is the relative importance of each variable?
+Comparing MPM and RB, several observations regarding sensitivity can be
+made before applying complex numerical analysis.
+In subsection 4.1.1 and
+4.1.2 it is shown if a projectile maintains a small angle of attack, MPM yields
+results on par with RB. This implies the properties disregarded during MPM's
+derivation such as pitching and yawing are indeed minute. This is corrobo-
+rated by the sensitivity analysis.
+Stellenbosch University https://scholar.sun.ac.za
+
+
+===== PAGE 70 =====
+CHAPTER 4. EVALUATION
+56
+This also exempliﬁes an inherent danger of sensitivity analysis. The relevance
+of each input parameter depends on the situation considered. To give insight
+into the overall performance, various cases must be investigated: sensitivity
+analysis results will diﬀer for each. For example the M1 artillery projectile
+is used for subsonic, supersonic, low and high ordinance trajectories. To il-
+lustrate the implications, 4 separate analyses are performed to encompass the
+wide array of ﬂight behaviours. The deﬁning characteristics of these cases are
+listed in table 4.9.
+Table 4.9: M1 artillery projectile, sensitivity analysis cases
+Run Number
+Twist (Cal/turn)
+Vm (m/s)
+QE (deg)
+1
+18
+205
+45
+2
+18
+205
+70
+3
+18
+493
+45
+4
+18
+493
+70
+4.2.1
+Time dependent sensitivity analysis
+Regardless of method, sensitivity/uncertainty analysis entails; generating a
+set of input parameters (B); evaluating the model for each entry to deﬁne a
+corresponding set of scalar values (A); estimating sensitivity (in this case µ⇤)
+using both sets.
+B = { b0, b1, b2, ... , bn }
+(4.3)
+an = f
+(
+bn
+)
+(4.4)
+A = { a0, a1, a2, ... , an }
+(4.5)
+µ⇤= f
+(
+A, B)
+(4.6)
+The sensitivity analysis performed diﬀers from those encountered in literature
+as the sensitivity is monitored with time. A time dependent representation
+of sensitivity yields a robust guide for visualising the propagation of errors,
+prioritising parameters and model selection. To accomplish this task, the set
+of output parameters A, must be expressible as a function of time.
+Stellenbosch University https://scholar.sun.ac.za
+
+
+===== PAGE 71 =====
+CHAPTER 4. EVALUATION
+57
+Taking advantage of the dense output algorithm, a set of time dependent
+functions are generated (F): each entry a unique projectile trajectory. Evalu-
+ating these functions, a complete set of projectile state vectors are known for
+any point in time.
+Yn(t)
+=
+f
+(
+bn
+)
+(4.7)
+F
+=
+{ Y0(t), Y1(t), Y2(t), ... , Yn(t) }
+(4.8)
+For the sensitivity measurement's magnitude to be comparable throughout,
+the property being investigated must be normalised at each instant considered.
+Normalisation by the norm of the mean vector worked suﬃciently well. This
+is done separately for position, velocity and angular velocity.
+ex
+&&
+i
+=
+xi
+|| mean(x)||
+(4.9)
+e ˙x
+&&
+i
+=
+˙xi
+|| mean(x˙ )||
+(4.10)
+e!
+&&
+i
+=
+!i
+|| mean(!)||
+(4.11)
+Atmosphere, Earth and Projectile models are all highly non-linear and cumu-
+latively have upwards of 30 possible inputs ( bn ). The number of inputs and
+inherent computational cost of RB makes traditional sensitivity analyses such
+as Monte Carlo and One At a Time impractical as they require an exorbitant
+number of function evaluations. Based on the guidelines provided in Saltelli
+et al. (2008), Elementary Eﬀects is appropriate.
+Saltelli et al. (2008) outlines how to calculate B and the sensitivity measure
+mu⇤from A. While additional sensitivity measures can be quantiﬁed using
+Elementary eﬀects, µ⇤is usually suﬃcient indication of the overall sensitivity.
+Stellenbosch University https://scholar.sun.ac.za
+
+
+===== PAGE 72 =====
+CHAPTER 4. EVALUATION
+58
+4.2.2
+Results
+For the subsonic and ﬂat trajectory (QE = 45°, Vm = 205 m s−1), position,
+velocity and angular velocity varied 3% from the mean (see ﬁgure 4.6). At
+supersonic velocities and/or high QE's the deviation reaches up to 10%. While
+not relevant for darts, it highlights the importance of investigating several
+operating conditions. The full results are in appendix E. If a similar analysis
+is performed on darts, intricate scenarios such as moving vehicles or helicopters
+should also be considered: ethical range will be signiﬁcantly shorter.
+Relative average deviation (RAD) = max
+✓&&&&
+xi −mean(x)
+mean(x)
+&&&&
+◆
+⇥100
+0.0
+0.2
+0.4
+0.6
+0.8
+1.0
+0
+5
+10
+Position RAD (%)
+0.0
+0.2
+0.4
+0.6
+0.8
+1.0
+0
+5
+10
+Velocity RAD (%)
+0.0
+0.2
+0.4
+0.6
+0.8
+1.0
+Normalised ﬂight time
+2
+4
+6
+Angular velocity RAD (%)
+Subsonic, QE = 45°
+Subsonic, QE = 70°
+Supersonic, QE = 45°
+Supersonic, QE = 70°
+Figure 4.6: Relative average deviation
+Stellenbosch University https://scholar.sun.ac.za
+
+
+===== PAGE 73 =====
+CHAPTER 4. EVALUATION
+59
+Sensitivity to launch parameters
+The barrel orientation (QE and DC) and muzzle velocity (Vm) are the most
+inﬂuential parameters in all scenarios considered (see ﬁgure 4.7). This suggest
+optimising/accurately knowing the launch parameters might be more relevant
+than the projectile. This extends to tranquilliser darts, especially when used
+with compressed air riﬂes where muzzle velocity can be adjusted. It is worth
+noting the contribution of “lateral jump” : initial yawing and pitching (!y, !z)
+cause the projectile to deﬂect from the intended trajectory.
+10
+20
+Time (seconds)
+0.00
+0.01
+0.02
+0.03
+EE sensitivity measure µ⇤
+xx Sensitivity
+10
+20
+Time (seconds)
+0.00
+0.01
+0.02
+0.03
+xy Sensitivity
+10
+20
+Time (seconds)
+0.00
+0.01
+0.02
+0.03
+xz Sensitivity
+DC
+QE
+Vm
+✓throw
+✓C
+↵0
+β0
+Tw
+!y
+!z
+Figure 4.7: Position sensitivity to initial conditions (Subsonic, QE = 45°)
+The sensitivity of the initial state, while always relevant, eventually stops in-
+creasing. In contrast sensitivity to parameters such as aerodynamic coeﬃcients
+or ambient conditions keep on increasing throughout the timespan investigated
+(see ﬁgures 4.8 and 4.9). Given enough time and/or small enough uncertainty
+in the initial conditions, the parameter errors will eventually overtake the ini-
+tial state errors: optimising the dart can become more crucial than the riﬂe.
+Stellenbosch University https://scholar.sun.ac.za
+
+
+===== PAGE 74 =====
+CHAPTER 4. EVALUATION
+60
+Ambient conditions
+Precisely measuring temperature and pressure is far less laborious than ac-
+curately deﬁning the aerodynamic coeﬃcients. Their sensitivity measures are
+however of similar magnitude (see ﬁgures 4.8 and 4.9). Eliminating uncer-
+tainty regarding T0 and P0 is thus an eﬀective means of improving precision.
+The contribution of wind (VWY ,VWX) must not be underestimated.
+It ex-
+acerbates lateral jump by increasing the initial angle of attack. In ﬁgure 4.8,
+there is an initial spike in cross-range wind's (VWY ) sensitivity as the projectile
+swerves trying to stabilise (lateral jump).
+10
+20
+Time (seconds)
+0.0000
+0.0025
+0.0050
+0.0075
+EE sensitivity measure µ⇤
+xx Sensitivity
+10
+20
+Time (seconds)
+0.000
+0.002
+0.004
+0.006
+xy Sensitivity
+10
+20
+Time (seconds)
+0.000
+0.001
+0.002
+0.003
+0.004
+xz Sensitivity
+T0
+P0
+RH
+VW X
+VW Y
+LA
+AZ
+AL
+Figure 4.8: Position sensitivity to ambient conditions (Subsonic, QE = 45°)
+At supersonic velocities all parameter sensitivities increase. See appendix E
+for the supersonic trajectory's results as they are not relatable to tranquilliser
+darts. Relative to temperature, the eﬀect of wind is less pronounced because
+of the supersonic velocities encountered.
+Predicting the onset of shock waves is crucial for supersonic trajectories. Con-
+sequently, even slight changes in air density and Mach number (temperature
+variation) have signiﬁcant inﬂuences on the trajectory.
+Stellenbosch University https://scholar.sun.ac.za
+
+
+===== PAGE 75 =====
+CHAPTER 4. EVALUATION
+61
+Aerodynamic coeﬃcients
+For a stable projectile with a consistently small angle of attack, the contribu-
+tion of CD0, CL0 and CM↵eclipses all other coeﬃcients. For such cases, like the
+trajectory presented in ﬁgure 4.9, (Subsonic, QE = 45°) MPM should yield
+accurate results.
+10
+20
+Time (seconds)
+0.000
+0.002
+0.004
+0.006
+EE sensitivity measure µ⇤
+xx Sensitivity
+10
+20
+Time (seconds)
+0.0000
+0.0005
+0.0010
+0.0015
+0.0020
+xy Sensitivity
+10
+20
+Time (seconds)
+0.000
+0.001
+0.002
+0.003
+xz Sensitivity
+CD0
+CD2
+CL0
+CL2
+CM↵0
+CM↵2
+CLP
+CMP
+CNP
+CN ˙↵
+CM ˙↵
+Figure 4.9: Position sensitivity to aerodynamic coeﬃcients (Subsonic, QE = 45°)
+As seen in ﬁgure 4.4, for the subsonic, super elevated (QE = 70°) trajectory,
+the yaw of repose reaches 23°. This large angle of attack increases the mag-
+nitude and overall complexity of the aerodynamic coeﬃcients. The sensitivity
+analysis for that trajectory (ﬁgure 4.10) reﬂects this: several additional coef-
+ﬁcients become relevant past the apogee. If impact were to occur exclusively
+before the apogee (t < 20 s), MPM would still be a viable approximation.
+10
+20
+30
+40
+Time (seconds)
+0.000
+0.002
+0.004
+0.006
+0.008
+EE sensitivity measure µ⇤
+xx Sensitivity
+10
+20
+30
+40
+Time (seconds)
+0.000
+0.002
+0.004
+0.006
+xy Sensitivity
+10
+20
+30
+40
+Time (seconds)
+0.000
+0.005
+0.010
+xz Sensitivity
+CD0
+CD2
+CL0
+CL2
+CM↵0
+CM↵2
+CLP
+CMP
+CNP
+CN ˙↵
+CM ˙↵
+Figure 4.10: Position sensitivity to aerodynamic coeﬃcients (Subsonic, QE = 70°)
+Stellenbosch University https://scholar.sun.ac.za
+
+
+===== PAGE 76 =====
+CHAPTER 4. EVALUATION
+62
+Sensitivity analysis show that a stable and straight trajectory can be modelled
+using simple approximations such as PM or MPM. Since this will generally
+be the case for tranquilliser darts, RB approximations will likely not be qual-
+itatively superior in most cases. In extreme conditions such as wind, moving
+vehicles or helicopters, a RB analysis is likely unavoidable.
+A large initial
+angle of attack, pitching and yawing will be present causing lateral jump and
+exacerbating aerodynamic resistance.
+Stellenbosch University https://scholar.sun.ac.za
+
+
+===== PAGE 77 =====
+Chapter 5
+Dart aerodynamic properties
+To investigate tranquilliser dart aerodynamic behaviour, doppler radar tests
+and computational ﬂuid analyses (CFA) are performed. Radar measurements
+provide a rudimentary guide and benchmark for the CFA. From both, an aer-
+oballistic dart proﬁle is assembled and applied to the projectile models to
+evaluate a hypothetical “design”. The level of correspondence indicates how
+viable the models are for their intended purpose: modelling tranquilliser dart
+trajectories.
+Only a smooth bore was available during testing and spin is thus not con-
+sidered.
+5.1
+Doppler radar measurements
+A doppler radar measures the dart's velocity along its trajectory. By moni-
+toring the rate of decay, select aerodynamic traits can be inferred; complexity
+of drag coeﬃcient (linearity); average drag coeﬃcient. Five shots are recorded
+for the three darts shown in ﬁgure 5.1, namely 0.5 cc, 1 cc and 1.5 cc darts.
+Figure 5.1: Professional wildlife equipment darts
+63
+Stellenbosch University https://scholar.sun.ac.za
+
+
+===== PAGE 78 =====
+CHAPTER 5. DART AERODYNAMIC PROPERTIES
+64
+Figures 5.2 - 5.4 shows that ( ˙x)−1 varies linearly with time. The consistent
+gradients, suggest the intricacies (non-linearities) incurred from instability or
+ﬂow regime are absent. Consequently, CD can be assumed constant for each
+individual dart without signiﬁcant error. Fitting the analytical solution (equa-
+tion 1.20, restated for convenience) to the measurements, an average CD is
+calculated.
+1
+˙x =
+✓
+CD
+⇢A
+2m
+◆
+⇥t + 1
+˙x0
+0.00
+0.05
+0.10
+0.15
+0.20
+0.25
+Time (s)
+0.0130
+0.0135
+0.0140
+0.0145
+0.0150
+( ˙x)−1 (s/m)
+Doppler radar measurements
+Linearised, CD = 0.898
+Figure 5.2: Curve ﬁtted to doppler radar measurements: 0.5 cc dart
+Due to the tailpieces, these darts all have high drag coeﬃcients (CD > 0.9).
+The additional surface area of the 1 cc and 1.5 cc darts increase their drag due
+to surface shear. The individual darts do not exhibit any unique behaviour,
+CFA is thus only performed on the 0.5 cc dart.
+0.00
+0.05
+0.10
+0.15
+0.20
+0.25
+Time (s)
+0.0135
+0.0140
+0.0145
+0.0150
+( ˙x)−1 (s/m)
+Doppler radar measurements
+Linearised, CD = 0.923
+Figure 5.3: Curve ﬁtted to doppler radar measurements: 1 cc dart
+Stellenbosch University https://scholar.sun.ac.za
+
+
+===== PAGE 79 =====
+CHAPTER 5. DART AERODYNAMIC PROPERTIES
+65
+0.00
+0.05
+0.10
+0.15
+0.20
+0.25
+Time (s)
+0.0140
+0.0145
+0.0150
+0.0155
+0.0160
+( ˙x)−1 (s/m)
+Doppler radar measurements
+Linearised, CD = 0.949
+Figure 5.4: Curve ﬁtted to doppler radar measurements: 1.5 cc dart
+5.2
+Computational ﬂuid dynamics
+The objective is to quantify the dart's aero-ballistic properties: diameter, mass,
+inertia and aerodynamic coeﬃcients. The process entails recreating its geom-
+etry in Autodesk® Inventor (Release 2019) and performing CFD analyses
+using Ansys® Fluent (Release 19.2). Typically the aerodynamic forces and
+moments are quantiﬁed at multiple angles of attack and Mach number to ac-
+count for their non-linear eﬀects. The doppler radar's results suggest this is
+not necessary as the drag coeﬃcient is almost constant.
+This does not imply they are irrelevant, simply that they do not inﬂuence
+these speciﬁc trajectories (short, straight, windless and no spin): complexity
+is case dependent as illustrated by the sensitivity analysis in section 4.2.
+Various velocities and angles of attack should thus still be investigated despite
+not being applicable to the recorded trajectories. Two separate parameterised
+analyses are performed to determine the coeﬃcient's sensitivity to angle of
+attack and Mach number. Since this requires several analyses, the param-
+eterised simulations run autonomously: create the mesh and solve the ﬂow
+without manual intervention.
+Stellenbosch University https://scholar.sun.ac.za
+
+
+===== PAGE 80 =====
+CHAPTER 5. DART AERODYNAMIC PROPERTIES
+66
+5.2.1
+Geometry reﬁnement
+The dart geometry is simple and can be easily captured, however the sharp
+needle tip causes extreme warpage of adjacent cells. This makes the simulation
+numerical unstable: residuals diverge. Robustness is improved by applying a
+small curvature (radius = 0.2 mm). The resulting mesh at the needle tip is
+shown in ﬁgure 5.5.
+Figure 5.5: Needle mesh after geometry reﬁnement
+5.2.2
+Flow domain
+External ballistic simulations are free stream simulations. The ﬂow ﬁeld sur-
+rounding the dart must be large enough to represent this. For low Mach num-
+ber ballistic problems like tranquilliser darts, velocity based inlet and pressure
+based outlet conditions are appropriate, (Ferziger and Perić, 2002). The dart
+is enveloped in a large cylinder with its volume representing ambient air at sea
+level. Since no spin is being considered, the needed ﬂow domain is decreased
+by implementing a symmetry boundary condition.
+Figure 5.6: Symmetry plane
+Stellenbosch University https://scholar.sun.ac.za
+
+
+===== PAGE 81 =====
+CHAPTER 5. DART AERODYNAMIC PROPERTIES
+67
+Meshing
+When investigating various angles of attack, the simulation must periodically
+re-mesh as the angle is incremented. To facilitate the needed autonomy, a
+predominantly unstructured topology is used (tetrahedral elements). To ac-
+curately capture the wake, a high mesh density region is created with more
+stringent size constraints (see ﬁgure 5.7).
+Figure 5.7: Mesh
+There are two options to solve near-wall regions in Reynolds-averaged Navier-
+Stokes based simulations: fully resolve the viscous sublayer or use wall func-
+tions to approximate the ﬂow quantities. Wall functions should only be used
+when near wall eﬀects are not the primary concern as they have deﬁcits in
+predicting ﬂow separation. This makes them inappropriate for this simula-
+tion: near wall eﬀects and ﬂow separation are paramount in determining the
+aerodynamic coeﬃcients (see ﬁgure 5.8). The recirculation at the dart face is
+clearly visible.
+Stellenbosch University https://scholar.sun.ac.za
+
+
+===== PAGE 82 =====
+CHAPTER 5. DART AERODYNAMIC PROPERTIES
+68
+Figure 5.8: Dart pressure contours and ﬂuid streamlines
+To ensure the viscous sublayer is resolved the dimensionless wall distance (y+)
+must be suﬃciently small during each analysis ( 1 < y+). Some of the key
+restrictions and modiﬁcations made to create the resulting grids (ﬁgure 5.7)
+are listed below:
+• Maximum element size for dart surface is 0.4 mm
+• A 20 layer inﬂation on dart surface (ﬁrst layer 0.02 mm thick)
+• Maximum element size in the high density mesh region is 4.5 mm
+• Element growth rate in the high density mesh region is 1.1
+5.2.3
+Fluid properties
+Darts operate exclusively at subsonic velocities (<0.3 Ma) where air can be
+assumed incompressible (Anderson, 2009). Mean sea level conditions are used.
+5.2.4
+Solvers
+Two solver types are commonly integrated into computational ﬂuid dynamics
+packages: a density-based and pressure-based solver.
+While density-based
+solvers are suited for any ﬂow regime, they are ineﬃcient at low Mach numbers
+(Ma < 0.3): ﬂow is almost incompressible. Hence a pressure based solver is
+appropriate for dart simulations. Additional settings used for the solver:
+• Gradient set to “Green-Gauss Node-Based”.
+• Discretisation methods all set to “Second Order Upwind “ .
+• Pressure-velocity coupling set to “Coupled“.
+Stellenbosch University https://scholar.sun.ac.za
+
+
+===== PAGE 83 =====
+CHAPTER 5. DART AERODYNAMIC PROPERTIES
+69
+5.2.5
+Turbulence model
+Three viable turbulence models are considered, SST k−!, Transition k−kl−!
+and Transition SST. As shown in table 5.1 both Transition SST and SST k−!
+yield accurate results. SST k −! is computationally less expensive and thus
+used during the parameterised simulations.
+The simulated drag will be less than the measured values. Small instabili-
+ties/oscillations are always present and increase the average drag coeﬃcient:
+a zero angle of attack is an unrealistic state.
+Table 5.1: Drag coeﬃcients (↵t = 0°)
+Solver
+CD
+Doppler radar
+0.898
+SST k −!
+0.858
+Transition k −kl −!
+1.043
+Transition SST
+0.863
+Mesh independence
+Given the prevalence of discretisation errors in CFA, mesh independence must
+be investigated (Fluent, 2013).
+Several simulations are performed with se-
+quentially smaller elements in the high mesh density region. Since the doppler
+radar test had no spin, only drag, lift and overturning moment are investi-
+gated. While drag showed little variation with mesh density (varied 5%, see
+ﬁgure 5.9), lift and overturning moment are signiﬁcantly more sensitive (vary-
+ing up to 25%). To precisely model all 3 coeﬃcients, a ﬁne mesh is required
+(> 106 elements, maximum element size 4.5 mm). The study is performed at
+70 m s−1 and 2.5° angle of attack.
+5
+10
+15
+Elements ⇥1e5
+0.96
+0.98
+1.00
+Normalised CD
+5
+10
+15
+Elements ⇥1e5
+0.9
+1.0
+Normalised CL
+5
+10
+15
+Elements ⇥1e5
+0.8
+0.9
+1.0
+Normalised CM↵
+Figure 5.9: Mesh independence
+Stellenbosch University https://scholar.sun.ac.za
+
+
+===== PAGE 84 =====
+CHAPTER 5. DART AERODYNAMIC PROPERTIES
+70
+5.3
+Results
+This dart's high stability and low operating velocities allow the coeﬃcients to
+be approximated as constant. If excessive pitching or yawing is present the
+drag, lift and overturning moment coeﬃcients will become highly non-linear.
+Dependency on velocity
+Tranquilliser darts operate exclusively at subsonic velocities (40 m s−1 < ˙x <
+100 m s−1). The coeﬃcients are nearly independent of velocity in this range.
+They can be approximated as constant without signiﬁcant error: a single anal-
+ysis at an average velocity (V = 70 m s−1) would suﬃce. Lift has the largest
+deviation from the average velocity (varies 5%, see ﬁgure 5.10), drag and over-
+turning moment show very little variation (< 1%).
+This corroborates the
+sensitivity analysis performed in section 4.2: non-linear eﬀects from angle of
+attack (such as CD2, CL2) could be disregarded for ﬂat trajectories. There-
+fore, the experimental cases investigated PM or MPM should yield suﬃciently
+accurate results.
+50
+75
+100
+Velocity m/s
+0.99
+1.00
+1.01
+Normalised CD
+50
+75
+100
+Velocity m/s
+0.95
+1.00
+1.05
+Normalised CL sin(↵t)
+50
+75
+100
+Velocity m/s
+0.995
+1.000
+1.005
+Normalised CM↵sin(↵t)
+Figure 5.10: Variation with velocity
+Dependency on angle of attack
+Drag, lift and overturning moment are highly sensitive to angle of attack: after
+tilting 5°, drag increased 35% (see ﬁgure 5.11). The aerodynamic coeﬃcients
+will be highly non-linear if pitching or yawing (instabilities) is present. The
+tailpiece however ensures the dart is stable, eliminating possible non-linearities
+due to the angle of attack (instabilities). If the darts are routinely used in
+windy conditions, moving vehicles or helicopters, high ﬁdelity simulations are
+unavoidable: initial angle of attack, pitching/yawing and corresponding lateral
+jump will be engorged.
+Stellenbosch University https://scholar.sun.ac.za
+
+
+===== PAGE 85 =====
+CHAPTER 5. DART AERODYNAMIC PROPERTIES
+71
+0
+10
+20
+Angle of attack (deg)
+1.0
+1.2
+1.4
+1.6
+CD
+0
+10
+20
+Angle of attack (deg)
+0.0
+0.1
+0.2
+CL sin(↵)
+0
+10
+20
+Angle of attack (deg)
+−0.4
+−0.2
+0.0
+CM↵sin(↵)
+Figure 5.11: Variation with angle of attack
+5.3.1
+Models compared with measurements
+For the trajectories measured, either MPM or PM model yield suﬃciently ad-
+equate results: relative errors varying between 0.2% and 3%.
+0.00
+0.05
+0.10
+0.15
+0.20
+0.25
+Time (s)
+66
+68
+70
+72
+74
+76
+78
+Velocity (m/s)
+Doppler radar measurements
+PM approximation
+Figure 5.12: PM model predicted velocity and trajectory
+Pitching and yawing are always present hence why PM slightly underesti-
+mates drag and the resulting velocity: assumes a zero angle of attack. RB can
+take the pitching and yawing motion into account. By introducing small an-
+gular velocity perturbations (!y = 1.5 rad · s−1), the RB model yields highly
+accurate results (ﬁgure 5.13). The improved accuracy is oﬀset by the labour
+required to suﬃciently deﬁne a Rigid-body approximation.
+Stellenbosch University https://scholar.sun.ac.za
+
+
+===== PAGE 86 =====
+CHAPTER 5. DART AERODYNAMIC PROPERTIES
+72
+0.00
+0.05
+0.10
+0.15
+0.20
+0.25
+Time (s)
+66
+68
+70
+72
+74
+76
+78
+Velocity (m/s)
+Doppler radar measurements
+RB approximation
+Figure 5.13: RB model predicted velocity and trajectory
+These results do not imply that high ﬁdelity models such as RB are irrele-
+vant. They are simply not required to model these particular dart trajectories.
+As illustrated by the sensitivity analysis (4.2.1), deviation from intended im-
+pact point is case dependent. If a spin stabilised dart design were developed,
+its stability would need to be conﬁrmed initially using RB.
+Stellenbosch University https://scholar.sun.ac.za
+
+
+===== PAGE 87 =====
+Chapter 6
+Conclusion
+Several ballistic models are investigated, derived, implemented and veriﬁed
+to facilitate the design of tranquilliser darts. No model is innately superior,
+each having their respective advantages. Complex models such as Rigid-body
+can yield accurate results in a wide array of scenarios but are computation-
+ally expensive and laborious to deﬁne. In contrast, Point-mass and Modiﬁed
+point-mass are inexpensive and simple but only accurate when the projectile
+is stable with minute pitching/yawing.
+Sensitivity analysis (Elementary eﬀects) showed the required model ﬁdelity
+and parameter accuracies are signiﬁcantly less stringent for subsonic, ﬂat tra-
+jectories. This agrees with doppler radar measurements suggesting drag sta-
+bilised darts have a near constant drag coeﬃcient. This is further corroborated
+by CFA of a 0.5 cc dart. The drag, lift and overturning moment coeﬃcients
+are nearly independent of velocity but sensitive to angle of attack. The tail-
+piece however ensures that there is little to no pitching and/or yawing, further
+eliminating non-linearities due to the angle of attack (instabilities). Conse-
+quently, a single CFA at an average velocity will yield a suﬃcient estimate of
+the aerodynamic forces and moments. For the same reasons, Point-mass and
+Modiﬁed point-mass will be qualitatively on par with Rigid-body. This does
+not imply that RB is irrelevant: if ﬂight stability is not known, PM and MPM
+are not reliable (dart might tumble).
+The drag coeﬃcients measured and simulated are high (CD >= 0.9), this
+can be accredited to drag stabilisation (tailpiece). The aerodynamic eﬃciency
+can be improved using spin stabilisation. Point-mass and Modiﬁed point-mass
+will however be unable to predict gyroscopic or dynamic instabilities. If a spin
+stabilised design is considered, it must (at least initially) be modelled using
+Rigid-body approximations to conﬁrm stability.
+73
+Stellenbosch University https://scholar.sun.ac.za
+
+
+===== PAGE 88 =====
+CHAPTER 6. CONCLUSION
+74
+Future studies
+The models can be reﬁned to take into account liquid payloads to analyse dart
+ﬂight performance and stability in greater detail. It is shown that the models
+can predict dart trajectories.
+In conjunction with CFD, they can be used
+to devise a more eﬃcient tranquilliser dart design. The success will reduce
+ballistic trauma and increase an operators ethical range.
+Stellenbosch University https://scholar.sun.ac.za
+
+
+===== PAGE 89 =====
+Appendices
+75
+Stellenbosch University https://scholar.sun.ac.za
+
+
+===== PAGE 90 =====
+Appendix A
+Atmospheric model
+It is good practice to compare new numerical models with existing literature
+or commercial codes. For short and ﬂat trajectories (like those encountered
+with darts), air density and speed of sound (⇢, a) can be assumed constant.
+Most analyses performed in literature are however for high ordinance artillery
+projectiles where this assumption is invalid: at 5000 m above sea level, air
+is 40% less dense (Cavcar, 2000). For benchmarking to be viable, the model
+must be able to take these changes into account.
+Both ⇢and a are indirectly only known at the launch site (through ambient
+pressure and temperature). The atmospheric model propagates these quan-
+tities to higher or lower altitudes.
+An internationally accepted model was
+introduced in 1952 by the International Civil Aviation Organisation (ICAO).
+A.1
+ICAO
+The ICAO Standard Atmosphere model can approximate air pressure, tem-
+perature, density and speed of sound over a wide range of altitudes (< 80 km).
+Temperature and pressure behave diﬀerently in the troposphere and tropopause.
+At the boundary between the two layers:
+T11 = 216.65◦K
+(A.1)
+P11 = 22632 Pa
+(A.2)
+Using these constants and the ambient conditions at the launch site, the tem-
+perature and pressure at the projectiles location is calculated.
+Temperature
+T =
+8
+>
+>
+<
+>
+>
+:
+T0 −6.5 xz
+1000
+(AL + xz) < 11000 m
+T11
+(AL + xz) => 11000 m
+(A.3)
+76
+Stellenbosch University https://scholar.sun.ac.za
+
+
+===== PAGE 91 =====
+APPENDIX A. ATMOSPHERIC MODEL
+77
+Pressure (dry air)
+P =
+8
+>
+>
+>
+>
+<
+>
+>
+>
+>
+:
+P0
+✓
+1 −0.0065xz
+T0
+◆5.2561
+(AL + xz) < 11000 m
+P11exp
+✓
+−g0
+RT11
+(xz + AL −11000)
+◆
+(AL + xz) => 11000 m
+(A.4)
+From the pressure and temperature at the projectile's location, the correspond-
+ing air density and speed of sound is calculated.
+Density: dry air
+Using the ideal gas law:
+R = 287.04 J/(kg·K)
+⇢= P
+RT
+(A.5)
+Speed of sound: dry air
+The speed of sound only varies with temperature.
+λ = 1.4
+a =
+p
+λ · R · T
+(A.6)
+Stellenbosch University https://scholar.sun.ac.za
+
+
+===== PAGE 92 =====
+APPENDIX A. ATMOSPHERIC MODEL
+78
+A.1.1
+Humidity correction factors
+When accuracy requirements are extremely stringent, it is recommended to
+include the eﬀects of humidity.
+Humid air is less dense and sound travels
+faster. While not explicitly signiﬁcant, for projectiles that consistently travel at
+transonic speeds, slight changes in Mach number can become crucial. Murphy
+(1954) provides two correction factors for density and speed of sound. The are
+simply multiplied by the corresponding property for dry air (δa · a).
+δa (RH) = 1 + 0.0014 (RH)
+✓
+Ps
+101320.75
+◆
+(A.7)
+δ⇢(RH) = 1 −0.00378 (RH)
+✓
+Ps
+101320.75
+◆
+(A.8)
+The saturated vapour pressure (Ps) can be accurately estimated using the
+Arden Buck equations presented in (Buck, 1981). They are a group of empirical
+correlations that relate saturation vapour pressure to temperature for moist
+air. They are valid between 193.15 and 323.15 K.
+Ps(T) =
+8
+>
+>
+>
+>
+<
+>
+>
+>
+>
+:
+611.21 exp
+✓✓
+18.678 −T −273.15
+234.5
+◆✓T −273.15
+−16.01 + T
+◆◆
+T > 0
+611.15 exp
+✓✓
+23.036 −T −273.15
+333.7
+◆✓T −273.15
+6.67 + T
+◆◆
+T < 0
+(A.9)
+When no information is available regarding the launch site, it is common prac-
+tice to use the average conditions at mean sea level (Cavcar, 2000).
+Table A.1: International Mean Sea Level Conditions
+Pressure
+Pave = 101325 Pa
+Temperature
+Tave = 288.15◦K (15◦C)
+Gravitational acceleration
+gave = 9.80665 m/s2
+Density
+⇢ave = 1.225 kg/m3
+Speed of sound
+aave = 340.294 m/s
+Stellenbosch University https://scholar.sun.ac.za
+
+
+===== PAGE 93 =====
+Appendix B
+Earth model
+Similar to the atmospheric model, this is not necessary for tranquilliser darts,
+but is required to benchmark the ballistic model against commercial codes.
+For most ballistic problems, the earth can be approximated as a stationary
+ﬂat plane. For long distance trajectories (> 2000 m), variation in gravity,
+the earth's rotation and curvature become increasingly signiﬁcant. The earth
+model quantiﬁes these eﬀect based on the geodetic location relative to the
+world frame. Figure B.1 shows the reference angles and values used to de-
+scribe the geodetic location.
+The approaches used are well documented in
+Chaves et al. (2019) and McCoy (1999).
+r = 6356766 m
+(B.1)
+⌦E = 7.292115 ⇥1e−5 rad/s
+(B.2)
+79
+Stellenbosch University https://scholar.sun.ac.za
+
+
+===== PAGE 94 =====
+APPENDIX B. EARTH MODEL
+80
+⌦E
+s
+r
+LA
+eX
+eY
+eZ
+North
+eX
+eY
+AZ
+Figure B.1: Geodetic location
+B.1
+Gravity
+Approximating the earth as ﬂat plane assumes gravitational acceleration is
+independent of latitude and altitude. This is suﬃcient for applications such
+as tranquilliser darts where the relevant distances are simply too short. For
+this simple approximations the gravity vector can be deﬁned as outlined in
+(Cavcar, 2000).
+gs =
+⇥
+0
+0
+−9.80665
+⇤T m s−2
+(B.3)
+This is however inadequate for high ordinance trajectories. Equation B.4 takes
+into account gravity's variation with both latitude and altitude (Chaves et al.
+(2019), McCoy (1999)).
+g = 9.80665[1 −0.0026 cos(2LA)]
+(B.4)
+gs = −g
+xx
+r
+0
+✓
+1 −2xz + AL
+r
+◆+T
+(B.5)
+B.2
+Coriolis eﬀect
+The world frame is in motion due to the earth's rotation. This rotating frame
+causes a ﬁctitious force that acts on the projectile known as the Coriolis eﬀect.
+⌦E
+s =
+⇥
+⌦E cos(LA) cos(AZ)
+⌦E cos(LA) sin(AZ)
+⌦E sin(LA)
+⇤T
+(B.6)
+⇤
+s = −2⌦E
+s ⇥x˙ s
+(B.7)
+Stellenbosch University https://scholar.sun.ac.za
+
+
+===== PAGE 95 =====
+APPENDIX B. EARTH MODEL
+81
+B.3
+Curvature correction
+The earth's inherent curvature means a ﬂat approximation will under esti-
+mate the horizontal displacement. These coordinates must thus be adjusted
+over greater distances. Equation B.8 gives the corrected coordinates for the
+projectile. It is however more convenient to use its derivative.
+xE =
+
+xx
+xy
+✓
+xz + x2
+x
+2r
+◆+T
+(B.8)
+In the derivative (equation B.9), the eﬀect is expressed as a vertical velocity.
+This can be seamlessly incorporated into any equation of motion.
+x˙ E
+=
+h
+˙xx
+˙xy
+⇣
+˙xz + ˙xx
+xx
+r
+⌘iT
+x˙ E
+=
+x˙ s +
+h
+0
+0
+˙xx
+xx
+r
+iT
+x˙ E
+=
+x˙ s + xc˙ s
+xc˙ s =
+h
+0
+0
+˙xx
+xx
+r
+iT
+(B.9)
+This increase in velocity only alters the resulting vertical displacement and is
+thus incorporated into the state vector derivative ˙Y. Illustrating this with the
+Point-mass equations of motion:
+YPM
+=
+xE
+x˙ s
++
+(B.10)
+˙YPM
+=
+x˙ E
+x¨ s
++
+=
+
+x˙ s
+m−1F
+s
++
++
+xc˙ s
+0
++
+(B.11)
+Stellenbosch University https://scholar.sun.ac.za
+
+
+===== PAGE 96 =====
+Appendix C
+Projectile properties
+In chapter 4 the model is benchmarked against trajectories encountered in
+literature. This appendix gives the properties of the projectiles used: diameter,
+mass, inertia and aeroballistic coeﬃcients.
+Linear interpolation is used to
+describe the coeﬃcients as functions of Mach number and/or angle of attack.
+C.1
+M107 artillery projectile
+Figure C.1: M107 artillery projectile
+m = 43.0962 kg
+d = 155 mm
+Ix = 0.14248 kg m2
+It = 1.225615 kg m2
+Table C.1: M107 artillery projectile aeroballistic coeﬃcients
+Mach
+CD0
+Mach
+CD2
+CLP
+Mach
+CL
+Mach
+.4
+.1419
+1.78
+1.890
+-.71
+3.336
+-8.7
+-.02800
+.6
+.1431
+1.79
+1.901
+-.71
+3.365
+-8.5
+-.02788
+.7
+.1439
+1.96
+1.909
+-.72
+3.388
+-8.4
+-.02776
+.8
+.1487
+2.18
+1.933
+-.74
+3.493
+-8.4
+-.02754
+.9
+.1756
+2.57
+2.033
+-.79
+3.737
+-9.3
+-.02712
+1.0
+.3239
+3.27
+2.328
+-.83
+3.618
+-11.4
+-.02643
+1.2
+.3816
+4.69
+2.476
+-.65
+3.403
+-12.6
+-.02511
+1.5
+.3416
+3.72
+2.621
+-.56
+3.268
+-13.0
+-.02370
+2.0
+.2976
+2.74
+2.812
+-.51
+3.058
+-12.4
+-.02213
+2.5
+.2607
+2.18
+2.865
+-.50
+2.928
+-11.7
+-.02028
+3.0
+.2329
+1.73
+2.821
+-.50
+2.874
+-10.5
+-.01905
+82
+Stellenbosch University https://scholar.sun.ac.za
+
+
+===== PAGE 97 =====
+APPENDIX C. PROJECTILE PROPERTIES
+83
+C.2
+Mortar
+Figure C.2: Mortar
+m = 13.585 kg
+d = 119.56 mm
+Ix = 0.02335 kg m2
+It = 0.23187 kg m2
+Table C.2: Mortar aeroballistic coeﬃcients
+Mach
+CD0
+Mach
+CD2
+Mach
+CLP
+Mach
+CL
+Mach
+CMa0
+0
+.119
+0
+2.32
+0
+1.75
+0
+14.8
+0
+-.02
+.8
+.119
+.4
+2.44
+.6
+1.95
+.5
+14.8
+.4
+-1.02
+.85
+.120
+.6
+2.66
+.8
+2.02
+.6
+4.5
+.6
+-1.62
+.87
+.122
+.7
+2.87
+.9
+2.06
+.63
+1.4
+.8
+-2.41
+.90
+.126
+.75
+3.01
+.95
+2.08
+.7
+0.4
+.9
+-2.72
+.93
+.148
+.85
+3.55
+.8
+8.8
+.92
+-2.75
+.95
+.182
+.90
+4.03
+.9
+28.3
+.95
+-2.71
+.95
+5.20
+.95
+40
+Mach
+CM↵2
+Mach
+(CMq+↵)0
+Mach
+(CMq+↵)2
+0
+-15.1
+0
+-22
+0
+48
+.45
+-15.1
+.8
+-21.1
+.5
+-46
+.6
+-12.7
+.85
+-21.9
+.6
+-86
+.7
+-8.5
+.9
+-24,2
+.7
+-144
+.75
+-4.5
+.92
+-26.8
+.8
+-259
+.8
+1.5
+.95
+-31.5
+.85
+-357
+.85
+13.9
+.9
+-468
+.90
+30.2
+.95
+-745
+.95
+59.9
+Stellenbosch University https://scholar.sun.ac.za
+
+
+===== PAGE 98 =====
+APPENDIX C. PROJECTILE PROPERTIES
+84
+C.3
+Sierra international bullet
+Figure C.3: Sierra international bullet
+m = 10.8898 g
+d = 7.82 mm
+Ix = 7.2282e−8 kg m2
+It = 5.3787−7 kg m2
+Table C.3: Sierra international bullet aeroballistic coeﬃcients
+Mach
+CD0
+Mach
+CD2
+Mach
+CLP
+Mach
+CL
+Mach
+CMa0
+0
+.140
+0
+2.9
+0
+-.0150
+0
+1.75
+0
+3.05
+.8
+.140
+.95
+2.9
+.5
+-.0125
+.5
+1.63
+.5
+3.26
+.85
+.142
+1.0
+3.0
+.8
+-.0108
+.8
+1.45
+.8
+3.38
+.90
+.160
+1.05
+3.1
+.85
+-.0107
+.85
+1.40
+.85
+3.40
+.95
+.240
+1.1
+3.6
+.90
+-.0105
+.90
+1.35
+.90
+3.43
+1.00
+.430
+1.2
+6.5
+.95
+-.0103
+.95
+1.30
+.95
+3.45
+1.05
+.449
+1.4
+7.6
+1.00
+-.0100
+1.0
+1.35
+1.0
+3.24
+1.1
+.447
+1.6
+7.3
+1.05
+-.0099
+1.05
+1.55
+1.05
+3.17
+1.2
+.434
+1.8
+6.8
+1.1
+-.0098
+1.1
+1.70
+1.1
+3.15
+1.4
+.410
+2.0
+6.1
+1.2
+-.0095
+1.2
+1.90
+1.2
+3.12
+1.6
+.385
+2.2
+5.4
+1.4
+-.0088
+1.4
+2.15
+1.4
+3.06
+1.8
+.365
+2.5
+4.4
+1.6
+-.0083
+1.6
+2.32
+1.6
+2.98
+2.0
+.350
+1.8
+-.0080
+1.8
+2.45
+1.8
+2.88
+2.2
+.339
+2.0
+-.0075
+2.0
+2.58
+2.0
+2.79
+2.5
+.320
+2.2
+-.0073
+2.2
+2.68
+2.2
+2.69
+2.5
+-.0068
+2.5
+2.85
+2.5
+2.56
+Mach
+CM↵2
+Mach
+CMq
+Mach No.
+↵2
+t
+CMP
+0
+-4.3
+0
+1.2
+0
+0
+-2.6
+.95
+-4.3
+1.05
+1.2
+0
+29.2
+.06
+1.0
+-4.35
+1.1
+0.5
+0
+400
+.06
+1.05
+-4.4
+1.2
+-3.6
+.90
+0
+-2.6
+2.5
+-4.4
+1.4
+-7.3
+1.1
+0
+-1.35
+1.6
+-8.2
+1.1
+18.4
+.05
+2.5
+-8.2
+1.1
+400
+.05
+1.4
+0
+-.51
+1.4
+9.9
+.24
+1.4
+400
+.24
+1.7
+0
+-33
+1.7
+5.6
+.10
+1.7
+400
+.10
+2.5
+0
+-.33
+2.5
+400
+.10
+Stellenbosch University https://scholar.sun.ac.za
+
+
+===== PAGE 99 =====
+APPENDIX C. PROJECTILE PROPERTIES
+85
+C.4
+M1 artillery projectile
+Figure C.4: M1 artillery projectile
+m = 14.97 kg
+d = 104.8 mm
+Ix = 0.02326 kg m2
+It = 0.23118 kg m2
+Table C.4: M1 artillery projectile aeroballistic coeﬃcients
+Mach
+CD0
+Mach
+CD2
+Mach
+CLP
+Mach
+CL0
+Mach
+CL2
+0
+.124
+0
+3.2
+0
+-0178
+0
+1.63
+0
+0.1
+.875
+.124
+.88
+3.2
+.43
+-0149
+.4
+1.63
+.2
+0.16
+.925
+.150
+.97
+6.3
+.70
+-0135
+.7
+1.41
+.6
+3.5
+.965
+.200
+.99
+4.0
+.91
+-0126
+.89
+1.22
+.8
+6.6
+990
+.350
+1.15
+5.0
+1.4
+-0110
+.99
+1.73
+.985
+9.2
+1.025
+.375
+1.25
+5.4
+1.75
+-.0101
+1.09
+1.57
+1.09
+8.8
+1.085
+.415
+1.3
+5.5
+2.1
+-.0094
+1.5
+1.97
+1.3
+12.0
+1.19
+.415
+2.5
+5.5
+2.5
+-.0087
+2.0
+2.25
+1.5
+13.7
+1.35
+.385
+2.5
+2.50
+2.0
+16.0
+1.80
+.335
+2.0
+.318
+2.5
+.276
+Stellenbosch University https://scholar.sun.ac.za
+
+
+===== PAGE 100 =====
+APPENDIX C. PROJECTILE PROPERTIES
+86
+Mach
+CM↵0
+Mach
+CM↵2
+Mach
+CMq+↵
+Mach
+↵2
+t
+CMP
+0
+3.55
+0
+-2.9
+0
+-3.15
+0
+0
+.10
+.46
+3.55
+.4
+-2.9
+.79
+-3.15
+0
+403.6
+.173
+.61
+3.76
+.45
+-3.1
+1.15
+-9.1
+0
+630
+.345
+.78
+3.92
+.65
+-4.4
+1.55
+-9.5
+0
+1316
+2.35
+.87
+3.96
+.78
+-3.45
+.22
+0
+.10
+.925
+4.85
+.885
+-1.78
+Mach
+↵2
+t
+CNP
+.22
+403.6
+.173
+.97
+4.0
+.98
+-3.0
+0
+0
+-.34
+.22
+630
+.345
+1.09
+3.83
+1.075
+-2.1
+0
+632
+-.91
+.22
+1316
+2.35
+1.5
+3.75
+1.25
+-3.325
+0
+908
+-1.42
+.31
+0
+.10
+2.5
+3.75
+1.5
+-4.45
+0
+1316
+-2.63
+.31
+410.8
+.133
+2.0
+-4.6
+.22
+0
+-.34
+.31
+637.7
+.471
+2.5
+-4.6
+.22
+632
+-.91
+.31
+915.9
+1.276
+.22
+908
+-1.42
+.31
+1316
+2.35
+.22
+1316
+-2.63
+.48
+0
+-.46
+.31
+0
+-.125
+.48
+27.5
+.08
+.31
+21.4
+-.465
+.48
+375.2
+.022
+.31
+364.5
+-.503
+.48
+1316
+.94
+.31
+638
+-1.015
+.81
+0
+-.46
+.31
+1316
+-2.92
+.81
+27.5
+.08
+.48
+0
+-.34
+.81
+375.2
+.022
+.48
+348.5
+-.591
+.81
+1316
+.94
+.48
+1316
+-2.45
+.87
+0
+.4175
+.99
+0
+-.34
+.87
+315.3
+.053
+.99
+348.5
+-.591
+.87
+743.9
+.285
+.99
+1316
+-2.45
+.92
+0
+.4175
+1.001
+0
+-.36
+.92
+315.3
+.053
+1.001
+706
+-1.68
+.92
+743.9
+.285
+1.55
+0
+-.36
+.96
+0
+.3747
+1.55
+706
+-1.68
+.96
+322.2
+.05
+.96
+1316
+.665
+.995
+0
+.3747
+.995
+322.2
+.05
+.995
+1316
+.665
+1.02
+0
+.20
+1.02
+322.2
+.301
+1.1
+1316
+.20
+1.1
+0
+.301
+1.21
+375.7
+.193
+1.21
+0
+.50
+1.21
+375.7
+.301
+1.28
+0
+.193
+1.28
+403.6
+.50
+1.28
+705.7
+.445
+1.46
+0
+.215
+1.46
+410.8
+.495
+1.55
+0
+.215
+1.55
+410.8
+.495
+Stellenbosch University https://scholar.sun.ac.za
+
+
+===== PAGE 101 =====
+Appendix D
+Algorithm sample outputs
+BallisticsAJC is equipped with an “Illustrate” routine. It natively produces
+several common ﬁgures, such as height vs range, drift vs range, pitch vs yaw
+and angle of attack vs time, (if the model allows it). It can be either executed
+within “Trajectory” as outlined in section 3.6 or at a later stage by providing
+“Illustrate”with the same struct used to save a prior simulation. In this case
+it simply processes the already existing data. This appendix gives the ﬁgures
+resulting from the sample struct provided in (table 3.1). The corresponding
+python script to process existing data:
+from Ballistics_AJC import Illustrate
+Illustrate(**Settings)
+The code produces these ﬁgures:
+0
+100
+200
+300
+400
+500
+600
+700
+800
+Range (m)
+0
+100
+200
+300
+400
+500
+600
+Height (m)
+Hermite spline
+Numerical solution: 239 Steps
+Figure D.1: Sample output: Height vs range
+87
+Stellenbosch University https://scholar.sun.ac.za
+
+
+===== PAGE 102 =====
+APPENDIX D. ALGORITHM SAMPLE OUTPUTS
+88
+−2
+−1
+0
+1
+2
+3
+Yaw (degrees)
+−2
+−1
+0
+1
+2
+Pitch (degrees)
+Hermite spline
+Numerical solution: 239 Steps
+Figure D.2: Sample output: Pitch vs Yaw
+Stellenbosch University https://scholar.sun.ac.za
+
+
+===== PAGE 103 =====
+APPENDIX D. ALGORITHM SAMPLE OUTPUTS
+89
+0
+100
+200
+300
+400
+500
+600
+700
+800
+Range (m)
+−2.5
+−2.0
+−1.5
+−1.0
+−0.5
+0.0
+Drift (m)
+Hermite spline
+Numerical solution: 239 Steps
+Figure D.3: Sample output: Drift vs range
+0
+1
+2
+3
+4
+5
+Time (s)
+0.0
+0.5
+1.0
+1.5
+2.0
+2.5
+3.0
+Angle of attack (degrees)
+Hermite spline
+Numerical solution: 239 Steps
+Figure D.4: Sample output: Angle of attack vs time
+Stellenbosch University https://scholar.sun.ac.za
+
+
+===== PAGE 104 =====
+APPENDIX D. ALGORITHM SAMPLE OUTPUTS
+90
+0
+200
+400
+600
+800
+1000
+Range (m)
+160
+170
+180
+190
+200
+Velocity (m/s)
+Hermite spline
+Numerical solution: 239 Steps
+Figure D.5: Sample output: Velocity vs time
+Stellenbosch University https://scholar.sun.ac.za
+
+
+===== PAGE 105 =====
+Appendix E
+Sensitivity/uncertainty analysis
+results
+Sensitivity analysis (Elementary eﬀects) is performed on a M1 artillery sim-
+ulation (Rigid-body).
+Unlike traditional analyses that simply investigate a
+predetermined point of impact, the entire trajectory is analysed. A time de-
+pendent presentation of sensitivity yields a robust guide for understanding the
+propagation of errors, prioritisation of parameters and model selection.
+Four unique trajectories are analysed with distinct deﬁning characteristics:
+supersonic, subsonic and high or low ordinance (outlined in table E.1). This
+appendix gives the results of the sensitivity analysis for all the parameters
+investigated: location, velocity and angular velocity.
+Table E.1: M1 artillery projectile cases
+Run Number
+Twist (Cal/turn)
+Vm (m/s)
+QE (deg)
+1
+18
+205
+45
+2
+18
+205
+70
+3
+18
+493
+45
+4
+18
+493
+70
+91
+Stellenbosch University https://scholar.sun.ac.za
+
+
+===== PAGE 106 =====
+APPENDIX E. SENSITIVITY/UNCERTAINTY ANALYSIS RESULTS
+92
+E.1
+Subsonic, QE = 45 study
+E.1.1
+Position sensitivity
+10
+20
+Time (seconds)
+0.000
+0.002
+0.004
+0.006
+EE sensitivity measure µ⇤
+xx Sensitivity
+10
+20
+Time (seconds)
+0.0000
+0.0005
+0.0010
+0.0015
+0.0020
+xy Sensitivity
+10
+20
+Time (seconds)
+0.000
+0.001
+0.002
+0.003
+xz Sensitivity
+CD0
+CD2
+CL0
+CL2
+CM↵0
+CM↵2
+CLP
+CMP
+CNP
+CN ˙↵
+CM ˙↵
+Figure E.1: Sensitivity to aerodynamic coeﬃcients
+10
+20
+Time (seconds)
+0.0000
+0.0025
+0.0050
+0.0075
+EE sensitivity measure µ⇤
+xx Sensitivity
+10
+20
+Time (seconds)
+0.000
+0.002
+0.004
+0.006
+xy Sensitivity
+10
+20
+Time (seconds)
+0.000
+0.001
+0.002
+0.003
+0.004
+xz Sensitivity
+T0
+P0
+RH
+VW X
+VW Y
+LA
+AZ
+AL
+Figure E.2: Sensitivity to location and ambient conditions
+.
+Stellenbosch University https://scholar.sun.ac.za
+
+
+===== PAGE 107 =====
+APPENDIX E. SENSITIVITY/UNCERTAINTY ANALYSIS RESULTS
+93
+10
+20
+Time (seconds)
+0.0000
+0.0001
+0.0002
+EE sensitivity measure µ⇤
+xx Sensitivity
+10
+20
+Time (seconds)
+0.0000
+0.0005
+0.0010
+0.0015
+0.0020
+xy Sensitivity
+10
+20
+Time (seconds)
+0.0000
+0.0001
+0.0002
+0.0003
+0.0004
+xz Sensitivity
+m
+d
+Ix
+It
+Figure E.3: Sensitivity to projectile properties
+10
+20
+Time (seconds)
+0.00
+0.01
+0.02
+0.03
+EE sensitivity measure µ⇤
+xx Sensitivity
+10
+20
+Time (seconds)
+0.00
+0.01
+0.02
+0.03
+xy Sensitivity
+10
+20
+Time (seconds)
+0.00
+0.01
+0.02
+0.03
+xz Sensitivity
+DC
+QE
+Vm
+✓throw
+✓C
+↵0
+β0
+Tw
+!y
+!z
+Figure E.4: Sensitivity to location and initial conditions
+Stellenbosch University https://scholar.sun.ac.za
+
+
+===== PAGE 108 =====
+APPENDIX E. SENSITIVITY/UNCERTAINTY ANALYSIS RESULTS
+94
+E.1.2
+Velocity sensitivity
+10
+20
+Time (seconds)
+0.0000
+0.0025
+0.0050
+0.0075
+0.0100
+EE sensitivity measure µ⇤
+˙x0 Sensitivity
+10
+20
+Time (seconds)
+0.000
+0.001
+0.002
+0.003
+0.004
+˙x1 Sensitivity
+10
+20
+Time (seconds)
+0.000
+0.001
+0.002
+0.003
+0.004
+˙x2 Sensitivity
+CD0
+CD2
+CL0
+CL2
+CM↵0
+CM↵2
+CLP
+CMP
+CNP
+CN ˙↵
+CM ˙↵
+Figure E.5: Sensitivity to aerodynamic coeﬃcients
+10
+20
+Time (seconds)
+0.000
+0.005
+0.010
+EE sensitivity measure µ⇤
+˙x0 Sensitivity
+10
+20
+Time (seconds)
+0.000
+0.002
+0.004
+0.006
+0.008
+˙x1 Sensitivity
+10
+20
+Time (seconds)
+0.000
+0.002
+0.004
+˙x2 Sensitivity
+T0
+P0
+RH
+VW X
+VW Y
+LA
+AZ
+AL
+Figure E.6: Sensitivity to location and ambient conditions
+.
+Stellenbosch University https://scholar.sun.ac.za
+
+
+===== PAGE 109 =====
+APPENDIX E. SENSITIVITY/UNCERTAINTY ANALYSIS RESULTS
+95
+10
+20
+Time (seconds)
+0.0000
+0.0002
+0.0004
+0.0006
+EE sensitivity measure µ⇤
+˙x0 Sensitivity
+10
+20
+Time (seconds)
+0.000
+0.001
+0.002
+0.003
+˙x1 Sensitivity
+10
+20
+Time (seconds)
+0.0000
+0.0005
+0.0010
+0.0015
+˙x2 Sensitivity
+m
+d
+Ix
+It
+Figure E.7: Sensitivity to projectile properties
+10
+20
+Time (seconds)
+0.00
+0.01
+0.02
+0.03
+EE sensitivity measure µ⇤
+˙x0 Sensitivity
+10
+20
+Time (seconds)
+0.00
+0.01
+0.02
+0.03
+˙x1 Sensitivity
+10
+20
+Time (seconds)
+0.00
+0.01
+0.02
+0.03
+˙x2 Sensitivity
+DC
+QE
+Vm
+✓throw
+✓C
+↵0
+β0
+Tw
+!y
+!z
+Figure E.8: Sensitivity to location and initial conditions
+Stellenbosch University https://scholar.sun.ac.za
+
+
+===== PAGE 110 =====
+APPENDIX E. SENSITIVITY/UNCERTAINTY ANALYSIS RESULTS
+96
+E.1.3
+Angular velocity
+10
+20
+Time (seconds)
+0.000
+0.005
+0.010
+EE sensitivity measure µ⇤
+!0 Sensitivity
+10
+20
+Time (seconds)
+0.0000
+0.0005
+0.0010
+!1 Sensitivity
+10
+20
+Time (seconds)
+0.0000
+0.0005
+0.0010
+!2 Sensitivity
+CD0
+CD2
+CL0
+CL2
+CM↵0
+CM↵2
+CLP
+CMP
+CNP
+CN ˙↵
+CM ˙↵
+Figure E.9: Sensitivity to aerodynamic coeﬃcients
+10
+20
+Time (seconds)
+0.000
+0.005
+0.010
+EE sensitivity measure µ⇤
+!0 Sensitivity
+10
+20
+Time (seconds)
+0.0000
+0.0005
+0.0010
+0.0015
+!1 Sensitivity
+10
+20
+Time (seconds)
+0.0000
+0.0005
+0.0010
+0.0015
+!2 Sensitivity
+T0
+P0
+RH
+VW X
+VW Y
+LA
+AZ
+AL
+Figure E.10: Sensitivity to location and ambient conditions
+.
+Stellenbosch University https://scholar.sun.ac.za
+
+
+===== PAGE 111 =====
+APPENDIX E. SENSITIVITY/UNCERTAINTY ANALYSIS RESULTS
+97
+10
+20
+Time (seconds)
+0.000
+0.005
+0.010
+EE sensitivity measure µ⇤
+!0 Sensitivity
+10
+20
+Time (seconds)
+0.000
+0.001
+0.002
+0.003
+0.004
+!1 Sensitivity
+10
+20
+Time (seconds)
+0.000
+0.001
+0.002
+0.003
+!2 Sensitivity
+m
+d
+Ix
+It
+Figure E.11: Sensitivity to projectile properties
+10
+20
+Time (seconds)
+0.000
+0.005
+0.010
+0.015
+EE sensitivity measure µ⇤
+!0 Sensitivity
+10
+20
+Time (seconds)
+0.000
+0.001
+0.002
+0.003
+!1 Sensitivity
+10
+20
+Time (seconds)
+0.000
+0.001
+0.002
+0.003
+!2 Sensitivity
+DC
+QE
+Vm
+✓throw
+✓C
+↵0
+β0
+Tw
+!y
+!z
+Figure E.12: Sensitivity to location and initial conditions
+Stellenbosch University https://scholar.sun.ac.za
+
+
+===== PAGE 112 =====
+APPENDIX E. SENSITIVITY/UNCERTAINTY ANALYSIS RESULTS
+98
+E.2
+Subsonic, QE = 70 study
+E.2.1
+Position sensitivity
+10
+20
+30
+40
+Time (seconds)
+0.000
+0.002
+0.004
+0.006
+0.008
+EE sensitivity measure µ⇤
+xx Sensitivity
+10
+20
+30
+40
+Time (seconds)
+0.000
+0.002
+0.004
+0.006
+xy Sensitivity
+10
+20
+30
+40
+Time (seconds)
+0.000
+0.005
+0.010
+xz Sensitivity
+CD0
+CD2
+CL0
+CL2
+CM↵0
+CM↵2
+CLP
+CMP
+CNP
+CN ˙↵
+CM ˙↵
+Figure E.13: Sensitivity to aerodynamic coeﬃcients
+10
+20
+30
+40
+Time (seconds)
+0.000
+0.005
+0.010
+EE sensitivity measure µ⇤
+xx Sensitivity
+10
+20
+30
+40
+Time (seconds)
+0.000
+0.005
+0.010
+0.015
+0.020
+xy Sensitivity
+10
+20
+30
+40
+Time (seconds)
+0.00
+0.01
+0.02
+0.03
+xz Sensitivity
+T0
+P0
+RH
+VW X
+VW Y
+LA
+AZ
+AL
+Figure E.14: Sensitivity to location and ambient conditions
+.
+Stellenbosch University https://scholar.sun.ac.za
+
+
+===== PAGE 113 =====
+APPENDIX E. SENSITIVITY/UNCERTAINTY ANALYSIS RESULTS
+99
+10
+20
+30
+40
+Time (seconds)
+0.000
+0.002
+0.004
+EE sensitivity measure µ⇤
+xx Sensitivity
+10
+20
+30
+40
+Time (seconds)
+0.000
+0.001
+0.002
+0.003
+xy Sensitivity
+10
+20
+30
+40
+Time (seconds)
+0.000
+0.005
+0.010
+xz Sensitivity
+m
+d
+Ix
+It
+Figure E.15: Sensitivity to projectile properties
+10
+20
+30
+40
+Time (seconds)
+0.00
+0.02
+0.04
+0.06
+0.08
+EE sensitivity measure µ⇤
+xx Sensitivity
+10
+20
+30
+40
+Time (seconds)
+0.00
+0.01
+0.02
+0.03
+xy Sensitivity
+10
+20
+30
+40
+Time (seconds)
+0.00
+0.02
+0.04
+xz Sensitivity
+DC
+QE
+Vm
+✓throw
+✓C
+↵0
+β0
+Tw
+!y
+!z
+Figure E.16: Sensitivity to location and initial conditions
+Stellenbosch University https://scholar.sun.ac.za
+
+
+===== PAGE 114 =====
+APPENDIX E. SENSITIVITY/UNCERTAINTY ANALYSIS RESULTS
+100
+E.2.2
+Velocity sensitivity
+10
+20
+30
+40
+Time (seconds)
+0.0000
+0.0025
+0.0050
+0.0075
+EE sensitivity measure µ⇤
+˙x0 Sensitivity
+10
+20
+30
+40
+Time (seconds)
+0.000
+0.002
+0.004
+0.006
+0.008
+˙x1 Sensitivity
+10
+20
+30
+40
+Time (seconds)
+0.000
+0.005
+0.010
+0.015
+0.020
+˙x2 Sensitivity
+CD0
+CD2
+CL0
+CL2
+CM↵0
+CM↵2
+CLP
+CMP
+CNP
+CN ˙↵
+CM ˙↵
+Figure E.17: Sensitivity to aerodynamic coeﬃcients
+10
+20
+30
+40
+Time (seconds)
+0.000
+0.005
+0.010
+0.015
+EE sensitivity measure µ⇤
+˙x0 Sensitivity
+10
+20
+30
+40
+Time (seconds)
+0.00
+0.01
+0.02
+˙x1 Sensitivity
+10
+20
+30
+40
+Time (seconds)
+0.00
+0.02
+0.04
+˙x2 Sensitivity
+T0
+P0
+RH
+VW X
+VW Y
+LA
+AZ
+AL
+Figure E.18: Sensitivity to location and ambient conditions
+.
+Stellenbosch University https://scholar.sun.ac.za
+
+
+===== PAGE 115 =====
+APPENDIX E. SENSITIVITY/UNCERTAINTY ANALYSIS RESULTS
+101
+10
+20
+30
+40
+Time (seconds)
+0.0000
+0.0025
+0.0050
+0.0075
+0.0100
+EE sensitivity measure µ⇤
+˙x0 Sensitivity
+10
+20
+30
+40
+Time (seconds)
+0.000
+0.002
+0.004
+0.006
+0.008
+˙x1 Sensitivity
+10
+20
+30
+40
+Time (seconds)
+0.000
+0.005
+0.010
+0.015
+0.020
+˙x2 Sensitivity
+m
+d
+Ix
+It
+Figure E.19: Sensitivity to projectile properties
+10
+20
+30
+40
+Time (seconds)
+0.00
+0.02
+0.04
+0.06
+0.08
+EE sensitivity measure µ⇤
+˙x0 Sensitivity
+10
+20
+30
+40
+Time (seconds)
+0.00
+0.01
+0.02
+0.03
+˙x1 Sensitivity
+10
+20
+30
+40
+Time (seconds)
+0.00
+0.02
+0.04
+˙x2 Sensitivity
+DC
+QE
+Vm
+✓throw
+✓C
+↵0
+β0
+Tw
+!y
+!z
+Figure E.20: Sensitivity to location and initial conditions
+Stellenbosch University https://scholar.sun.ac.za
+
+
+===== PAGE 116 =====
+APPENDIX E. SENSITIVITY/UNCERTAINTY ANALYSIS RESULTS
+102
+E.2.3
+Angular velocity sensitivity
+10
+20
+30
+40
+Time (seconds)
+0.000
+0.005
+0.010
+EE sensitivity measure µ⇤
+!0 Sensitivity
+10
+20
+30
+40
+Time (seconds)
+0.000
+0.001
+0.002
+!1 Sensitivity
+10
+20
+30
+40
+Time (seconds)
+0.000
+0.001
+0.002
+!2 Sensitivity
+CD0
+CD2
+CL0
+CL2
+CM↵0
+CM↵2
+CLP
+CMP
+CNP
+CN ˙↵
+CM ˙↵
+Figure E.21: Sensitivity to aerodynamic coeﬃcients
+10
+20
+30
+40
+Time (seconds)
+0.000
+0.005
+0.010
+0.015
+EE sensitivity measure µ⇤
+!0 Sensitivity
+10
+20
+30
+40
+Time (seconds)
+0.0000
+0.0005
+0.0010
+0.0015
+0.0020
+!1 Sensitivity
+10
+20
+30
+40
+Time (seconds)
+0.0000
+0.0005
+0.0010
+0.0015
+0.0020
+!2 Sensitivity
+T0
+P0
+RH
+VW X
+VW Y
+LA
+AZ
+AL
+Figure E.22: Sensitivity to location and ambient conditions
+.
+Stellenbosch University https://scholar.sun.ac.za
+
+
+===== PAGE 117 =====
+APPENDIX E. SENSITIVITY/UNCERTAINTY ANALYSIS RESULTS
+103
+10
+20
+30
+40
+Time (seconds)
+0.000
+0.005
+0.010
+EE sensitivity measure µ⇤
+!0 Sensitivity
+10
+20
+30
+40
+Time (seconds)
+0.000
+0.001
+0.002
+0.003
+!1 Sensitivity
+10
+20
+30
+40
+Time (seconds)
+0.000
+0.001
+0.002
+0.003
+!2 Sensitivity
+m
+d
+Ix
+It
+Figure E.23: Sensitivity to projectile properties
+10
+20
+30
+40
+Time (seconds)
+0.000
+0.005
+0.010
+0.015
+0.020
+EE sensitivity measure µ⇤
+!0 Sensitivity
+10
+20
+30
+40
+Time (seconds)
+0.000
+0.001
+0.002
+0.003
+!1 Sensitivity
+10
+20
+30
+40
+Time (seconds)
+0.000
+0.001
+0.002
+0.003
+!2 Sensitivity
+DC
+QE
+Vm
+✓throw
+✓C
+↵0
+β0
+Tw
+!y
+!z
+Figure E.24: Sensitivity to location and initial conditions
+Stellenbosch University https://scholar.sun.ac.za
+
+
+===== PAGE 118 =====
+APPENDIX E. SENSITIVITY/UNCERTAINTY ANALYSIS RESULTS
+104
+E.3
+Supersonic, QE = 45 study
+E.3.1
+Position sensitivity
+20
+40
+Time (seconds)
+0.00
+0.01
+0.02
+EE sensitivity measure µ⇤
+xx Sensitivity
+20
+40
+Time (seconds)
+0.0000
+0.0005
+0.0010
+0.0015
+0.0020
+xy Sensitivity
+20
+40
+Time (seconds)
+0.000
+0.005
+0.010
+0.015
+xz Sensitivity
+CD0
+CD2
+CL0
+CL2
+CM↵0
+CM↵2
+CLP
+CMP
+CNP
+CN ˙↵
+CM ˙↵
+Figure E.25: Sensitivity to aerodynamic coeﬃcients
+20
+40
+Time (seconds)
+0.00
+0.01
+0.02
+0.03
+0.04
+EE sensitivity measure µ⇤
+xx Sensitivity
+20
+40
+Time (seconds)
+0.000
+0.005
+0.010
+0.015
+xy Sensitivity
+20
+40
+Time (seconds)
+0.00
+0.01
+0.02
+0.03
+xz Sensitivity
+T0
+P0
+RH
+VW X
+VW Y
+LA
+AZ
+AL
+Figure E.26: Sensitivity to location and ambient conditions
+.
+Stellenbosch University https://scholar.sun.ac.za
+
+
+===== PAGE 119 =====
+APPENDIX E. SENSITIVITY/UNCERTAINTY ANALYSIS RESULTS
+105
+20
+40
+Time (seconds)
+0.0000
+0.0002
+0.0004
+0.0006
+0.0008
+EE sensitivity measure µ⇤
+xx Sensitivity
+20
+40
+Time (seconds)
+0.000
+0.001
+0.002
+xy Sensitivity
+20
+40
+Time (seconds)
+0.0000
+0.0002
+0.0004
+xz Sensitivity
+m
+d
+Ix
+It
+Figure E.27: Sensitivity to projectile properties
+20
+40
+Time (seconds)
+0.00
+0.01
+0.02
+EE sensitivity measure µ⇤
+xx Sensitivity
+20
+40
+Time (seconds)
+0.00
+0.01
+0.02
+0.03
+xy Sensitivity
+20
+40
+Time (seconds)
+0.00
+0.01
+0.02
+0.03
+xz Sensitivity
+DC
+QE
+Vm
+✓throw
+✓C
+↵0
+β0
+Tw
+!y
+!z
+Figure E.28: Sensitivity to location and initial conditions
+Stellenbosch University https://scholar.sun.ac.za
+
+
+===== PAGE 120 =====
+APPENDIX E. SENSITIVITY/UNCERTAINTY ANALYSIS RESULTS
+106
+E.3.2
+Velocity sensitivity
+20
+40
+Time (seconds)
+0.00
+0.01
+0.02
+EE sensitivity measure µ⇤
+˙x0 Sensitivity
+20
+40
+Time (seconds)
+0.000
+0.001
+0.002
+0.003
+˙x1 Sensitivity
+20
+40
+Time (seconds)
+0.000
+0.005
+0.010
+0.015
+˙x2 Sensitivity
+CD0
+CD2
+CL0
+CL2
+CM↵0
+CM↵2
+CLP
+CMP
+CNP
+CN ˙↵
+CM ˙↵
+Figure E.29: Sensitivity to aerodynamic coeﬃcients
+20
+40
+Time (seconds)
+0.00
+0.02
+0.04
+EE sensitivity measure µ⇤
+˙x0 Sensitivity
+20
+40
+Time (seconds)
+0.000
+0.005
+0.010
+0.015
+˙x1 Sensitivity
+20
+40
+Time (seconds)
+0.00
+0.01
+0.02
+0.03
+˙x2 Sensitivity
+T0
+P0
+RH
+VW X
+VW Y
+LA
+AZ
+AL
+Figure E.30: Sensitivity to location and ambient conditions
+.
+Stellenbosch University https://scholar.sun.ac.za
+
+
+===== PAGE 121 =====
+APPENDIX E. SENSITIVITY/UNCERTAINTY ANALYSIS RESULTS
+107
+20
+40
+Time (seconds)
+0.00000
+0.00025
+0.00050
+0.00075
+EE sensitivity measure µ⇤
+˙x0 Sensitivity
+20
+40
+Time (seconds)
+0.000
+0.001
+0.002
+0.003
+0.004
+˙x1 Sensitivity
+20
+40
+Time (seconds)
+0.0000
+0.0002
+0.0004
+0.0006
+˙x2 Sensitivity
+m
+d
+Ix
+It
+Figure E.31: Sensitivity to projectile properties
+20
+40
+Time (seconds)
+0.00
+0.01
+0.02
+EE sensitivity measure µ⇤
+˙x0 Sensitivity
+20
+40
+Time (seconds)
+0.00
+0.01
+0.02
+0.03
+˙x1 Sensitivity
+20
+40
+Time (seconds)
+0.00
+0.01
+0.02
+0.03
+˙x2 Sensitivity
+DC
+QE
+Vm
+✓throw
+✓C
+↵0
+β0
+Tw
+!y
+!z
+Figure E.32: Sensitivity to location and initial conditions
+Stellenbosch University https://scholar.sun.ac.za
+
+
+===== PAGE 122 =====
+APPENDIX E. SENSITIVITY/UNCERTAINTY ANALYSIS RESULTS
+108
+E.3.3
+Angular velocity sensitivity
+20
+40
+Time (seconds)
+0.00
+0.01
+0.02
+0.03
+EE sensitivity measure µ⇤
+!0 Sensitivity
+20
+40
+Time (seconds)
+0.00000
+0.00025
+0.00050
+0.00075
+0.00100
+!1 Sensitivity
+20
+40
+Time (seconds)
+0.0000
+0.0002
+0.0004
+0.0006
+0.0008
+!2 Sensitivity
+CD0
+CD2
+CL0
+CL2
+CM↵0
+CM↵2
+CLP
+CMP
+CNP
+CN ˙↵
+CM ˙↵
+Figure E.33: Sensitivity to aerodynamic coeﬃcients
+20
+40
+Time (seconds)
+0.00
+0.01
+0.02
+EE sensitivity measure µ⇤
+!0 Sensitivity
+20
+40
+Time (seconds)
+0.00000
+0.00025
+0.00050
+0.00075
+0.00100
+!1 Sensitivity
+20
+40
+Time (seconds)
+0.0000
+0.0005
+0.0010
+!2 Sensitivity
+T0
+P0
+RH
+VW X
+VW Y
+LA
+AZ
+AL
+Figure E.34: Sensitivity to location and ambient conditions
+.
+Stellenbosch University https://scholar.sun.ac.za
+
+
+===== PAGE 123 =====
+APPENDIX E. SENSITIVITY/UNCERTAINTY ANALYSIS RESULTS
+109
+20
+40
+Time (seconds)
+0.00
+0.01
+0.02
+0.03
+EE sensitivity measure µ⇤
+!0 Sensitivity
+20
+40
+Time (seconds)
+0.000
+0.001
+0.002
+0.003
+!1 Sensitivity
+20
+40
+Time (seconds)
+0.000
+0.001
+0.002
+0.003
+!2 Sensitivity
+m
+d
+Ix
+It
+Figure E.35: Sensitivity to projectile properties
+20
+40
+Time (seconds)
+0.000
+0.005
+0.010
+0.015
+EE sensitivity measure µ⇤
+!0 Sensitivity
+20
+40
+Time (seconds)
+0.000
+0.001
+0.002
+!1 Sensitivity
+20
+40
+Time (seconds)
+0.000
+0.001
+0.002
+!2 Sensitivity
+DC
+QE
+Vm
+✓throw
+✓C
+↵0
+β0
+Tw
+!y
+!z
+Figure E.36: Sensitivity to location and initial conditions
+Stellenbosch University https://scholar.sun.ac.za
+
+
+===== PAGE 124 =====
+APPENDIX E. SENSITIVITY/UNCERTAINTY ANALYSIS RESULTS
+110
+E.4
+Supersonic, QE = 70 study
+E.4.1
+Position sensitivity
+20
+40
+60
+Time (seconds)
+0.00
+0.01
+0.02
+EE sensitivity measure µ⇤
+xx Sensitivity
+20
+40
+60
+Time (seconds)
+0.000
+0.002
+0.004
+0.006
+0.008
+xy Sensitivity
+20
+40
+60
+Time (seconds)
+0.00
+0.01
+0.02
+0.03
+0.04
+xz Sensitivity
+CD0
+CD2
+CL0
+CL2
+CM↵0
+CM↵2
+CLP
+CMP
+CNP
+CN ˙↵
+CM ˙↵
+Figure E.37: Sensitivity to aerodynamic coeﬃcients
+20
+40
+60
+Time (seconds)
+0.00
+0.01
+0.02
+0.03
+0.04
+EE sensitivity measure µ⇤
+xx Sensitivity
+20
+40
+60
+Time (seconds)
+0.00
+0.01
+0.02
+0.03
+xy Sensitivity
+20
+40
+60
+Time (seconds)
+0.00
+0.02
+0.04
+0.06
+0.08
+xz Sensitivity
+T0
+P0
+RH
+VW X
+VW Y
+LA
+AZ
+AL
+Figure E.38: Sensitivity to location and ambient conditions
+.
+Stellenbosch University https://scholar.sun.ac.za
+
+
+===== PAGE 125 =====
+APPENDIX E. SENSITIVITY/UNCERTAINTY ANALYSIS RESULTS
+111
+20
+40
+60
+Time (seconds)
+0.000
+0.002
+0.004
+0.006
+0.008
+EE sensitivity measure µ⇤
+xx Sensitivity
+20
+40
+60
+Time (seconds)
+0.000
+0.002
+0.004
+0.006
+xy Sensitivity
+20
+40
+60
+Time (seconds)
+0.000
+0.005
+0.010
+xz Sensitivity
+m
+d
+Ix
+It
+Figure E.39: Sensitivity to projectile properties
+20
+40
+60
+Time (seconds)
+0.00
+0.02
+0.04
+0.06
+0.08
+EE sensitivity measure µ⇤
+xx Sensitivity
+20
+40
+60
+Time (seconds)
+0.00
+0.01
+0.02
+0.03
+xy Sensitivity
+20
+40
+60
+Time (seconds)
+0.00
+0.02
+0.04
+xz Sensitivity
+DC
+QE
+Vm
+✓throw
+✓C
+↵0
+β0
+Tw
+!y
+!z
+Figure E.40: Sensitivity to location and initial conditions
+Stellenbosch University https://scholar.sun.ac.za
+
+
+===== PAGE 126 =====
+APPENDIX E. SENSITIVITY/UNCERTAINTY ANALYSIS RESULTS
+112
+E.4.2
+Velocity sensitivity
+20
+40
+60
+Time (seconds)
+0.00
+0.01
+0.02
+EE sensitivity measure µ⇤
+˙x0 Sensitivity
+20
+40
+60
+Time (seconds)
+0.000
+0.005
+0.010
+˙x1 Sensitivity
+20
+40
+60
+Time (seconds)
+0.00
+0.02
+0.04
+˙x2 Sensitivity
+CD0
+CD2
+CL0
+CL2
+CM↵0
+CM↵2
+CLP
+CMP
+CNP
+CN ˙↵
+CM ˙↵
+Figure E.41: Sensitivity to aerodynamic coeﬃcients
+20
+40
+60
+Time (seconds)
+0.00
+0.02
+0.04
+EE sensitivity measure µ⇤
+˙x0 Sensitivity
+20
+40
+60
+Time (seconds)
+0.00
+0.01
+0.02
+0.03
+˙x1 Sensitivity
+20
+40
+60
+Time (seconds)
+0.000
+0.025
+0.050
+0.075
+˙x2 Sensitivity
+T0
+P0
+RH
+VW X
+VW Y
+LA
+AZ
+AL
+Figure E.42: Sensitivity to location and ambient conditions
+.
+Stellenbosch University https://scholar.sun.ac.za
+
+
+===== PAGE 127 =====
+APPENDIX E. SENSITIVITY/UNCERTAINTY ANALYSIS RESULTS
+113
+20
+40
+60
+Time (seconds)
+0.000
+0.005
+0.010
+EE sensitivity measure µ⇤
+˙x0 Sensitivity
+20
+40
+60
+Time (seconds)
+0.000
+0.005
+0.010
+˙x1 Sensitivity
+20
+40
+60
+Time (seconds)
+0.00
+0.01
+0.02
+˙x2 Sensitivity
+m
+d
+Ix
+It
+Figure E.43: Sensitivity to projectile properties
+20
+40
+60
+Time (seconds)
+0.00
+0.02
+0.04
+0.06
+0.08
+EE sensitivity measure µ⇤
+˙x0 Sensitivity
+20
+40
+60
+Time (seconds)
+0.00
+0.01
+0.02
+0.03
+˙x1 Sensitivity
+20
+40
+60
+Time (seconds)
+0.00
+0.02
+0.04
+0.06
+˙x2 Sensitivity
+DC
+QE
+Vm
+✓throw
+✓C
+↵0
+β0
+Tw
+!y
+!z
+Figure E.44: Sensitivity to location and initial conditions
+Stellenbosch University https://scholar.sun.ac.za
+
+
+===== PAGE 128 =====
+APPENDIX E. SENSITIVITY/UNCERTAINTY ANALYSIS RESULTS
+114
+E.4.3
+Angular velocity sensitivity
+20
+40
+60
+Time (seconds)
+0.00
+0.01
+0.02
+0.03
+EE sensitivity measure µ⇤
+!0 Sensitivity
+20
+40
+60
+Time (seconds)
+0.00000
+0.00025
+0.00050
+0.00075
+!1 Sensitivity
+20
+40
+60
+Time (seconds)
+0.00000
+0.00025
+0.00050
+0.00075
+0.00100
+!2 Sensitivity
+CD0
+CD2
+CL0
+CL2
+CM↵0
+CM↵2
+CLP
+CMP
+CNP
+CN ˙↵
+CM ˙↵
+Figure E.45: Sensitivity to aerodynamic coeﬃcients
+20
+40
+60
+Time (seconds)
+0.00
+0.01
+0.02
+EE sensitivity measure µ⇤
+!0 Sensitivity
+20
+40
+60
+Time (seconds)
+0.0000
+0.0002
+0.0004
+0.0006
+0.0008
+!1 Sensitivity
+20
+40
+60
+Time (seconds)
+0.0000
+0.0005
+0.0010
+!2 Sensitivity
+T0
+P0
+RH
+VW X
+VW Y
+LA
+AZ
+AL
+Figure E.46: Sensitivity to location and ambient conditions
+Stellenbosch University https://scholar.sun.ac.za
+
+
+===== PAGE 129 =====
+APPENDIX E. SENSITIVITY/UNCERTAINTY ANALYSIS RESULTS
+115
+20
+40
+60
+Time (seconds)
+0.00
+0.01
+0.02
+0.03
+EE sensitivity measure µ⇤
+!0 Sensitivity
+20
+40
+60
+Time (seconds)
+0.000
+0.001
+0.002
+!1 Sensitivity
+20
+40
+60
+Time (seconds)
+0.0000
+0.0005
+0.0010
+0.0015
+0.0020
+!2 Sensitivity
+m
+d
+Ix
+It
+Figure E.47: Sensitivity to projectile properties
+20
+40
+60
+Time (seconds)
+0.000
+0.005
+0.010
+0.015
+0.020
+EE sensitivity measure µ⇤
+!0 Sensitivity
+20
+40
+60
+Time (seconds)
+0.000
+0.001
+0.002
+!1 Sensitivity
+20
+40
+60
+Time (seconds)
+0.000
+0.001
+0.002
+!2 Sensitivity
+DC
+QE
+Vm
+✓throw
+✓C
+↵0
+β0
+Tw
+!y
+!z
+Figure E.48: Sensitivity to location and initial conditions
+Stellenbosch University https://scholar.sun.ac.za
+
+
+===== PAGE 130 =====
+APPENDIX E. SENSITIVITY/UNCERTAINTY ANALYSIS RESULTS
+116
+Table E.2: Sample inputs and Sensitivity analysis
+Input
+Distribution
+Range
+Units (SI)
+µ
+µ⇤
+σ
+Ambient conditions
+T0
+Uniform
+[ 5. 40.]
+◦C
+0.007
+0.007
+0.001
+P0
+Uniform
+[ 99698. 103991.]
+Pa
+-0.002
+0.002
+0
+RH
+Uniform
+[ 8. 90.]
+%
+0.001
+0.001
+0
+VWX
+Uniform
+[-5.3 5.3]
+m s−1
+0.002
+0.002
+0.002
+VWY
+Uniform
+[-5.3 5.3]
+m s−1
+0.001
+0.003
+0.003
+Earth properties
+LA
+Uniform
+[-38. -24.]
+deg
+0.001
+0.001
+0
+AZ
+Uniform
+[-180. 180.]
+deg
+0.003
+0.003
+0.002
+AL
+Uniform
+[ 0. 1000.]
+m
+0
+0
+0
+Projectile properties
+m
+Normal
+[14.969 14.971]
+kg
+0
+0
+0
+d
+Normal
+[0.104 0.105]
+m
+-0
+0
+0
+Ix
+Normal
+[0.022 0.024]
+kg m2
+0.001
+0.001
+0
+It
+Normal
+[0.22 0.243]
+kg m2
+-0
+0
+0
+CD0
+Normal
+[ 95. 105.]
+%
+-0.006
+0.006
+0
+CD2
+Normal
+[ 95. 105.]
+%
+-0
+0
+0
+CL0
+Normal
+[ 95. 105.]
+%
+0
+0
+0
+CL2
+Normal
+[ 95. 105.]
+%
+0
+0
+0
+CM↵0
+Normal
+[ 95. 105.]
+%
+-0
+0
+0
+CM↵2
+Normal
+[ 95. 105.]
+%
+0
+0
+0
+CLP
+Normal
+[ 95. 105.]
+%
+-0
+0
+0
+CMP
+Normal
+[ 95. 105.]
+%
+-0
+0
+0
+CNP
+Normal
+[ 95. 105.]
+%
+0
+0
+0
+CN ˙↵
+Normal
+[ 95. 105.]
+%
+0
+0
+0
+CM ˙↵
+Normal
+[ 95. 105.]
+%
+0
+0
+0
+Initial conditions
+DC
+Normal
+[-1. 1.]
+deg
+0
+0
+0
+QE
+Normal
+[44. 46.]
+m s−1
+0.058
+0.058
+0
+Vm
+Normal
+[204. 206.]
+deg
+0.016
+0.016
+0
+✓throw
+Normal
+[0. 0.054]
+deg
+0.002
+0.002
+0
+✓C
+Normal
+[ 0. 360.]
+deg
+0
+0
+0
+↵0
+Normal
+[-0.1 0.1]
+deg
+0
+0
+0
+β0
+Normal
+[-0.1 0.1]
+cal/turn
+-0
+0
+0
+Tw
+Normal
+[17.8 18.2]
+rad s−1
+-0
+0
+0
+!y
+Normal
+[-1.44 1.44]
+rad s−1
+0.001
+0.002
+0.002
+!z
+Normal
+[-1.44 1.44]
+0.001
+0.001
+0.002
+Stellenbosch University https://scholar.sun.ac.za
+
+
+===== PAGE 131 =====
+List of References
+Altufayl, A. (2019). Development of a 6-DOF Trajectory Simulation Model for Asym-
+metric Projectiles. Ph.D. thesis, North-West University.
+Anderson, J. (2009). Fundementals of aerodynamics. 5th edn. McGraw-Hill Higher
+Education.
+Baranowski, L., Gadomski, B., Majewski, P. and Szymonik, J. (2016).
+Explicit
+"ballistic M-model": A reﬁnement of the implicit "modiﬁed point mass trajectory
+model". Bulletin of the Polish Academy of Sciences: Technical Sciences. ISSN
+02397528.
+Bradly, J. (1990).
+An alternative form of the Modiﬁed Point-Mass Equation of
+Motion. Ballistic research laboratory.
+Buck, A.L. (1981). New Equation for computing vapor pressure. Journal of Applied
+Meteorology.
+Bush, M. (1992). Remote Drug Delivery Systems Published by : American Asso-
+ciation of Zoo Veterinarians Stable URL : http://www.jstor.org/stable/20095205
+REVIEW ARTICLE REMOTE DRUG DELIVERY SYSTEMS. Journal of Zoo
+and Wildlife Medicine, vol. 23, no. 2, pp. 159–180.
+Caudell, J.N., West, B.C., Griﬃn, B. and Davis, K. (2009). Fostering greater profes-
+sionalism with ﬁrearms in the wildlife arena. In: Human Dimensions of Wildlife
+Damage Management Fostering, pp. 95–99.
+Cavcar, M. (2000). The International Standard Atmosphere (ISA). Anadolu Uni-
+versity, Turkey.
+Chaves, E., Manezes, M.T. and Sobreiro, T. (2019). Mini-curso "Corpo conciencinete
+na intervenção urbana", vol. 1. 3rd edn. CRC Press. ISBN 9781138055315.
+Cooper, G.R. and Costello, M. (2011). Trajectory prediction of spin-stabilized pro-
+jectiles with a liquid payload. Journal of Spacecraft and Rockets. ISSN 15336794.
+Crassidis, J.L. and Markley, F.L. (2003). Quaternion Identities. Fundamentals of
+Spacecraft Attitude Determination and Control, vol. 3, no. 4, pp. 345–359.
+Elsaadany, A. and Wen-Jun, Y. (2014). Accurate trajectory prediction for typical
+artillery projectile. In: Proceedings of the 33rd Chinese Control Conference, CCC
+2014. ISBN 9789881563842. ISSN 21612927.
+117
+Stellenbosch University https://scholar.sun.ac.za
+
+
+===== PAGE 132 =====
+LIST OF REFERENCES
+118
+Ferziger, J.H. and Perić, M. (2002). Computational Methods for Fluid Dynamics.
+Fluent, A. (2013). Ansys Fluent Theory Guide. ANSYS Inc., USA.
+Fresconi, F., Cooper, G. and Costello, M. (2011). Practical Assessment of Real-Time
+Impact Point Estimators for Smart Weapons. Journal of Aerospace Engineering,
+vol. 11, no. January, pp. 1–11.
+Gkritzapis, D.N. and Kaimakamis, G. (2008). A Review of Flight Dynamic Simula-
+tion Model of Missiles Hellenic Army Academy. pp. 257–261.
+Gkritzapis, D.N., Panagiotopoulos, E.E., Margaris, D.P. and Papanikas, D.G. (2007).
+Computational atmospheric trajectory simulation analysis of spin-stabilized pro-
+jectiles and small bullets. In: Collection of Technical Papers - 2007 AIAA Atmo-
+spheric Flight Mechanics Conference. ISBN 1563479052. ISSN 1752-5055.
+Greenwood, D.T. (2003). Advanced Dynamics.
+Hainz, L.C. and Costello, M. (2005).
+Modiﬁed projectile linear theory for rapid
+trajectory prediction. Journal of Guidance, Control, and Dynamics, vol. 28, no. 5,
+pp. 1006–1014. ISSN 07315090.
+Hampton, J.O., Adams, P.J., Forsyth, D.M., Cowled, B.D., Stuart, I.G., Hyndman,
+T.H. and Collins, T. (2016). Improving animal welfare in wildlife shooting. Wildlife
+Society Bulletin, vol. 40, no. 4, pp. 1–27.
+Henderson, D. (1977). Euler Angles, Quaternions, and Transformation Matrices.
+NASA JSC Report.
+Hibbeler, R. (2010). Engineering mechanics: Dynamics. 12th edn. Upper Saddle
+River: Pearson.
+Khalil, M., Rui, X. and Hendy, H. (2015). Discrete Time Transfer Matrix Method
+for Projectile Trajectory Prediction. Journal of Aerospace Engineering, vol. 28,
+no. 2. ISSN 0893-1321.
+Koene, B., ID-Boufker, F. and Papy, A. (2008). Kinetic Non-lethal Weapons. Nether-
+lands Annual Review of Military Studies 2008: Sensors, Weapons, C4I and Oper-
+ations Research.
+Lieske, R.F. and Reiter, M.L. (1966). Equations of Motion for a Modiﬁed Point Mass
+Trajectory. Ballistic research laboratory.
+McCoy, R. (1999).
+Modern Exterior Ballistics.
+Schiﬀer Publishing.
+ISBN
+0764338250,9780764338250.
+Murphy, C. (1954). Data reduction for the free ﬂight spark ranges.
+Pneu-Dart (2020). Pneu dart Inc.
+Available at: http://www.pneudart.com/products/projectors/#gauged
+Stellenbosch University https://scholar.sun.ac.za
+
+
+===== PAGE 133 =====
+LIST OF REFERENCES
+119
+Press, W.H. and Teukolsky, S.A. (1992). Adaptive Stepsize Runge-Kutta Integration.
+Computers in Physics. ISSN 08941866.
+Press, W.H., Teukolsky, S.A., Vetterling, T.W. and Flannery, B.P. (2007). Numerical
+Recipies, The Art of Scientiﬁc Computing. ISBN 978-0-521-88068-8.
+Rogers, J., Costello, M. and Cooper, G. (2013). Design considerations for stability
+of liquid payload projectiles. Journal of Spacecraft and Rockets. ISSN 15336794.
+Rosenﬁeld, D. (2017). Introduction to Technical Aspects of Remote Drug Delivery
+Systems (* RDDS ) with Telemetric Support in Free-Ranging Wildlife * RDDS =
+Remote Drug Delivery System. Abravas, vol. 2, no. September.
+Saltelli, A., Ratto, M., Andres, T., Campolongo, F., Cariboni, J., Gatelli, D.,
+Saisana, M. and Tarantola, S. (2008). Global Sensitivity Analysis. The Primer.
+ISBN 9780470059975.
+Sandvik, A.W. (2018). Numerical Solutions of Classical Equations of Motion.
+Schobeiri, M.T. (2010). Fluid mechanics for engineers: A graduate textbook. Springer.
+ISBN 9783642115936.
+Tsien, H.S. (2012). Collected Works of H.S. Tsien (1938–1956). Academic Press.
+White, F.M. (2010). Fluid Mechanics (4th Edition). Refrigeration And Air Condi-
+tioning. ISSN 1364-0321. 1003.3921v1.
+Wie, B. (2008). Space Vehicle Dynamics and Control, Second Edition. American
+Institute of Aeronautics and Astronautics.
+Stellenbosch University https://scholar.sun.ac.za

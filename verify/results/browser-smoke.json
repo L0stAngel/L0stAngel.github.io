@@ -1,0 +1,357 @@
+{
+  "url": "file:///C:/Users/shadowmoon/Desktop/test/120mm_ballistics.html",
+  "startedAt": "2026-10-24T03:13:56.112Z",
+  "bundleSync": {
+    "bytes": 153080,
+    "scripts": 0,
+    "files": {
+      "physics.js": {
+        "same": true
+      },
+      "render3d.js": {
+        "same": true
+      },
+      "charts.js": {
+        "same": true
+      },
+      "main.js": {
+        "same": true
+      }
+    }
+  },
+  "consoleErrors": [],
+  "pageErrors": [],
+  "screenshots": [
+    "01-mortar-initial.png",
+    "02-mortar-global.png",
+    "03-mortar-burst.png",
+    "04-mortar-fragments.png",
+    "05-mortar-final.png",
+    "06-spin-preset.png",
+    "07-env-panel.png",
+    "08-wind-cross-15.png",
+    "09-model-panel.png",
+    "10-extreme-spin-550-70.png",
+    "11-viewport-1280x800.png",
+    "13-viewport-1000x720.png",
+    "12-viewport-500x900.png"
+  ],
+  "initial": {
+    "preset": "mortar120",
+    "presetName": "120mm 迫弹（尾翼稳定·不旋转）",
+    "presetButtons": 2,
+    "activePresetBtn": "mortar120",
+    "hudItems": 10,
+    "chartCells": 7,
+    "chartTags": [
+      "高度 H",
+      "速度 V / 马赫 Ma",
+      "攻角 α / 偏航 β",
+      "弹道倾角 θ",
+      "侧偏 Z（风偏 + 偏流 + 科氏）",
+      "动压 q",
+      "总攻角 αt"
+    ],
+    "statCount": 6,
+    "statusCode": "SOLVED 113ms",
+    "statusMode": "弹道飞行中",
+    "presetNote": "当前弹型：120mm 迫弹（尾翼稳定、不旋转；McCoy 附录 C 实测气动系数，v0=318 m/s 为装药 4）",
+    "v0Range": {
+      "min": "250",
+      "max": "340",
+      "value": "318"
+    },
+    "angleMax": "85",
+    "twistDisabled": true,
+    "twistVal": "不旋转",
+    "seedRange": {
+      "min": "1",
+      "max": "9999",
+      "value": "2024"
+    },
+    "speedBtns": 4,
+    "camBtns": 3,
+    "overlayHidden": true,
+    "canvas": {
+      "w": 1288,
+      "h": 880
+    },
+    "stats": {
+      "range": "7301 m",
+      "alt": "2100 m",
+      "mach": "0.93",
+      "drift": "+7.9 m",
+      "vimp": "234 m/s",
+      "r90": "330 m"
+    },
+    "fragModel": "MOTT μ 5.9 g · 均值 11.9 g · GURNEY 1040 m/s · 自转 0 rad/s · 破片 800",
+    "windChip": "风 无风 · 科氏 40°N",
+    "hasScene3D": true,
+    "hasCharts": true,
+    "hasBallistics": true
+  },
+  "fpsFlight": {
+    "frames": 134,
+    "ms": 2210.7000000001863,
+    "fps": 60.61428506807288
+  },
+  "hudAtBurst": {
+    "t": "41.37",
+    "h": "12.0",
+    "v": "234",
+    "mach": "0.69",
+    "alpha": "+0.01",
+    "q": "33.4",
+    "x": "7300",
+    "z": "7.9",
+    "spin": "0",
+    "stabLabel": "静稳定裕度",
+    "sg": "1.32",
+    "sgUnit": "cal",
+    "toast": "动爆 · 炸高 12 m · 落速 234 m/s · 攻角 +0.0° · 侧偏 +8 m · 破片 800 枚 · R90 330 m"
+  },
+  "fpsFragmentsMortar": {
+    "frames": 134,
+    "ms": 2211,
+    "fps": 60.60606060606061
+  },
+  "realSecondsToFinish8x": 0.004,
+  "spinPreset": {
+    "preset": "spin120",
+    "presetName": "120mm 杀爆弹（旋转稳定代表弹）",
+    "statusCode": "SOLVED 178ms",
+    "v0Range": {
+      "min": "250",
+      "max": "550",
+      "value": "450"
+    },
+    "twistDisabled": false,
+    "twistVal": "1:18",
+    "chartTags": [
+      "高度 H",
+      "速度 V / 马赫 Ma",
+      "攻角 α / 偏航 β",
+      "弹道倾角 θ",
+      "侧偏 Z（风偏 + 偏流 + 科氏）",
+      "动压 q",
+      "自转 ωx"
+    ],
+    "stabLabel": "稳定因子",
+    "sgUnit": "Sg",
+    "presetNote": "当前弹型：120mm 旋转稳定杀爆弹代表弹（线膛炮，1:18 缠距；气动系数按 105mm M1 同类换算，动/静稳定性由 Sg 判定）",
+    "stats": {
+      "range": "9778 m",
+      "alt": "2940 m",
+      "mach": "1.32",
+      "drift": "+189.2 m",
+      "vimp": "265 m/s",
+      "r90": "385 m"
+    },
+    "hudSpin": "1144",
+    "hudSg": "5.06",
+    "fragModel": "MOTT μ 6.6 g · 均值 13.1 g · GURNEY 1254 m/s · 自转 809 rad/s · 破片 800",
+    "windChip": "风 无风 · 科氏 40°N"
+  },
+  "envPanel": {
+    "visible": true,
+    "overlayVisible": true,
+    "twistDisabled": true,
+    "twistVal": "不旋转",
+    "seed": "2024",
+    "seedRange": {
+      "min": "1",
+      "max": "9999"
+    },
+    "coriolisChecked": true,
+    "windOnChecked": true,
+    "summary": "120mm 迫弹（尾翼稳定·不旋转） · ISA 大气 15°C · 纬度 40° · 风 无风 · 不旋转 · 破片 800 片 · 种子 #2024 · 科氏力开"
+  },
+  "windTest": {
+    "statDrift": "+266.6 m",
+    "windChip": "风 右风 15 m/s · 科氏 40°N",
+    "summary": "120mm 迫弹（尾翼稳定·不旋转） · ISA 大气 15°C · 纬度 40° · 风 右风 15 m/s · 不旋转 · 破片 800 片 · 种子 #2024 · 科氏力开",
+    "range": "7288 m",
+    "beforeDrift": "+7.9 m"
+  },
+  "modelPanel": {
+    "visible": true,
+    "tables": 2,
+    "tableRows": 12,
+    "hasMcCoy": true,
+    "hasValidation": true,
+    "hasLimits": true
+  },
+  "seedTest": {
+    "r90a": "382 m",
+    "r90b": "382 m",
+    "same": true
+  },
+  "extreme": {
+    "statusCode": "SOLVED 343ms",
+    "stats": {
+      "range": "7438 m",
+      "alt": "6069 m",
+      "mach": "1.62",
+      "drift": "+1524.9 m",
+      "vimp": "308 m/s",
+      "r90": "461 m"
+    },
+    "hudT": "9.50",
+    "hudSg": "7.45"
+  },
+  "api": {
+    "aeroAt": [
+      0.35714285714285715,
+      1.714,
+      0.5910735122520419,
+      3.9575
+    ],
+    "presets": [
+      "mortar120",
+      "spin120"
+    ],
+    "aeroDriftField": {
+      "hasAeroDrift": true,
+      "hasOldWindDrift": false
+    },
+    "tabKeys": [
+      "CD0",
+      "CD2",
+      "CNa0",
+      "CNa2",
+      "CMa0",
+      "CMa2",
+      "Cmq0",
+      "Cmq2"
+    ],
+    "seedReproducible": {
+      "a": 588.8692301712731,
+      "b": 588.8692301712731,
+      "same": true
+    },
+    "windApi": {
+      "drift15": 258.71377944521663,
+      "drift0": 0,
+      "delta": 258.71377944521663
+    },
+    "coriolisApi": {
+      "north": 8.643603088823125,
+      "south": -21.590828988547226
+    }
+  },
+  "afterResize1280": {
+    "viewport": [
+      888,
+      660
+    ],
+    "canvasAttr": [
+      888,
+      660
+    ],
+    "canvasClient": [
+      888,
+      660
+    ],
+    "canvasInlineStyle": " x ",
+    "chartCells": 7,
+    "chartCanvas0": [
+      391,
+      69
+    ],
+    "hudItems": 10
+  },
+  "afterResize1000": {
+    "viewport": [
+      674,
+      580
+    ],
+    "canvasAttr": [
+      674,
+      580
+    ],
+    "canvasClient": [
+      674,
+      580
+    ],
+    "match": true
+  },
+  "afterResize500": {
+    "viewport": [
+      500,
+      688
+    ],
+    "canvasAttr": [
+      500,
+      688
+    ],
+    "canvasClient": [
+      500,
+      688
+    ],
+    "chartCells": 7,
+    "hudOverflow": false
+  },
+  "responsive": {
+    "default1680": {
+      "canvas": {
+        "w": 1288,
+        "h": 880
+      }
+    },
+    "resize1280": {
+      "viewport": [
+        888,
+        660
+      ],
+      "canvasAttr": [
+        888,
+        660
+      ],
+      "canvasClient": [
+        888,
+        660
+      ],
+      "canvasInlineStyle": " x ",
+      "chartCells": 7,
+      "chartCanvas0": [
+        391,
+        69
+      ],
+      "hudItems": 10
+    },
+    "resize1000": {
+      "viewport": [
+        674,
+        580
+      ],
+      "canvasAttr": [
+        674,
+        580
+      ],
+      "canvasClient": [
+        674,
+        580
+      ],
+      "match": true
+    },
+    "resize500": {
+      "viewport": [
+        500,
+        688
+      ],
+      "canvasAttr": [
+        500,
+        688
+      ],
+      "canvasClient": [
+        500,
+        688
+      ],
+      "chartCells": 7,
+      "hudOverflow": false
+    },
+    "sceneResizeBug": false,
+    "sceneResizeFixed": true
+  },
+  "errorsTotal": 0
+}

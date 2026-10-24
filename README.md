@@ -1,0 +1,69 @@
+# 120mm 杀爆弹 · 六自由度外弹道与动爆破片仿真
+
+纯前端、零依赖的 120mm 杀爆弹外弹道演示：6-DOF 刚体弹道 + 动爆破片场 + 实时 3D/曲线可视化。
+物理内核基于 **McCoy《Modern Exterior Ballistics》(2nd ed., 2012)** 的 BRL 气动系数与 6-DOF 方法，
+并用 McCoy 公开算例完成了双组基准验证。
+
+## 快速开始
+
+- **直接打开**：`120mm_ballistics.html`（单文件离线版，双击即可）。
+- **开发模式**：打开 `index.html`（与 physics.js / render3d.js / charts.js / main.js 分离）。
+- **重新打包单文件**：`node _build.js`（生成 120mm_ballistics.html，并检查无外部引用）。
+- **物理验证**：`node test-validation.js`（57 项检查：ISA、步长收敛、风/科氏方向性、破片守恒、McCoy 双组基准、性能）。
+- **单次仿真摘要**：`node test-physics.js`。
+
+## 两种可切换弹型预设
+
+| | A · 120mm 迫弹（默认） | B · 120mm 旋转稳定杀爆弹代表弹 |
+|---|---|---|
+| 稳定方式 | 尾翼稳定、不旋转 | 线膛自转（可调缠距，默认 1:18） |
+| 数据来源 | McCoy 表 9.5 + 附录 C（实测气动） | 同类弹估算 + McCoy 附录 B（105mm M1 换算） |
+| 默认初速 | 318 m/s | 450 m/s |
+| 验证 | McCoy 表 9.7 六组（射程偏差 ≤1.7%） | McCoy 例 9.2 四组（射程偏差 ≤4.7%） |
+
+切换后初速/射角范围、HUD 稳定性指标（静稳定裕度 / 陀螺稳定因子 Sg）、第 7 张曲线（总攻角 / 自转）会自动调整。
+
+## 页面功能
+
+- 场景：3D 弹道、弹体姿态、风矢量、动爆火光/烟云、破片飞散与落点密度场、R50/R90 圈。
+- HUD：飞行时间、高度、速度、马赫、攻角、动压、水平距离、侧偏 Z、自转、稳定性。
+- 曲线：高度、速度/马赫、攻角/偏航、弹道倾角、侧偏、动压、自转（或总攻角）。
+- 控制：初速、射角、空炸高度、横风、时间倍率、暂停/重置、跟随/全局/自由相机。
+- 面板：环境参数（风、气温、纬度、缠距、破片数、随机种子、科氏/风开关）；模型与文献（假设、公式、双验证表、参考文献）。
+
+## 模型要点
+
+- 6-DOF 刚体：15 维状态、RK4 自适应步长（≤0.5 ms，按自转缩放）、四元数归一化、起爆/触地事件插值。
+- 气动（BRL 记法）：C_D、C_N、C_Mα 的线性 + sin²αt 非线性项；俯仰/滚转阻尼；Magnus 力矩（旋转弹）。
+- 环境：ISA 分层大气（0–32 km）、横/纵风幂律剖面、科氏力（纬度/射向）、重力随高度衰减。
+- 破片：Mott 质量分布 + Gurney 初速 + 自转切向速度 + 三区飞散角 + 变密度大气/风场存速；质量守恒、固定种子可复现。
+
+## 目录
+
+```
+120mm_ballistics.html   单文件成品（离线可用）
+index.html / styles.css 源页面
+physics.js              6-DOF + 破片内核（Node/浏览器通用）
+render3d.js             3D 渲染
+charts.js               曲线
+main.js                 主控/UI/面板
+_build.js               单文件打包
+test-validation.js      独立验证套件（57 项）
+test-physics.js         单次仿真摘要
+docs/                   文献综述、优化报告、审计、复验、截图
+refs/                   本地参考 PDF/文本（McCoy 2012、Cilliers 2021）
+verify/                 独立验证脚本与结果
+```
+
+## 文献与验证
+
+- 文献综述（58 条，含 DOI/URL 与参数推荐表）：[docs/literature-review.md](docs/literature-review.md)
+- 优化与验证报告：[docs/report.md](docs/report.md)
+- 原模型审计：[docs/physics-audit.md](docs/physics-audit.md)
+- 独立复验：**P0=0 / P1=0 / P2=0**（P3=24 为记录/工程细节），详见 [docs/final-verification.md](docs/final-verification.md)；界面截图见 [docs/screenshots](docs/screenshots/)
+- 关键文献：McCoy R L, *Modern Exterior Ballistics*, 2nd ed., 2012（6-DOF、附录 B/C 气动系数、例 9.2、表 9.5–9.7）；Gurney BRL Report 405 (1943)；Mott & Linfoot (1943, Springer 2006 重印)；ISO 2533:1975 / GB/T 45846-2025；李昆等 (2023, 78 J 判据)；Orłowski 等 (2024, 120mm 迫弹破碎试验)。
+
+## 说明
+
+本模型用于教学演示、模型对比与趋势分析，**不用于射表编制或实弹射击诸元计算**。
+120mm 迫弹的装药/壳体/破片统计与旋转弹气动系数为工程估算或同类换算，已在页面"模型与文献"面板和报告中标注。

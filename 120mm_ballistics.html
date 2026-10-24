@@ -1,0 +1,4530 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>120mm 杀爆弹 · 六自由度外弹道与动爆破片仿真</title>
+<style>
+/* =============================================================================
+   120mm 杀爆弹外弹道仿真 — 深色军事科技风
+   ========================================================================== */
+:root {
+  --bg: #04070b;
+  --bg-deep: #020406;
+  --panel: rgba(9, 15, 22, 0.92);
+  --panel-solid: #080d13;
+  --line: rgba(90, 190, 215, 0.16);
+  --line-strong: rgba(90, 210, 235, 0.42);
+  --cyan: #46d3e6;
+  --cyan-soft: rgba(70, 211, 230, 0.55);
+  --amber: #ffb43a;
+  --red: #ff4d4d;
+  --green: #5ee6a8;
+  --text: #cfe3ea;
+  --text-dim: #8aa3b0;
+  --muted: #5d7683;
+  --mono: "JetBrains Mono", "Cascadia Mono", "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  --sans: "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", system-ui, sans-serif;
+  --header-h: 62px;
+  --footer-h: 78px;
+  --side-w: 392px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  height: 100%;
+  background: var(--bg-deep);
+  color: var(--text);
+  font-family: var(--sans);
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(70, 211, 230, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(70, 211, 230, 0.035) 1px, transparent 1px);
+  background-size: 48px 48px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+#app {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+.mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+
+/* ------------------------------- 顶栏 ----------------------------------- */
+#topbar {
+  flex: 0 0 var(--header-h);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 22px;
+  border-bottom: 1px solid var(--line);
+  background: linear-gradient(180deg, rgba(10, 18, 26, 0.96), rgba(6, 10, 15, 0.9));
+  position: relative;
+}
+
+#topbar::after {
+  content: "";
+  position: absolute;
+  left: 0; right: 0; bottom: -1px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--cyan-soft) 18%, transparent 55%);
+  opacity: .6;
+}
+
+.brand { display: flex; align-items: center; gap: 14px; min-width: 0; }
+
+.brand-mark {
+  width: 34px; height: 34px;
+  color: var(--cyan);
+  filter: drop-shadow(0 0 8px rgba(70, 211, 230, 0.45));
+  flex: 0 0 auto;
+}
+.brand-mark svg { width: 100%; height: 100%; }
+
+.brand-text h1 {
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: .12em;
+  color: #e8f6fa;
+  white-space: nowrap;
+}
+.brand-text h1 span { color: var(--cyan); font-weight: 400; }
+
+.brand-text p {
+  margin-top: 3px;
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: .22em;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.status-strip { display: flex; align-items: center; gap: 10px; }
+
+.status-chip {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 11px;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  background: rgba(9, 17, 24, 0.7);
+  font-size: 11px;
+  letter-spacing: .08em;
+  color: var(--text-dim);
+}
+
+.status-chip.mono { font-size: 10px; color: var(--muted); letter-spacing: .12em; }
+
+.dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--green);
+  box-shadow: 0 0 8px var(--green);
+  transition: background .3s, box-shadow .3s;
+}
+.dot.armed { background: var(--amber); box-shadow: 0 0 8px var(--amber); }
+.dot.boom { background: var(--red); box-shadow: 0 0 10px var(--red); animation: pulse .5s ease-out 3; }
+.dot.done { background: var(--muted); box-shadow: none; }
+
+@keyframes pulse {
+  0% { transform: scale(1); opacity: 1; }
+  100% { transform: scale(2.4); opacity: .35; }
+}
+
+/* ------------------------------- 主区 ----------------------------------- */
+main {
+  flex: 1 1 auto;
+  display: flex;
+  min-height: 0;
+}
+
+#viewport {
+  position: relative;
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  background: #050a10;
+}
+
+#scene { display: block; width: 100%; height: 100%; }
+
+/* 角标 */
+.corner {
+  position: absolute;
+  width: 16px; height: 16px;
+  border-color: var(--line-strong);
+  border-style: solid;
+  border-width: 0;
+  pointer-events: none;
+}
+.corner.tl { top: 12px; left: 12px; border-top-width: 1px; border-left-width: 1px; }
+.corner.tr { top: 12px; right: 12px; border-top-width: 1px; border-right-width: 1px; }
+.corner.bl { bottom: 12px; left: 12px; border-bottom-width: 1px; border-left-width: 1px; }
+.corner.br { bottom: 12px; right: 12px; border-bottom-width: 1px; border-right-width: 1px; }
+
+/* HUD */
+.hud {
+  position: absolute;
+  top: 26px; left: 26px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(118px, auto));
+  gap: 1px;
+  background: var(--line);
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  overflow: hidden;
+  backdrop-filter: blur(6px);
+  pointer-events: none;
+  box-shadow: 0 6px 30px rgba(0, 0, 0, .45);
+}
+
+.hud-item {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 7px 11px;
+  background: rgba(6, 12, 18, 0.86);
+}
+
+.hud-label {
+  font-size: 9.5px;
+  letter-spacing: .12em;
+  color: var(--muted);
+  min-width: 46px;
+}
+
+.hud-value {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--cyan);
+  text-shadow: 0 0 12px rgba(70, 211, 230, .35);
+  margin-left: auto;
+}
+
+.hud-unit { font-size: 9px; color: var(--muted); font-family: var(--mono); }
+
+/* 相机按钮 */
+.cam-controls {
+  position: absolute;
+  top: 26px; right: 26px;
+  display: flex;
+  gap: 1px;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  overflow: hidden;
+  background: var(--line);
+  backdrop-filter: blur(6px);
+}
+
+.cam-controls button {
+  border: 0;
+  padding: 7px 14px;
+  background: rgba(6, 12, 18, 0.86);
+  color: var(--text-dim);
+  font-family: var(--sans);
+  font-size: 11px;
+  letter-spacing: .1em;
+  cursor: pointer;
+  transition: color .18s, background .18s;
+}
+.cam-controls button:hover { color: var(--cyan); background: rgba(12, 26, 34, .95); }
+.cam-controls button.active { color: #04121a; background: var(--cyan); font-weight: 600; }
+
+.cam-hint {
+  position: absolute;
+  top: 60px; right: 26px;
+  font-size: 9px;
+  letter-spacing: .08em;
+  color: rgba(140, 170, 180, .55);
+  pointer-events: none;
+  text-shadow: 0 1px 4px #000;
+}
+
+/* 图例 */
+.legend {
+  position: absolute;
+  left: 26px; bottom: 24px;
+  display: flex;
+  gap: 16px;
+  font-size: 10px;
+  letter-spacing: .1em;
+  color: var(--text-dim);
+  pointer-events: none;
+  text-shadow: 0 1px 4px #000;
+}
+.legend span { display: flex; align-items: center; gap: 6px; }
+.legend i {
+  width: 14px; height: 3px;
+  border-radius: 2px;
+  display: inline-block;
+  box-shadow: 0 0 8px currentColor;
+}
+
+/* 事件提示 */
+.toast {
+  position: absolute;
+  left: 50%;
+  bottom: 88px;
+  transform: translate(-50%, 14px);
+  padding: 9px 20px;
+  border: 1px solid rgba(255, 180, 58, .5);
+  border-radius: 2px;
+  background: rgba(24, 14, 2, .82);
+  color: var(--amber);
+  font-family: var(--mono);
+  font-size: 11.5px;
+  letter-spacing: .14em;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .25s, transform .25s;
+  white-space: nowrap;
+  backdrop-filter: blur(6px);
+}
+.toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+/* ------------------------------- 侧栏 ----------------------------------- */
+#sidebar {
+  flex: 0 0 var(--side-w);
+  width: var(--side-w);
+  border-left: 1px solid var(--line);
+  background: var(--panel-solid);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  position: relative;
+}
+
+#sidebar::before {
+  content: "";
+  position: absolute;
+  left: -1px; top: 0; bottom: 0;
+  width: 1px;
+  background: linear-gradient(180deg, transparent, var(--cyan-soft) 12%, transparent 60%);
+  opacity: .5;
+}
+
+.sidebar-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 13px 16px 11px;
+  border-bottom: 1px solid var(--line);
+  flex: 0 0 auto;
+}
+.sidebar-head h2 {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: .16em;
+  color: #d8edf3;
+}
+.sidebar-head span { font-size: 9px; letter-spacing: .22em; color: var(--muted); }
+
+#charts {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: repeat(7, minmax(0, 1fr));
+  gap: 1px;
+  background: var(--line);
+  overflow: hidden;
+}
+
+.chart-cell {
+  position: relative;
+  background: #070c12;
+  min-height: 0;
+  overflow: hidden;
+}
+.chart-cell canvas { display: block; width: 100%; height: 100%; }
+
+.chart-tag {
+  position: absolute;
+  top: 6px; left: 9px;
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: .14em;
+  color: var(--muted);
+  pointer-events: none;
+}
+.chart-cur {
+  position: absolute;
+  top: 6px; right: 9px;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  color: var(--cyan);
+  pointer-events: none;
+  text-shadow: 0 0 10px rgba(70, 211, 230, .4);
+}
+
+.sidebar-foot {
+  flex: 0 0 auto;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  border-top: 1px solid var(--line);
+}
+.frag-model {
+  flex: 0 0 auto;
+  padding: 7px 14px;
+  border-top: 1px solid var(--line);
+  font-size: 9.5px;
+  letter-spacing: .04em;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.stat {
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  border-right: 1px solid var(--line);
+}
+.stat:last-child { border-right: 0; }
+.stat span { font-size: 9px; letter-spacing: .1em; color: var(--muted); }
+.stat b { font-size: 13px; color: var(--amber); font-weight: 600; }
+
+/* ------------------------------- 底栏 ----------------------------------- */
+#controls {
+  flex: 0 0 var(--footer-h);
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 0 22px;
+  border-top: 1px solid var(--line);
+  background: linear-gradient(0deg, rgba(10, 18, 26, .97), rgba(6, 10, 15, .9));
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.control-group { display: flex; align-items: center; gap: 10px; flex: 0 0 auto; }
+.control-group .group-label {
+  font-size: 10px;
+  letter-spacing: .1em;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.btn {
+  appearance: none;
+  border: 1px solid var(--line-strong);
+  background: rgba(12, 22, 30, .8);
+  color: var(--text);
+  font-family: var(--sans);
+  font-size: 12px;
+  letter-spacing: .1em;
+  padding: 9px 18px;
+  border-radius: 2px;
+  cursor: pointer;
+  transition: all .18s;
+  min-width: 76px;
+}
+.btn:hover { border-color: var(--cyan); color: var(--cyan); background: rgba(20, 40, 50, .9); }
+.btn:active { transform: translateY(1px); }
+.btn.primary {
+  background: rgba(70, 211, 230, .12);
+  border-color: var(--cyan);
+  color: var(--cyan);
+  font-weight: 600;
+}
+.btn.primary:hover { background: rgba(70, 211, 230, .22); box-shadow: 0 0 18px rgba(70, 211, 230, .22); }
+
+.seg {
+  display: flex;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.seg button {
+  border: 0;
+  border-right: 1px solid var(--line);
+  background: rgba(8, 14, 20, .8);
+  color: var(--text-dim);
+  font-family: var(--mono);
+  font-size: 11px;
+  padding: 8px 12px;
+  cursor: pointer;
+  transition: all .15s;
+}
+.seg button:last-child { border-right: 0; }
+.seg button:hover { color: var(--cyan); }
+.seg button.active { background: var(--cyan); color: #04121a; font-weight: 700; }
+
+.slider-group { flex-direction: column; align-items: stretch; gap: 5px; min-width: 132px; }
+.slider-group label {
+  font-size: 9.5px;
+  letter-spacing: .1em;
+  color: var(--muted);
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  white-space: nowrap;
+}
+.slider-group label b { color: var(--cyan); font-size: 11.5px; font-weight: 600; }
+.slider-group label em { font-style: normal; font-size: 8.5px; color: var(--muted); }
+
+input[type="range"] {
+  appearance: none;
+  width: 100%;
+  height: 3px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, var(--cyan-soft), rgba(70, 211, 230, .12));
+  outline: none;
+  cursor: pointer;
+}
+input[type="range"]::-webkit-slider-thumb {
+  appearance: none;
+  width: 11px; height: 11px;
+  border-radius: 50%;
+  background: var(--cyan);
+  border: 2px solid #04121a;
+  box-shadow: 0 0 9px rgba(70, 211, 230, .8);
+  cursor: pointer;
+}
+input[type="range"]::-moz-range-thumb {
+  width: 9px; height: 9px;
+  border-radius: 50%;
+  background: var(--cyan);
+  border: 2px solid #04121a;
+  box-shadow: 0 0 9px rgba(70, 211, 230, .8);
+  cursor: pointer;
+}
+
+/* ------------------------------- 响应式 --------------------------------- */
+@media (max-width: 1180px) {
+  :root { --side-w: 326px; }
+  #controls { gap: 16px; }
+  .slider-group { min-width: 120px; }
+  #topbar { padding: 0 14px; gap: 10px; }
+  .brand { gap: 8px; }
+  .brand-text h1 { font-size: 14px; letter-spacing: .08em; }
+  .brand-text p { display: none; }
+  .status-chip.mono { display: none; }
+  .status-strip { gap: 6px; }
+  .top-action { padding: 5px 8px; font-size: 10px; }
+  .preset-seg button { padding: 6px 7px; font-size: 10px; }
+}
+
+@media (max-width: 980px) {
+  html, body { overflow: auto; }
+  #app { height: auto; min-height: 100%; }
+  main { flex-direction: column; }
+  #viewport { flex: 0 0 auto; height: 58vh; min-height: 380px; }
+  #sidebar { flex: 0 0 auto; width: 100%; border-left: 0; border-top: 1px solid var(--line); }
+  #charts { grid-template-rows: repeat(7, 132px); grid-template-columns: 1fr; }
+  #controls { flex-wrap: wrap; height: auto; padding: 12px 16px; gap: 12px; }
+  .hud { grid-template-columns: repeat(2, minmax(96px, auto)); }
+  .hud-item { padding: 5px 8px; }
+  .hud-value { font-size: 13px; }
+}
+
+@media (max-width: 620px) {
+  .brand-text p { display: none; }
+  .brand-text h1 { font-size: 13px; }
+  .status-chip.mono { display: none; }
+  .hud { top: 14px; left: 14px; }
+  .cam-controls { top: 14px; right: 14px; }
+  .cam-hint { display: none; }
+  .legend { display: none; }
+  #sidebar { display: none; }
+  #viewport { height: calc(100vh - var(--header-h) - 150px); }
+}
+
+
+/* ======================= 顶栏操作按钮 / 风场提示 ======================= */
+.top-action {
+  border: 1px solid var(--line-strong);
+  background: rgba(9, 17, 24, 0.7);
+  color: var(--text-dim);
+  font-family: var(--sans);
+  font-size: 11px;
+  letter-spacing: .1em;
+  padding: 6px 12px;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: all .18s;
+}
+.top-action:hover { color: var(--cyan); border-color: var(--cyan); background: rgba(16, 34, 44, .95); }
+
+.wind-chip {
+  position: absolute;
+  top: 88px; right: 26px;
+  padding: 6px 12px;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  background: rgba(6, 12, 18, 0.78);
+  color: #9fc6d4;
+  font-size: 10px;
+  letter-spacing: .08em;
+  pointer-events: none;
+  backdrop-filter: blur(6px);
+  white-space: nowrap;
+}
+
+/* ============================ 弹层 =================================== */
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3vh 2vw;
+  background: rgba(2, 6, 10, 0.72);
+  backdrop-filter: blur(5px);
+}
+.overlay[hidden] { display: none; }
+
+.panel {
+  width: min(560px, 94vw);
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(180deg, #0a131b, #070d13);
+  border: 1px solid var(--line-strong);
+  border-radius: 4px;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, .7), 0 0 40px rgba(70, 211, 230, .08);
+  overflow: hidden;
+}
+.panel.wide { width: min(1120px, 95vw); }
+.panel[hidden] { display: none; }
+
+.panel-head {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  padding: 15px 20px 13px;
+  border-bottom: 1px solid var(--line);
+  background: rgba(10, 20, 28, .85);
+}
+.panel-head h3 { font-size: 15px; letter-spacing: .14em; color: #e6f5f9; font-weight: 600; }
+.panel-head .panel-sub { font-size: 9px; letter-spacing: .2em; color: var(--muted); flex: 1 1 auto; }
+.panel-close {
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--text-dim);
+  font-size: 18px;
+  line-height: 1;
+  width: 28px; height: 26px;
+  border-radius: 2px;
+  cursor: pointer;
+  transition: all .15s;
+}
+.panel-close:hover { color: var(--red); border-color: var(--red); }
+
+.panel-body { padding: 18px 22px 24px; overflow-y: auto; }
+.panel-note { font-size: 11.5px; line-height: 1.8; color: var(--text-dim); margin: 0 0 14px; }
+
+/* --------------------------- 环境面板 -------------------------------- */
+.env-grid { display: flex; flex-direction: column; gap: 15px; margin: 6px 0 18px; }
+.env-row { display: grid; grid-template-columns: 108px 1fr 86px; align-items: center; gap: 12px; }
+.env-row > span { font-size: 11.5px; color: var(--text-dim); letter-spacing: .06em; }
+.env-row > b { font-size: 11.5px; color: var(--cyan); text-align: right; font-weight: 600; }
+.env-row input[type="range"] { width: 100%; }
+
+.env-toggles {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+.env-toggles label { display: flex; align-items: center; gap: 7px; font-size: 12px; color: var(--text-dim); cursor: pointer; }
+.env-toggles input[type="checkbox"] { accent-color: var(--cyan); width: 14px; height: 14px; }
+.btn.small { padding: 6px 12px; font-size: 11px; min-width: 0; margin-left: auto; }
+.env-summary { margin-top: 16px; font-size: 10.5px; color: var(--muted); letter-spacing: .04em; line-height: 1.7; }
+
+/* --------------------------- 模型面板 -------------------------------- */
+.model-body {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px 34px;
+  font-size: 12px;
+  line-height: 1.75;
+  color: var(--text-dim);
+}
+.model-col h4 {
+  margin: 16px 0 7px;
+  font-size: 12.5px;
+  letter-spacing: .1em;
+  color: var(--cyan);
+  font-weight: 600;
+}
+.model-col h4:first-child { margin-top: 0; }
+.model-col ul { padding-left: 18px; margin: 0 0 6px; }
+.model-col li { margin-bottom: 4px; }
+.model-col b { color: var(--text); font-weight: 600; }
+.model-limits li { color: #b9c9d0; }
+.model-formula {
+  margin: 8px 0 10px;
+  padding: 10px 14px;
+  border-left: 2px solid var(--cyan-soft);
+  background: rgba(70, 211, 230, .05);
+  font-size: 11px;
+  line-height: 2;
+  color: #b7dfe8;
+  overflow-x: auto;
+}
+.model-formula sub, .model-formula sup { font-size: .7em; }
+
+.model-table { width: 100%; border-collapse: collapse; margin: 8px 0 10px; font-size: 11px; }
+.model-table th, .model-table td { border: 1px solid var(--line); padding: 6px 8px; text-align: center; }
+.model-table th { background: rgba(70, 211, 230, .07); color: var(--text-dim); font-weight: 600; letter-spacing: .05em; }
+.model-table td b { color: var(--green); font-weight: 600; }
+.model-table td:first-child { color: var(--amber); }
+
+.ref-list { padding-left: 20px; margin: 6px 0 10px; font-size: 11px; line-height: 1.7; }
+.ref-list li { margin-bottom: 6px; }
+
+/* --------------------------- 响应式补充 ------------------------------ */
+@media (max-width: 980px) {
+  .model-body { grid-template-columns: 1fr; }
+  .wind-chip { display: none; }
+  .top-action { padding: 5px 9px; font-size: 10px; }
+}
+@media (max-width: 620px) {
+  .top-action { display: none; }
+}
+
+
+/* ============================ 弹型预设切换 ============================ */
+.preset-seg {
+  display: flex;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  overflow: hidden;
+  background: var(--line);
+}
+.preset-seg button {
+  border: 0;
+  border-right: 1px solid var(--line);
+  background: rgba(6, 12, 18, 0.86);
+  color: var(--text-dim);
+  font-family: var(--sans);
+  font-size: 11px;
+  letter-spacing: .06em;
+  padding: 6px 10px;
+  cursor: pointer;
+  transition: all .15s;
+  white-space: nowrap;
+}
+.preset-seg button:last-child { border-right: 0; }
+.preset-seg button:hover { color: var(--cyan); }
+.preset-seg button.active { background: var(--cyan); color: #04121a; font-weight: 600; }
+
+.env-row.disabled { opacity: .42; }
+.env-row input[type="range"]:disabled { cursor: not-allowed; }
+
+@media (max-width: 1180px) {
+  .preset-seg button { padding: 6px 7px; font-size: 10px; }
+}
+
+</style>
+</head>
+<body>
+<div id="app">
+
+  <header id="topbar">
+    <div class="brand">
+      <div class="brand-mark">
+        <svg viewBox="0 0 32 32" aria-hidden="true">
+          <circle cx="16" cy="16" r="13" fill="none" stroke="currentColor" stroke-width="1.2" opacity=".35"/>
+          <circle cx="16" cy="16" r="7" fill="none" stroke="currentColor" stroke-width="1.2" opacity=".55"/>
+          <path d="M16 3v6M16 23v6M3 16h6M23 16h6" stroke="currentColor" stroke-width="1.4"/>
+          <circle cx="16" cy="16" r="2.2" fill="currentColor"/>
+        </svg>
+      </div>
+      <div class="brand-text">
+        <h1>120mm 杀爆弹 <span>外弹道仿真</span></h1>
+        <p>6-DOF RIGID-BODY · BRL AERO · WIND / CORIOLIS · DYNAMIC FRAGMENTATION</p>
+      </div>
+    </div>
+    <div class="status-strip">
+      <div class="preset-seg" id="preset-seg">
+        <button type="button" data-preset="mortar120" class="active">120mm 迫弹</button>
+        <button type="button" data-preset="spin120">120mm 旋转弹</button>
+      </div>
+      <div class="status-chip">
+        <i class="dot" id="status-dot"></i>
+        <span id="status-mode">待发射</span>
+      </div>
+      <div class="status-chip mono" id="status-code">SYS.READY</div>
+      <button type="button" class="top-action" id="btn-env">环境参数</button>
+      <button type="button" class="top-action" id="btn-model">模型与文献</button>
+    </div>
+  </header>
+
+  <main>
+    <section id="viewport">
+      <canvas id="scene"></canvas>
+
+      <div id="hud" class="hud">
+        <div class="hud-item">
+          <span class="hud-label">飞行时间</span>
+          <span class="hud-value mono" id="hud-t">0.00</span>
+          <span class="hud-unit">s</span>
+        </div>
+        <div class="hud-item">
+          <span class="hud-label">高度</span>
+          <span class="hud-value mono" id="hud-h">0</span>
+          <span class="hud-unit">m</span>
+        </div>
+        <div class="hud-item">
+          <span class="hud-label">速度</span>
+          <span class="hud-value mono" id="hud-v">450</span>
+          <span class="hud-unit">m/s</span>
+        </div>
+        <div class="hud-item">
+          <span class="hud-label">马赫数</span>
+          <span class="hud-value mono" id="hud-mach">1.32</span>
+          <span class="hud-unit">Ma</span>
+        </div>
+        <div class="hud-item">
+          <span class="hud-label">攻角</span>
+          <span class="hud-value mono" id="hud-alpha">0.00</span>
+          <span class="hud-unit">°</span>
+        </div>
+        <div class="hud-item">
+          <span class="hud-label">动压</span>
+          <span class="hud-value mono" id="hud-q">0</span>
+          <span class="hud-unit">kPa</span>
+        </div>
+        <div class="hud-item">
+          <span class="hud-label">水平距离</span>
+          <span class="hud-value mono" id="hud-x">0</span>
+          <span class="hud-unit">m</span>
+        </div>
+        <div class="hud-item">
+          <span class="hud-label">侧偏 Z</span>
+          <span class="hud-value mono" id="hud-z">0</span>
+          <span class="hud-unit">m</span>
+        </div>
+        <div class="hud-item">
+          <span class="hud-label">自转</span>
+          <span class="hud-value mono" id="hud-spin">0</span>
+          <span class="hud-unit">rad/s</span>
+        </div>
+        <div class="hud-item">
+          <span class="hud-label" id="hud-stab-label">静稳定裕度</span>
+          <span class="hud-value mono" id="hud-sg">—</span>
+          <span class="hud-unit" id="hud-sg-unit">cal</span>
+        </div>
+      </div>
+
+      <div id="cam-controls" class="cam-controls">
+        <button type="button" data-mode="follow" class="active">跟随</button>
+        <button type="button" data-mode="global">全局</button>
+        <button type="button" data-mode="orbit">自由</button>
+      </div>
+      <div class="cam-hint mono">左键旋转 · 右键 / Shift 平移 · 滚轮缩放</div>
+      <div id="wind-chip" class="wind-chip mono">风 0 m/s · 无风</div>
+
+      <div id="legend" class="legend">
+        <span><i style="background:#4fe6ff"></i>弹道</span>
+        <span><i style="background:#8ca07a"></i>弹体</span>
+        <span><i style="background:#ffb43a"></i>破片</span>
+        <span><i style="background:#ff4d4d"></i>落点</span>
+      </div>
+
+      <div id="toast" class="toast"></div>
+
+      <div class="corner tl"></div>
+      <div class="corner tr"></div>
+      <div class="corner bl"></div>
+      <div class="corner br"></div>
+    </section>
+
+    <aside id="sidebar">
+      <div class="sidebar-head">
+        <h2>弹道参数历程</h2>
+        <span class="mono">TELEMETRY</span>
+      </div>
+      <div id="charts"></div>
+      <div class="frag-model mono" id="frag-model">MOTT μ — · 均值 — · GURNEY —</div>
+      <div class="sidebar-foot">
+        <div class="stat"><span>射程</span><b class="mono" id="stat-range">—</b></div>
+        <div class="stat"><span>最大高度</span><b class="mono" id="stat-alt">—</b></div>
+        <div class="stat"><span>最大马赫</span><b class="mono" id="stat-mach">—</b></div>
+        <div class="stat"><span>侧偏</span><b class="mono" id="stat-drift">—</b></div>
+        <div class="stat"><span>落点速度</span><b class="mono" id="stat-vimp">—</b></div>
+        <div class="stat"><span>破片 R90</span><b class="mono" id="stat-r90">—</b></div>
+      </div>
+    </aside>
+  </main>
+
+  <footer id="controls">
+    <div class="control-group">
+      <button id="btn-play" type="button" class="btn primary">暂停</button>
+      <button id="btn-reset" type="button" class="btn">重置</button>
+    </div>
+
+    <div class="control-group">
+      <label class="group-label">时间倍率</label>
+      <div class="seg" id="speed-seg">
+        <button type="button" data-speed="1">1×</button>
+        <button type="button" data-speed="2" class="active">2×</button>
+        <button type="button" data-speed="4">4×</button>
+        <button type="button" data-speed="8">8×</button>
+      </div>
+    </div>
+
+    <div class="control-group slider-group">
+      <label for="rng-v0">初速 <b class="mono" id="val-v0">318</b><em>m/s</em></label>
+      <input type="range" id="rng-v0" min="250" max="340" step="1" value="318">
+    </div>
+
+    <div class="control-group slider-group">
+      <label for="rng-angle">射角 <b class="mono" id="val-angle">45</b><em>°</em></label>
+      <input type="range" id="rng-angle" min="15" max="70" step="1" value="45">
+    </div>
+
+    <div class="control-group slider-group">
+      <label for="rng-boom">空炸高度 <b class="mono" id="val-boom">12</b><em>m</em></label>
+      <input type="range" id="rng-boom" min="0" max="80" step="2" value="12">
+    </div>
+
+    <div class="control-group slider-group">
+      <label for="rng-wind">横风 <b class="mono" id="val-wind">0</b><em>m/s</em></label>
+      <input type="range" id="rng-wind" min="-15" max="15" step="1" value="0">
+    </div>
+  </footer>
+
+  <!-- ============================ 弹层面板 ============================ -->
+  <div id="overlay" class="overlay" hidden>
+    <section class="panel" id="panel-env" hidden>
+      <header class="panel-head">
+        <h3>环境与弹道参数</h3>
+        <span class="mono panel-sub">ENVIRONMENT / BALLISTICS</span>
+        <button type="button" class="panel-close" data-close="overlay">×</button>
+      </header>
+      <div class="panel-body">
+        <p class="panel-note" id="preset-note">当前弹型：120mm 迫弹（尾翼稳定、不旋转；McCoy 附录 C 实测气动系数，v0=318 m/s 为装药 4）。</p>
+        <p class="panel-note">风场采用幂律剖面（10 m 参考高度，指数 1/7）；科氏力按纬度与射向计算；标准大气按 ISA 分层（0–32 km）。修改后自动重算。</p>
+        <div class="env-grid">
+          <label class="env-row">
+            <span>横风（+右）</span>
+            <input type="range" id="env-wind-cross" min="-15" max="15" step="1" value="0">
+            <b class="mono" id="env-wind-cross-val">0 m/s</b>
+          </label>
+          <label class="env-row">
+            <span>纵风（+逆风）</span>
+            <input type="range" id="env-wind-head" min="-15" max="15" step="1" value="0">
+            <b class="mono" id="env-wind-head-val">0 m/s</b>
+          </label>
+          <label class="env-row">
+            <span>海平面气温</span>
+            <input type="range" id="env-temp" min="-20" max="40" step="1" value="15">
+            <b class="mono" id="env-temp-val">15 °C</b>
+          </label>
+          <label class="env-row">
+            <span>纬度</span>
+            <input type="range" id="env-lat" min="-60" max="60" step="1" value="40">
+            <b class="mono" id="env-lat-val">40°N</b>
+          </label>
+          <label class="env-row" id="row-twist">
+            <span>膛线缠距</span>
+            <input type="range" id="env-twist" min="15" max="22" step="1" value="18" disabled>
+            <b class="mono" id="env-twist-val">不旋转</b>
+          </label>
+          <label class="env-row">
+            <span>破片数量</span>
+            <input type="range" id="env-frag" min="200" max="1600" step="100" value="800">
+            <b class="mono" id="env-frag-val">800</b>
+          </label>
+          <label class="env-row">
+            <span>破片随机种子</span>
+            <input type="range" id="env-seed" min="1" max="9999" step="1" value="2024">
+            <b class="mono" id="env-seed-val">#2024</b>
+          </label>
+        </div>
+        <div class="env-toggles">
+          <label><input type="checkbox" id="env-coriolis" checked> 地球自转科氏力</label>
+          <label><input type="checkbox" id="env-wind-on" checked> 风场</label>
+          <button type="button" class="btn small" id="env-reset">恢复默认</button>
+        </div>
+        <div class="env-summary mono" id="env-summary"></div>
+      </div>
+    </section>
+
+    <section class="panel wide" id="panel-model" hidden>
+      <header class="panel-head">
+        <h3>模型与文献</h3>
+        <span class="mono panel-sub">MODEL ASSUMPTIONS / VALIDATION / REFERENCES</span>
+        <button type="button" class="panel-close" data-close="overlay">×</button>
+      </header>
+      <div class="panel-body model-body">
+        <div class="model-col">
+          <h4>1 · 弹型预设</h4>
+          <ul>
+            <li><b>A · 120mm 迫弹（默认）</b>：尾翼稳定、全程不旋转。质量/惯量取自 McCoy 表 9.5（M934/M930/M929 平均），气动系数取自 McCoy 附录 C（BRL 跨音速靶道自由飞试验）；v0=318 m/s、45° 对应 6-DOF 射程 7315 m。</li>
+            <li><b>B · 120mm 旋转稳定杀爆弹代表弹</b>：线膛炮发射，自转由缠距换算（默认 1:18）；气动系数按 McCoy 附录 B 的 105mm HE M1 同类弹换算（<i>估算值</i>），内核以 105mm M1 参数完成验证。</li>
+            <li>破片质量分布/初速由 Gurney + Mott 模型给出；装药与壳体质量为工程估算（公开数据缺失），页面已标注。</li>
+          </ul>
+
+          <h4>2 · 六自由度刚体外弹道</h4>
+          <ul>
+            <li>状态量：位置、速度、四元数姿态、弹体系角速度（15 维，含科氏力侧偏累积量）；RK4 积分，步长按自转自适应（≤0.5 ms）。</li>
+            <li>弹体动力学：欧拉方程 <span class="mono">I·ω̇ + ω×(Iω) = M</span>；四元数归一化避免欧拉奇异。</li>
+            <li>气动角按<b>相对风速</b>计算；风场通过相对速度进入气动力与力矩。</li>
+            <li>事件：下降段穿越空炸高度 / 触地，线性插值得到起爆点状态；给出 Sg、偏流、风偏、科氏偏移等诊断量。</li>
+          </ul>
+
+          <h4>3 · 气动模型（BRL 命名法）</h4>
+          <div class="model-formula mono">
+            C<sub>D</sub> = C<sub>D0</sub> + C<sub>Dδ2</sub>·sin²α<sub>t</sub><br>
+            C<sub>N</sub> = (C<sub>Nα0</sub> + C<sub>Nα2</sub>·sin²α<sub>t</sub>)·sinα<sub>t</sub><br>
+            C<sub>Mα</sub> = C<sub>Mα0</sub> + C<sub>Mα2</sub>·sin²α<sub>t</sub>（正 = 翻转，需自转稳定；负 = 静稳定）<br>
+            M<sub>阻尼</sub> = q·S·d²/V·[(C<sub>Mq</sub>+C<sub>Mα̇</sub>)<sub>0</sub> + (…)<sub>2</sub>·sin²α<sub>t</sub>]·ω<br>
+            M<sub>Magnus</sub> = q·S·d·(p·d/V)·C<sub>Mpα</sub>（仅旋转弹）
+          </div>
+          <p>旋转弹陀螺稳定因子 <span class="mono">Sg = (I<sub>x</sub>·p)² / (4·I<sub>y</sub>·q·S·d·C<sub>Mα</sub>)</span>，Sg &gt; 1 为稳定必要条件；尾翼弹给出静稳定裕度 <span class="mono">−C<sub>Mα</sub>/C<sub>Nα</sub></span>（口径）。</p>
+
+          <h4>4 · 环境模型</h4>
+          <ul>
+            <li>ISA 标准大气分层公式（0–11 / 11–20 / 20–32 km），支持海平面气温偏移（ISO 2533 / GB 1920）。</li>
+            <li>风场：横风/纵风 + 幂律高度剖面 <span class="mono">w(h)=w<sub>10</sub>(h/10)<sup>1/7</sup></span>。</li>
+            <li>科氏力：<span class="mono">a = −2Ω×v</span>，按纬度与射向计算（40°N、7 km 射程量级 10–20 m）。</li>
+            <li>重力随高度衰减 <span class="mono">g(h)=g₀(R/(R+h))²</span>；平面地球假设。</li>
+          </ul>
+
+          <h4>5 · 动爆破片</h4>
+          <ul>
+            <li>质量分布：Mott 分布 <span class="mono">N(&gt;m)=N₀e<sup>−√(m/μ)</sup></span>，平均质量 = 2μ，质量守恒归一。破片数为 Monte-Carlo 统计样本数（默认 800，可调 200–1600），由 Mott 分布描述总体，<b>不等同于该型号全部物理破片数</b>。</li>
+            <li>初速：Gurney 公式 <span class="mono">v<sub>G</sub>=√(2E·β/(1+β/2))</span>，β=C/M；端部折减 + 分区速度因子。</li>
+            <li>动爆叠加：弹丸速度矢量 + 自转切向速度 <span class="mono">ω×r</span>；飞散角按弹头/圆柱/弹底三区截短正态。</li>
+            <li>存速：变密度大气 + 马赫相关 C<sub>d</sub> + 体积<sup>2/3</sup> 迎风面积 + 风场相对速度（RK4，步长 5 ms；落地速度线性插值）。</li>
+            <li><b>统计口径</b>：R50/R90 为 50%/90% 已落地破片的水平落点半径（相对爆点地面投影），<b>不是杀伤半径</b>；有效破片按落地动能 &gt; 78 J（人员致伤阈值量级，中文出处：李昆等 2023；80 J 另见 Rettinger 2017）统计；随机抽样种子固定可复现。</li>
+          </ul>
+        </div>
+
+        <div class="model-col">
+          <h4>6 · 验证 A：120mm 迫弹（McCoy 表 9.7 六组 6-DOF）</h4>
+          <table class="model-table">
+            <thead><tr><th>v0 / QE</th><th>飞行时间 / s</th><th>射程 / m</th><th>最大高度 / m</th></tr></thead>
+            <tbody>
+              <tr><td>102 / 45°</td><td>14.6 → <b>14.6</b></td><td>1010 → <b>1008</b></td><td>260 → <b>259</b></td></tr>
+              <tr><td>102 / 65°</td><td>18.6 → <b>18.6</b></td><td>770 → <b>765</b></td><td>420 → <b>423</b></td></tr>
+              <tr><td>102 / 85°</td><td>20.5 → <b>20.5</b></td><td>165 → <b>162</b></td><td>510 → <b>508</b></td></tr>
+              <tr><td>318 / 45°</td><td>41.4 → <b>41.4</b></td><td>7315 → <b>7310</b></td><td>2100 → <b>2100</b></td></tr>
+              <tr><td>318 / 65°</td><td>52.6 → <b>52.5</b></td><td>5570 → <b>5572</b></td><td>3380 → <b>3378</b></td></tr>
+              <tr><td>318 / 85°</td><td>57.7 → <b>57.7</b></td><td>1275 → <b>1274</b></td><td>4070 → <b>4067</b></td></tr>
+            </tbody>
+          </table>
+          <p class="panel-note">全部工况偏差 ≤1.7%；85° 高射角弹道顶点攻角（装药 0 约 50°、装药 4 约 13°）与 McCoy 原文（47° / 13°）一致。</p>
+
+          <h4>7 · 验证 B：105mm M1 旋转弹内核（McCoy 例 9.2）</h4>
+          <table class="model-table">
+            <thead><tr><th>工况</th><th>射程 / m</th><th>飞行时间 / s</th><th>最大高度 / m</th></tr></thead>
+            <tbody>
+              <tr><td>C7 45°</td><td>11500 → <b>11476</b></td><td>52.5 → <b>52.4</b></td><td>3460 → <b>3446</b></td></tr>
+              <tr><td>C1 45°</td><td>3760 → <b>3763</b></td><td>28.5 → <b>28.5</b></td><td>1000 → <b>997</b></td></tr>
+              <tr><td>C7 70°</td><td>7300 → <b>7135</b></td><td>70.5 → <b>70.2</b></td><td>6000 → <b>6000</b></td></tr>
+              <tr><td>C1 70°</td><td>2320 → <b>2210</b></td><td>38.5 → <b>39.0</b></td><td>1750 → <b>1742</b></td></tr>
+            </tbody>
+          </table>
+          <p class="panel-note">1:18 缠距（Sg=3.12，与 McCoy 报道的 3.1 一致）射程偏差 0.2%–4.7%；1:25 缠距（Sg=1.62，McCoy 报道 1.6）四组偏差为 C1-45 +0.2%、C1-70 +0.5%、C7-45 −0.2%、C7-70 +1.5%。70° 工况在弹道顶点低动压段 α<sub>t</sub> 达 20°/33°，属大攻角非线性敏感区（McCoy 原文对 70° 亦标注 approximately 且 α<sub>t</sub>&gt;15° 仅作定性参考）。</p>
+
+          <h4>8 · 模型假设与局限</h4>
+          <ul class="model-limits">
+            <li>刚体、轴对称、质量/惯量恒定；气动模型适用于小攻角（一般 α<sub>t</sub>&lt;10°），更大攻角（高射角弹道顶点）为定性参考。</li>
+            <li>120mm 迫弹气动数据止于 Ma 0.95（实弹 v0≤318 m/s）；提高初速属外推。旋转弹气动系数由 105mm M1 同类换算，非 120mm 实测。</li>
+            <li>未计气动不对称、动不平衡、引信延时与炸高散布；空炸高度为标称值。</li>
+            <li>破片为自然破片统计模型（装药/壳体/飞散角为工程设定），未计壳体结构强度细节；杀伤仅用动能阈值，未计目标易损性。</li>
+            <li>平面地球 + 常值重力 + 可选科氏力；不含地球曲率、离心力与地形。</li>
+            <li><b>本模型用于教学演示与趋势分析，不用于射表编制或实弹射击诸元计算。</b></li>
+          </ul>
+
+          <h4>9 · 参考文献（完整 58 条见 docs/literature-review.md）</h4>
+          <ol class="ref-list">
+            <li>McCoy R L. <i>Modern Exterior Ballistics: The Launch and Flight Dynamics of Symmetric Projectiles</i>. 2nd ed. Schiffer Publishing, 2012.（第 9 章 6-DOF；附录 B/C 气动系数；例 9.2、表 9.3–9.7）</li>
+            <li>McCoy R L. Tabulated Aerodynamic Characteristics of the 105mm, M1 Projectile. Appendix B of [1], pp. 218–219.</li>
+            <li>Cilliers A J. <i>Modelling the external ballistics of tranquilliser darts</i>. MEng thesis, Stellenbosch University, 2021. https://scholar.sun.ac.za/handle/10019.1/109951</li>
+            <li>Gurney R W. <i>The Initial Velocities of Fragments from Bombs, Shells and Grenades</i>. BRL Report 405, 1943. https://doi.org/10.21236/ADA800105</li>
+            <li>Mott N F, Linfoot E H. <i>A Theory of Fragmentation</i>. 1943; reprinted in: Grady D (ed), Fragmentation of Rings and Shells, Springer, 2006: 207–225. https://doi.org/10.1007/978-3-540-27145-1_9</li>
+            <li>Gold V M. <i>Engineering Model for Design of Explosive Fragmentation Munitions</i>. DTIC, 2007. https://doi.org/10.21236/ADA462991（Mott 分布/μ 参数的结构化出处）</li>
+            <li>李昆, 等. 浇注 PBX 装药爆炸壳体破片分布特性[J]. 科学技术与工程, 2023, 23(17): 7335–7340. https://doi.org/10.12404/j.issn.1671-1815.2023.23.17.07335（破片动能 &gt;78 J 杀伤判据的中文出处）</li>
+            <li>Orłowski M, 等. 120mm HE mortar fragmentation studies, Part I/II[J]. Problemy Techniki Uzbrojenia, 2024, 169(2): 7–27 / 170(3): 39–64. https://doi.org/10.5604/01.3001.0054.6650 与 …7454（120mm 迫弹真实破碎试验）</li>
+            <li>Catovic A. An overview of Gurney method for estimating the initial velocities of fragments for high explosive munition. <i>Defense and Security Studies</i>, 2021, 1: 16–25.</li>
+            <li>Moxnes J F, Frøyland Ø. Projected area and drag coefficient of high velocity irregular fragments that rotate or tumble. 30th International Symposium on Ballistics, 2017.</li>
+            <li>Rettinger G. The "80 Joule criterion" reconsidered today. <i>Forensic Science International</i>, 2017, 276: 64–70.</li>
+            <li>ISO 2533:1975 <i>Standard Atmosphere</i>；GB/T 45846-2025《标准大气》（2025-10-01 实施，采标 ISO）.</li>
+            <li>FAS. M933/M934, 120mm HE Cartridge（v0 101–318 m/s，最大射程 7.2 km）. https://man.fas.org/dod-101/sys/land/m933.htm</li>
+            <li>雷娟棉, 李田田, 黄灿. 高速旋转弹丸马格努斯效应数值研究[J]. 兵工学报, 2013, 34(6).（页码待核实）</li>
+            <li>管军, 易文俊, 刘海, 等. 基于遗传-最大似然方法高速旋转弹丸阻力系数辨识[J]. 弹道学报, 2016, 28(4).（页码待核实）</li>
+            <li>周红, 沈伟, 王桃芬, 等. 科里奥利力对远射程炮弹发射的影响研究[J]. 物理通报, 2025(6).（页码待核实）</li>
+            <li>洪豆, 郑宇, 李文彬, 等. 破片战斗部杀伤面积影响规律研究[J]. 兵器装备工程学报, 2021, 42(5).（页码待核实）</li>
+            <li>刘建斌, 夏金刚, 缪前树, 等. 航空火箭杀爆弹动态爆炸威力仿真分析[J]. 兵器装备工程学报, 2020, 41(8).（页码待核实）</li>
+          </ol>
+          <p class="panel-note">注：文献题录、DOI/URL、参数推荐表与逐项校核见 <span class="mono">docs/literature-review.md</span>；模型改进与验证汇总见 <span class="mono">docs/report.md</span>。</p>
+        </div>
+      </div>
+    </section>
+  </div>
+
+</div>
+
+<script>
+/* ===== physics.js ===== */
+/* =============================================================================
+ * 120 mm 杀爆弹 — 六自由度刚体外弹道 + 动爆破片仿真内核
+ * 纯 JS，无依赖，可在浏览器 / Node 中运行
+ *
+ * 坐标系（发射/地面系 O-xyz）：x 指向射向水平投影，y 垂直向上，z 构成右手系
+ * 说明：本文件采用"弹道系"约定 —— x 为射向水平投影，y 向上，z 为射向右侧。
+ * 弹体系 O1-x1y1z1：x1 沿弹轴指前，y1 弹体上方，z1 右手
+ * 状态向量 y[15] =
+ *   [ px,py,pz, vx,vy,vz, qw,qx,qy,qz, wx,wy,wz, zCor, vCor ]
+ *   zCor / vCor 为科氏力单独引起的侧向位移/速度（诊断量，不参与气动力）
+ *
+ * 主要升级（相对初版）：
+ *   1. ISA 分层标准大气（0–32 km，含温度偏移灵敏度）
+ *   2. 风场（横风/纵风 + 幂律高度剖面，气动力用相对风速）
+ *   3. 地球自转科氏力（纬度/射向可调）
+ *   4. 真实自转：由膛线缠距换算炮口转速，并计滚转阻尼衰减
+ *   5. 六自由度气动模型：非线性法向力、俯仰阻尼、滚转阻尼、Magnus 力/力矩
+ *   6. 炮口扰动初始姿态（跳角 + 横向角速度），产生进动/章动
+ *   7. 事件插值起爆/落点，陀螺稳定因子等诊断量
+ *   8. 破片：Mott 质量分布 + Gurney 初速 + 自转切向速度 + 风场存速
+ *
+ * 主要参考文献：
+ *   [1] McCoy R L. Modern Exterior Ballistics: The Launch and Flight Dynamics
+ *       of Symmetric Projectiles[M]. 2nd ed. Atglen: Schiffer Publishing, 2012.
+ *       （6-DOF 方程、BRL 气动系数、陀螺稳定因子、翻转/俯仰阻尼/Magnus 力矩）
+ *   [2] McCoy R L. Tabulated Aerodynamic Characteristics of the 105mm, M1
+ *       Projectile. Appendix B of [1], pp.218-219 — 本文气动系数表来源。
+ *   [3] Mott N F, Linfoot E H. A Theory of Fragmentation. 1943; reprinted in:
+ *       Grady D (ed). Fragmentation of Rings and Shells. Springer, 2006:
+ *       207-225. DOI 10.1007/978-3-540-27145-1_9
+ *   [4] Gurney R W. The Initial Velocities of Fragments from Bombs, Shells and
+ *       Grenades[R]. BRL Report 405, 1943. DOI 10.21236/ADA800105
+ *   [5] 李昆, 等. 浇注 PBX 装药爆炸壳体破片分布特性[J]. 科学技术与工程,
+ *       2023, 23(17): 7335-7340. DOI 10.12404/j.issn.1671-1815.2023.23.17.07335
+ *       （"破片动能 >78 J 为杀伤破片"的中文出处；80 J 另见 Rettinger 2017）
+ *   [6] ISO 2533:1975 Standard Atmosphere；GB/T 45846-2025《标准大气》
+ *       （2025-10-01 实施，采标 ISO；替代 GB 1920-80 引用）
+ *   [7] Orłowski M, et al. 120mm HE mortar fragmentation studies, Part I/II[J].
+ *       Problemy Techniki Uzbrojenia, 2024, 169(2): 7-27 / 170(3): 39-64.
+ *       DOI 10.5604/01.3001.0054.6650 / 10.5604/01.3001.0054.7454
+ *       （120mm 迫弹真实破碎弹道试验；本文破片参数为工程设定，未直接取用）
+ * ========================================================================== */
+(function (root) {
+  'use strict';
+
+  var G0 = 9.80665;                 // 标准重力加速度 m/s²
+  var OMEGA_E = 7.292115e-5;        // 地球自转角速度 rad/s
+  var R_EARTH = 6371000;            // 地球平均半径 m
+  var RAD2DEG = 180 / Math.PI;
+  var DEG2RAD = Math.PI / 180;
+
+  /* ------------------------------- 弹型预设 -------------------------------
+   * 预设 A（默认）：120 mm 迫弹 —— 尾翼稳定、全程不旋转
+   *   质量/惯量取自 McCoy 表 9.5（M934/M930/M929 平均）；
+   *   气动系数取自 McCoy 附录 C（BRL-MR-3884 自由飞试验）；
+   *   验证基准：McCoy 表 9.7（v0=102/318 m/s，QE=45/65/85°）。
+   * 预设 B：120 mm 杀爆弹（旋转稳定代表弹）—— 线膛炮发射
+   *   质量/惯量为同类弹工程估算；气动系数按 McCoy 附录 B 的 105 mm HE M1
+   *   同类弹换算（无 120 mm 旋转弹实测数据，明确标注为估算）；
+   *   内核验证：以 105 mm M1 参数代入复现 McCoy 例 9.2（4 组）。
+   * ---------------------------------------------------------------------- */
+  var SHELL_MORTAR120 = {
+    mass: 13.585,                     // kg 弹丸全重（McCoy 表 9.5）
+    D: 0.11956,                       // m 参考直径
+    L: 0.7049,                        // m 弹长
+    S: Math.PI * 0.11956 * 0.11956 / 4,
+    Ix: 0.02335,                      // kg·m² 极转动惯量（McCoy 表 9.5）
+    Iy: 0.23187,                      // kg·m² 赤道转动惯量（McCoy 表 9.5）
+    xcgD: (0.7049 - 0.4229) / 0.11956,// 质心距弹尖 / 口径 = 2.36（McCoy 表 9.5）
+    casing: 9.5,                      // kg 壳体金属质量（工程估算，公开数据缺失）
+    charge: 1.9,                      // kg 装药质量（工程估算 → β≈0.20）
+    gurney2E: 5.95e6,                 // (m/s)² TNT 型装药 √2E≈2440 m/s
+    twist: 0,                         // 尾翼稳定、不旋转（McCoy p.207 原文）
+    wallR: 0.054,                     // m 破片起始半径
+    fragDensity: 7850,
+    spinMode: 'none',
+    aeroSource: 'McCoy App.C (120mm mortar, BRL-MR-3884)',
+    presetName: '120mm 迫弹（尾翼稳定·不旋转）'
+  };
+
+  var SHELL_SPIN120 = {
+    mass: 15.5,                       // kg 弹丸全重（同类弹估算）
+    D: 0.120,                         // m 口径
+    L: 0.70,                          // m 弹长
+    S: Math.PI * 0.120 * 0.120 / 4,
+    Ix: 0.0266,                       // kg·m² 极转动惯量（按 McCoy 120mm 弹数据换算）
+    Iy: 0.2646,                       // kg·m² 赤道转动惯量（按 McCoy 120mm 弹数据换算）
+    xcgD: 2.90,                       // 质心距弹尖 / 口径（同类弹估算）
+    casing: 10.5,                     // kg 壳体金属质量（工程估算）
+    charge: 3.2,                      // kg 装药质量（工程估算）
+    gurney2E: 5.95e6,
+    twist: 18,                        // 膛线缠距，口径/转（右旋）
+    wallR: 0.052,
+    fragDensity: 7850,
+    spinMode: 'rifled',
+    aeroSource: 'McCoy App.B (105mm M1 surrogate, estimated for 120mm)',
+    presetName: '120mm 杀爆弹（旋转稳定代表弹）'
+  };
+
+  /* --------------------------- 气动系数数据表 -----------------------------
+   * BRL 气动命名法（McCoy 2012, 第 9 章 + 附录 B/C）：
+   *   C_D  = C_D0 + C_Dδ2·sin²αt
+   *   C_N  = (C_Nα0 + C_Nα2·sin²αt)·sinαt
+   *   C_Mα = (C_Mα0 + C_Mα2·sin²αt)      （正 = 翻转/静不稳定；负 = 静稳定）
+   *   C_Mq+C_Mα̇ = (…)0 + (…)2·sin²αt     （俯仰阻尼，BRL 归一）
+   *   C_lp : 滚转阻尼；C_Mpα/C_Npα : Magnus 力矩/力（旋转弹）
+   * 表列形式 [Ma, 系数值]，线性插值，Ma 超出表范围取端值。
+   * ---------------------------------------------------------------------- */
+  /* 附录 C：120mm 迫弹（尾翼稳定、不旋转；Ma ≤ 0.95） */
+  var AERO_MORTAR120 = {
+    CD0: [[0, 0.119], [0.7, 0.119], [0.85, 0.120], [0.87, 0.122],
+          [0.90, 0.126], [0.93, 0.148], [0.95, 0.182]],
+    CD2: [[0, 2.32], [0.4, 2.44], [0.6, 2.66], [0.7, 2.87], [0.75, 3.01],
+          [0.85, 3.55], [0.90, 4.03], [0.95, 5.20]],
+    CNa0: [[0, 1.75], [0.6, 1.95], [0.8, 2.02], [0.9, 2.06], [0.95, 2.08]],
+    CNa2: [[0, 14.8], [0.5, 14.8], [0.6, 4.5], [0.63, 1.4], [0.7, 0.4],
+           [0.8, 8.8], [0.9, 28.3], [0.95, 40.0]],
+    CMa0: [[0, -0.02], [0.4, -1.02], [0.6, -1.62], [0.8, -2.41],
+           [0.9, -2.72], [0.92, -2.75], [0.95, -2.71]],
+    CMa2: [[0, -15.1], [0.45, -15.1], [0.6, -12.7], [0.7, -8.5],
+           [0.75, -4.5], [0.8, 1.5], [0.85, 13.9], [0.9, 30.2], [0.95, 59.9]],
+    Cmq0: [[0, -22.0], [0.8, -21.1], [0.85, -21.9], [0.9, -24.2],
+           [0.92, -26.8], [0.95, -31.5]],
+    Cmq2: [[0, 48], [0.5, -46], [0.6, -86], [0.7, -144], [0.8, -259],
+           [0.85, -357], [0.9, -468], [0.95, -745]]
+  };
+
+  /* 附录 B：105mm HE M1（旋转稳定；120mm 代表弹按同类弹形换算） */
+  var AERO_SPIN120 = {
+    CD0: [[0, 0.124], [0.875, 0.124], [0.925, 0.150], [0.965, 0.200], [0.990, 0.350],
+          [1.025, 0.375], [1.085, 0.415], [1.19, 0.415], [1.35, 0.385],
+          [1.80, 0.335], [2.0, 0.318], [2.5, 0.276]],
+    CD2: [[0, 3.2], [0.88, 3.2], [0.97, 6.3], [0.99, 4.0], [1.15, 5.0],
+          [1.25, 5.4], [1.30, 5.5], [2.1, 5.5], [2.5, 5.5]],
+    CNa0: [[0, 1.63], [0.4, 1.63], [0.7, 1.41], [0.89, 1.22], [0.99, 1.73],
+           [1.09, 1.57], [1.5, 1.97], [2.0, 2.25], [2.5, 2.50]],
+    CNa2: [[0, 0.1], [0.2, 0.1], [0.6, 3.5], [0.8, 6.6], [0.985, 9.2],
+           [1.09, 8.8], [1.3, 12.0], [1.5, 13.7], [2.0, 16.0], [2.5, 17.0]],
+    CMa0: [[0, 3.55], [0.46, 3.55], [0.61, 3.76], [0.78, 3.92], [0.87, 3.96],
+           [0.925, 4.85], [0.97, 4.0], [1.09, 3.83], [1.5, 3.75], [2.5, 3.75]],
+    CMa2: [[0, -2.9], [0.4, -2.9], [0.45, -3.1], [0.65, -4.4], [0.78, -3.45],
+           [0.885, -1.78], [0.98, -3.0], [1.075, -2.1], [1.25, -3.325],
+           [1.5, -4.45], [2.0, -4.6], [2.5, -4.6]],
+    Cmq0: [[0, -3.15], [0.79, -3.15], [1.15, -9.1], [1.55, -9.5]],
+    Clp: [[0, -0.0178], [0.43, -0.0149], [0.70, -0.0135], [0.91, -0.0126],
+          [0.99, -0.0110], [1.09, -0.0101], [1.5, -0.0094], [2.0, -0.0087],
+          [2.5, -0.0087]],
+    CMp: [[0, 0.10], [0.22, 0.10], [0.31, 0.10], [0.48, -0.46], [0.81, -0.46],
+          [0.87, 0.4175], [0.92, 0.4175], [0.96, 0.3747], [0.995, 0.3747],
+          [1.02, 0.20], [1.1, 0.20], [1.21, 0.193], [1.28, 0.193],
+          [1.46, 0.215], [1.55, 0.215]],
+    CNp: [[0, -0.34], [0.22, -0.34], [0.31, -0.125], [0.48, -0.34],
+          [0.999, -0.34], [1.001, -0.36], [1.55, -0.36]]
+  };
+
+  var PRESETS = {
+    mortar120: {
+      id: 'mortar120',
+      name: SHELL_MORTAR120.presetName,
+      shell: SHELL_MORTAR120,
+      aero: AERO_MORTAR120,
+      defaults: { v0: 318, angle: 45, twist: 0, wz0: 1.795, wy0: 0,
+        jump: 0, yaw0: 0, fragCount: 800, v0Min: 250, v0Max: 340, angleMax: 85 }
+    },
+    spin120: {
+      id: 'spin120',
+      name: SHELL_SPIN120.presetName,
+      shell: SHELL_SPIN120,
+      aero: AERO_SPIN120,
+      defaults: { v0: 450, angle: 45, twist: 18, wz0: 1.60, wy0: 0.40,
+        jump: 0.15, yaw0: 0.035, fragCount: 800, v0Min: 250, v0Max: 550, angleMax: 70 }
+    }
+  };
+
+  var PRESET_NAME = 'mortar120';
+  var SHELL = {};
+  var TAB = AERO_MORTAR120;
+
+  function applyPreset(name) {
+    var p = PRESETS[name] || PRESETS.mortar120;
+    var k;
+    for (k in SHELL) if (Object.prototype.hasOwnProperty.call(SHELL, k)) delete SHELL[k];
+    for (k in p.shell) SHELL[k] = p.shell[k];
+    TAB = p.aero;
+    PRESET_NAME = p.id;
+    return p;
+  }
+  applyPreset(PRESET_NAME);
+
+  /* 气动模型开关与常量 */
+  var AERO_C = {
+    useMagnusForce: false,  // Magnus 力（量级小，默认关闭）
+    useMagnusMoment: true,  // Magnus 力矩（旋转弹偏流/极限环，必须保留）
+    useNonlinear: true      // 大攻角非线性（CNa2 / CD2 / CMa2 / Cmq2）
+  };
+
+  function interpTab(tab, x) {
+    var n = tab.length;
+    if (!(x > tab[0][0])) return tab[0][1];
+    if (x >= tab[n - 1][0]) return tab[n - 1][1];
+    for (var i = 0; i < n - 1; i++) {
+      if (x <= tab[i + 1][0]) {
+        var t = (x - tab[i][0]) / (tab[i + 1][0] - tab[i][0]);
+        return tab[i][1] + (tab[i + 1][1] - tab[i][1]) * t;
+      }
+    }
+    return tab[n - 1][1];
+  }
+
+  /* 兼容旧接口：返回 [C_D0, C_Nα, 压心估计, C_Mα0] */
+  function aeroAt(mach) {
+    var cd0 = interpTab(TAB.CD0, mach);
+    var cna = interpTab(TAB.CNa0, mach);
+    var cma = interpTab(TAB.CMa0, mach);
+    var cp = SHELL.xcgD - cma / Math.max(Math.abs(cna), 1e-6);
+    return [cd0, cna, cp, cma];
+  }
+
+  /* ------------------------------ 标准大气 -------------------------------
+   * ISA 分层公式：对流层 0–11 km、平流层 11–20 km、20–32 km，
+   * 表 0–32 km 每 100 m 一点，线性插值（插值误差 < 0.05%）。
+   * 温度偏移 dT 时按 ρ = p/(R·T) 修正（工程灵敏度近似，气压取标准值）。
+   * 依据 ISO 2533:1975 / GB 1920-80。
+   * ---------------------------------------------------------------------- */
+  var R_AIR = 287.05287, GAMMA_AIR = 1.4;
+  var ATM_N = 321;
+  var ATM = new Array(ATM_N);
+
+  function isaBase(h) {
+    var T, p;
+    if (h < 11000) {
+      T = 288.15 - 0.0065 * h;
+      p = 101325 * Math.pow(T / 288.15, 5.255877);
+    } else if (h < 20000) {
+      T = 216.65;
+      p = 22632.06 * Math.exp(-G0 * (h - 11000) / (R_AIR * 216.65));
+    } else {
+      T = 216.65 + 0.001 * (h - 20000);
+      p = 5474.89 * Math.pow(T / 216.65, -34.1632);
+    }
+    return { T: T, p: p, rho: p / (R_AIR * T), a: Math.sqrt(GAMMA_AIR * R_AIR * T) };
+  }
+  for (var ai = 0; ai < ATM_N; ai++) ATM[ai] = isaBase(ai * 100);
+
+  function atmosphere(h, dT) {
+    if (!(h > 0)) h = 0;
+    if (h > 32000) h = 32000;
+    var f = h * 0.01, i = Math.floor(f), t = f - i;
+    if (i >= ATM_N - 1) { i = ATM_N - 2; t = 1; }   // 顶层边界取 32 km 表值
+    var A = ATM[i], B = ATM[i + 1];
+    var T = A.T + (B.T - A.T) * t;
+    var p = A.p + (B.p - A.p) * t;
+    if (dT) {
+      T += dT;
+      return { T: T, p: p, rho: p / (R_AIR * T), a: Math.sqrt(GAMMA_AIR * R_AIR * T) };
+    }
+    return {
+      T: T, p: p,
+      rho: A.rho + (B.rho - A.rho) * t,
+      a: A.a + (B.a - A.a) * t
+    };
+  }
+
+  /* ------------------------------- 环境默认值 ---------------------------- */
+  var ENV_DEFAULT = {
+    tempC: 15,        // 海平面气温 °C（ISA 15°C），仅作温度偏移灵敏度
+    latitude: 40,     // 纬度 °（北纬正），取 40°N 代表中纬度
+    azimuth: 0,       // 射向方位角 °（0 = 正北，90 = 正东）
+    windCross: 0,     // 横风 m/s，+ 为吹向弹道右侧
+    windHead: 0,      // 纵风 m/s，+ 为逆风（迎面）
+    windRefH: 10,     // 风速参考高度 m
+    windPower: 0.143, // 幂律风剖面指数（开阔地 ≈ 1/7）
+    useCoriolis: true,
+    useWind: true
+  };
+
+  /* --------------------------- 运行上下文（模块内共享）------------------- */
+  var CUR = {
+    dT: 0,
+    useWind: true, useCoriolis: true,
+    windHead: 0, windCross: 0, windPower: 0.143, windRefH: 10,
+    omgX: 0, omgY: 0, omgZ: 0
+  };
+
+  function setEnv(env) {
+    env = env || {};
+    var e = {
+      tempC: env.tempC != null ? env.tempC : ENV_DEFAULT.tempC,
+      latitude: env.latitude != null ? env.latitude : ENV_DEFAULT.latitude,
+      azimuth: env.azimuth != null ? env.azimuth : ENV_DEFAULT.azimuth,
+      windCross: env.windCross != null ? env.windCross : ENV_DEFAULT.windCross,
+      windHead: env.windHead != null ? env.windHead : ENV_DEFAULT.windHead,
+      windRefH: env.windRefH != null ? env.windRefH : ENV_DEFAULT.windRefH,
+      windPower: env.windPower != null ? env.windPower : ENV_DEFAULT.windPower,
+      useCoriolis: env.useCoriolis !== false,
+      useWind: env.useWind !== false
+    };
+    CUR.dT = e.tempC - 15;
+    CUR.useWind = e.useWind;
+    CUR.useCoriolis = e.useCoriolis;
+    CUR.windHead = e.windHead;
+    CUR.windCross = e.windCross;
+    CUR.windPower = e.windPower;
+    CUR.windRefH = e.windRefH;
+    var phi = e.latitude * DEG2RAD, A = e.azimuth * DEG2RAD;
+    CUR.omgX = OMEGA_E * Math.cos(phi) * Math.cos(A);
+    CUR.omgY = OMEGA_E * Math.sin(phi);
+    CUR.omgZ = -OMEGA_E * Math.cos(phi) * Math.sin(A);
+    return e;
+  }
+
+  /* 幂律风剖面：w(h) = w10·(h/10)^α，近地按 2 m 处理（工程近似） */
+  function windProfile(h) {
+    var hr = CUR.windRefH > 0 ? CUR.windRefH : 10;
+    var hh = h > 2 ? h : 2;
+    var f = Math.pow(hh / hr, CUR.windPower);
+    return f;
+  }
+
+  /* ---------------------------- 六自由度导数 ------------------------------ */
+  function deriv(y, out) {
+    var qw = y[6], qx = y[7], qy = y[8], qz = y[9];
+    var wx = y[10], wy = y[11], wz = y[12];
+    var vx = y[3], vy = y[4], vz = y[5];
+
+    var xx = qx * qx, yy = qy * qy, zz = qz * qz;
+    var R00 = 1 - 2 * (yy + zz), R01 = 2 * (qx * qy - qw * qz), R02 = 2 * (qx * qz + qw * qy);
+    var R10 = 2 * (qx * qy + qw * qz), R11 = 1 - 2 * (xx + zz), R12 = 2 * (qy * qz - qw * qx);
+    var R20 = 2 * (qx * qz - qw * qy), R21 = 2 * (qy * qz + qw * qx), R22 = 1 - 2 * (xx + yy);
+
+    // 相对空气速度（风速随高度变化）
+    var rvx = vx, rvy = vy, rvz = vz;
+    if (CUR.useWind && (CUR.windCross !== 0 || CUR.windHead !== 0)) {
+      var wf = windProfile(y[1]);
+      rvx -= -CUR.windHead * wf;
+      rvz -= CUR.windCross * wf;
+    }
+
+    // 相对速度在弹体系下的分量 (R^T·v_rel)
+    var ub = R00 * rvx + R10 * rvy + R20 * rvz;
+    var vb = R01 * rvx + R11 * rvy + R21 * rvz;
+    var wb = R02 * rvx + R12 * rvy + R22 * rvz;
+
+    var V2 = rvx * rvx + rvy * rvy + rvz * rvz;
+    var V = Math.sqrt(V2) + 1e-9;
+
+    var atm = atmosphere(y[1], CUR.dT);
+    var mach = V / atm.a;
+    var qd = 0.5 * atm.rho * V2;
+    var S = SHELL.S, d = SHELL.D;
+
+    var alpha = 0, beta = 0, alphaT = 0, sinAt = 0;
+    if (ub > 0.15 * V) {
+      alpha = Math.atan2(-vb, ub);   // 正攻角 = 弹轴抬高于相对风速
+      beta = Math.atan2(-wb, ub);    // 正偏航角 = 弹轴偏向相对风速右侧
+      alphaT = Math.sqrt(alpha * alpha + beta * beta);
+      sinAt = Math.sqrt(vb * vb + wb * wb) / V;
+    }
+    var sa2 = sinAt * sinAt;
+
+    // ---- 气动力（弹体系，BRL/McCoy 系数表）----
+    var cd0 = interpTab(TAB.CD0, mach);
+    var cd2 = AERO_C.useNonlinear ? interpTab(TAB.CD2, mach) : 0;
+    var cna0 = interpTab(TAB.CNa0, mach);
+    var cna2 = AERO_C.useNonlinear ? interpTab(TAB.CNa2, mach) : 0;
+    var Cd = cd0 + cd2 * sa2;
+    var CN = (cna0 + cna2 * sa2) * sinAt;
+
+    var Fx = -qd * S * Cd;
+    var Fy = 0, Fz = 0;
+    if (sinAt > 1e-9) {
+      var invSin = 1 / (V * sinAt);
+      Fy = qd * S * CN * (-vb) * invSin;
+      Fz = qd * S * CN * (-wb) * invSin;
+    }
+
+    // 角速度相关力矩基准：M = (q·S·d²/V)·C·ω（BRL 命名法）
+    var base = qd * S * d * d / V;
+    var pdV = wx * d / V;
+
+    // Magnus 力（量级小，默认关闭；仅旋转弹表存在时生效）
+    if (AERO_C.useMagnusForce && TAB.CNp && alphaT > 1e-9) {
+      var cnp = interpTab(TAB.CNp, mach);
+      var magF = qd * S * pdV * cnp * sinAt;
+      Fy += magF * (beta / alphaT);
+      Fz += magF * (alpha / alphaT);
+    }
+
+    // ---- 翻转力矩（静力矩；CMa>0 为静不稳定，由自转陀螺稳定）----
+    var cma0 = interpTab(TAB.CMa0, mach);
+    var cma2 = AERO_C.useNonlinear ? interpTab(TAB.CMa2, mach) : 0;
+    var CM = (cma0 + cma2 * sa2) * sinAt;
+    var Ms = qd * S * d * CM;
+    var My = 0, Mz = 0;
+    if (alphaT > 1e-12) {                 // 攻角为零时静力矩为零，避免 0/0
+      My = -Ms * (beta / alphaT);
+      Mz = Ms * (alpha / alphaT);
+    }
+
+    // ---- 俯仰阻尼、滚转阻尼（BRL 归一，含攻角非线性项）----
+    var cmq = interpTab(TAB.Cmq0, mach);
+    if (AERO_C.useNonlinear && TAB.Cmq2) cmq += interpTab(TAB.Cmq2, mach) * sa2;
+    var Mx = 0;
+    if (TAB.Clp) Mx = base * interpTab(TAB.Clp, mach) * wx;
+    My += base * cmq * wy;
+    Mz += base * cmq * wz;
+
+    // ---- Magnus 力矩（旋转弹产生偏流/极限环偏航；尾翼弹表不存在则跳过）----
+    if (AERO_C.useMagnusMoment && TAB.CMp && alphaT > 1e-9) {
+      var cmp = interpTab(TAB.CMp, mach);
+      var Mm = base * wx * cmp * sinAt;
+      // 方向垂直于攻角平面：(0, β, -α)（右旋弹 p>0 时产生向右偏流）
+      My += Mm * (beta / alphaT);
+      Mz -= Mm * (alpha / alphaT);
+    }
+
+    // ---- 合力转到地面系 ----
+    var invM = 1 / SHELL.mass;
+    var fwx = (R00 * Fx + R01 * Fy + R02 * Fz) * invM;
+    var fwy = (R10 * Fx + R11 * Fy + R12 * Fz) * invM;
+    var fwz = (R20 * Fx + R21 * Fy + R22 * Fz) * invM;
+
+    // 重力随高度衰减
+    var g = G0 * R_EARTH * R_EARTH / ((R_EARTH + y[1]) * (R_EARTH + y[1]));
+    fwy -= g;
+
+    // 科氏力 a = -2 Ω × v（Ω 在发射系下的分量）
+    var corZ = 0;
+    if (CUR.useCoriolis) {
+      var ox = CUR.omgX, oy = CUR.omgY, oz = CUR.omgZ;
+      var acx = -2 * (oy * vz - oz * vy);      // -2(Ω×v)_x
+      var acy = -2 * (oz * vx - ox * vz);
+      var acz = -2 * (ox * vy - oy * vx);
+      fwx += acx; fwy += acy; fwz += acz;
+      corZ = acz;
+    }
+
+    // 累积"科氏力单独贡献"的侧向位移（诊断用，不进入真实状态耦合）
+    var zc = y[13], vc = y[14];
+
+    // ---- 转动动力学（欧拉方程，Ix 为极轴、Iy 为赤道轴）----
+    var A = SHELL.Ix, B = SHELL.Iy;
+    var dwx = Mx / A;
+    var dwy = (My - wx * wz * (A - B)) / B;
+    var dwz = (Mz - wx * wy * (B - A)) / B;
+
+    // ---- 状态导数 ----
+    out[0] = vx; out[1] = vy; out[2] = vz;
+    out[3] = fwx; out[4] = fwy; out[5] = fwz;
+    out[6] = -0.5 * (qx * wx + qy * wy + qz * wz);
+    out[7] = 0.5 * (qw * wx + qy * wz - qz * wy);
+    out[8] = 0.5 * (qw * wy - qx * wz + qz * wx);
+    out[9] = 0.5 * (qw * wz + qx * wy - qy * wx);
+    out[10] = dwx; out[11] = dwy; out[12] = dwz;
+    out[13] = vc;
+    out[14] = corZ;
+    return out;
+  }
+
+  /* ------------------------------- RK4 积分 ------------------------------- */
+  var NS = 15;
+  var K1 = new Float64Array(NS), K2 = new Float64Array(NS),
+      K3 = new Float64Array(NS), K4 = new Float64Array(NS),
+      YT = new Float64Array(NS);
+
+  function rk4(y, h) {
+    var i;
+    deriv(y, K1);
+    for (i = 0; i < NS; i++) YT[i] = y[i] + 0.5 * h * K1[i];
+    deriv(YT, K2);
+    for (i = 0; i < NS; i++) YT[i] = y[i] + 0.5 * h * K2[i];
+    deriv(YT, K3);
+    for (i = 0; i < NS; i++) YT[i] = y[i] + h * K3[i];
+    deriv(YT, K4);
+    for (i = 0; i < NS; i++) {
+      y[i] += h * (K1[i] + 2 * K2[i] + 2 * K3[i] + K4[i]) / 6;
+    }
+    // 四元数归一化
+    var n = Math.sqrt(y[6] * y[6] + y[7] * y[7] + y[8] * y[8] + y[9] * y[9]);
+    if (n > 0) {
+      var inv = 1 / n;
+      y[6] *= inv; y[7] *= inv; y[8] *= inv; y[9] *= inv;
+    }
+  }
+
+  /* --------------------------- 姿态/状态派生量 ---------------------------- */
+  function quatToMatrix(q) {
+    var w = q[0], x = q[1], y = q[2], z = q[3];
+    var xx = x * x, yy = y * y, zz = z * z;
+    return [
+      [1 - 2 * (yy + zz), 2 * (x * y - w * z), 2 * (x * z + w * y)],
+      [2 * (x * y + w * z), 1 - 2 * (xx + zz), 2 * (y * z - w * x)],
+      [2 * (x * z - w * y), 2 * (y * z + w * x), 1 - 2 * (xx + yy)]
+    ];
+  }
+
+  /* 陀螺稳定因子 Sg = (Ix·p)² / (4·Iy·q·S·d·CMα)
+   * Sg > 1 时陀螺稳定（McCoy, Modern Exterior Ballistics, Eq. 9.x） */
+  function stabilityFactor(spin, qd, mach) {
+    var cma = interpTab(TAB.CMa0, mach);
+    if (!(cma > 1e-12) || !(qd > 1e-9)) return Infinity;   // 静稳定或静力矩为零
+    var K = qd * SHELL.S * SHELL.D * cma;
+    var IxP = SHELL.Ix * spin;
+    return IxP * IxP / (4 * SHELL.Iy * K);
+  }
+
+  function deriveKinematics(y, s) {
+    var qw = y[6], qx = y[7], qy = y[8], qz = y[9];
+    var vx = y[3], vy = y[4], vz = y[5];
+    var xx = qx * qx, yy = qy * qy, zz = qz * qz;
+    var R00 = 1 - 2 * (yy + zz), R01 = 2 * (qx * qy - qw * qz), R02 = 2 * (qx * qz + qw * qy);
+    var R10 = 2 * (qx * qy + qw * qz), R11 = 1 - 2 * (xx + zz), R12 = 2 * (qy * qz - qw * qx);
+    var R20 = 2 * (qx * qz - qw * qy), R21 = 2 * (qy * qz + qw * qx), R22 = 1 - 2 * (xx + yy);
+
+    // 相对空气速度
+    var rvx = vx, rvy = vy, rvz = vz;
+    if (CUR.useWind && (CUR.windCross !== 0 || CUR.windHead !== 0)) {
+      var wf = windProfile(y[1]);
+      rvx -= -CUR.windHead * wf;
+      rvz -= CUR.windCross * wf;
+    }
+    var V2 = rvx * rvx + rvy * rvy + rvz * rvz;
+    var V = Math.sqrt(V2) + 1e-9;
+    var ub = R00 * rvx + R10 * rvy + R20 * rvz;
+    var vb = R01 * rvx + R11 * rvy + R21 * rvz;
+    var wb = R02 * rvx + R12 * rvy + R22 * rvz;
+
+    var atm = atmosphere(y[1], CUR.dT);
+    var mach = V / atm.a;
+    var qd = 0.5 * atm.rho * V2;
+
+    var alpha = 0, beta = 0;
+    if (ub > 0.15 * V) {
+      alpha = Math.atan2(-vb, ub);
+      beta = Math.atan2(-wb, ub);
+    }
+
+    // 弹轴方向（世界系）
+    var ax = R00, ay = R10, az = R20;
+
+    var speedGround = Math.sqrt(vx * vx + vy * vy + vz * vz);
+    s.t = s.t != null ? s.t : 0;
+    s.x = y[0]; s.y = y[1]; s.z = y[2];
+    s.vx = vx; s.vy = vy; s.vz = vz;
+    s.speed = speedGround;
+    s.mach = mach;
+    s.alpha = alpha * RAD2DEG;
+    s.beta = beta * RAD2DEG;
+    s.alphaT = Math.sqrt(alpha * alpha + beta * beta) * RAD2DEG;
+    s.theta = Math.atan2(vy, Math.sqrt(vx * vx + vz * vz)) * RAD2DEG; // 弹道倾角
+    s.pitch = Math.asin(Math.max(-1, Math.min(1, ay))) * RAD2DEG;      // 弹轴俯仰
+    s.yaw = Math.atan2(-az, ax) * RAD2DEG;
+    s.wx = y[10]; s.wy = y[11]; s.wz = y[12];
+    s.omega = Math.sqrt(y[10] * y[10] + y[11] * y[11] + y[12] * y[12]);
+    s.qdyn = qd / 1000;   // kPa
+    s.rho = atm.rho;
+    s.T = atm.T;
+    s.ax = ax; s.ay = ay; s.az = az;
+    s.quat = [y[6], y[7], y[8], y[9]];
+    s.coriolisDrift = y[13];
+    s.aeroDrift = y[2] - y[13];
+    s.sg = stabilityFactor(y[10], qd, mach);
+    return s;
+  }
+
+  /* ------------------------------ 随机数 ---------------------------------- */
+  var RNG = Math.random;
+
+  function makeLCG(seed) {
+    var s = (seed >>> 0) || 1;
+    return function () {
+      s = (Math.imul(1103515245, s) + 12345) >>> 0;
+      return s / 4294967296;
+    };
+  }
+  function rnd() { return RNG(); }
+  function randn() {
+    var u = 0, v = 0;
+    while (u === 0) u = rnd();
+    while (v === 0) v = rnd();
+    return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+  }
+
+  /* ------------------------- 四元数：欧拉角 → 四元数 ---------------------
+   * 弹轴俯仰角 th（绕世界 z 轴），偏航角 ps（绕世界 y 轴，正 = 偏左）
+   * R = Rz(th)·Ry(ps)
+   * ---------------------------------------------------------------------- */
+  function quatFromAngles(th, ps) {
+    var ct = Math.cos(th * 0.5), st = Math.sin(th * 0.5);
+    var cp = Math.cos(ps * 0.5), sp = Math.sin(ps * 0.5);
+    // q = qz(th) * qy(ps)
+    return [
+      ct * cp,
+      -st * sp,
+      ct * sp,
+      st * cp
+    ];
+  }
+
+  function spinFromTwist(v0, twist) {
+    if (!(twist > 0)) return 0;
+    return 2 * Math.PI * v0 / (twist * SHELL.D);
+  }
+
+  /* ------------------------------ 主仿真函数 ------------------------------
+   * @param {Object} cfg
+   *   v0        初速 m/s            (默认 450)
+   *   angle     射角 deg            (默认 45)
+   *   hBoom     空炸高度 m，0=触地  (默认 12)
+   *   twist     膛线缠距 口径/转     (默认 SHELL.twist=18)
+   *   spin      直接给定炮口转速 rad/s（覆盖 twist 换算，测试用）
+   *   jump      炮口跳角 deg         (默认 0.12)
+   *   yaw0      炮口偏航角 deg       (默认 0.03)
+   *   wy0/wz0   炮口横向角速度 rad/s (默认 0.35 / 0.85)
+   *   env       环境参数（见 ENV_DEFAULT）
+   *   dt        积分步长 s           (默认 0.0005)
+   *   sampleDt  采样间隔 s           (默认 0.01)
+   *   maxTime   最大仿真时间 s       (默认 160)
+   *   fragCount 破片数              (默认 800)
+   *   seed      随机种子（可选，可复现破片抽样）
+   * ---------------------------------------------------------------------- */
+  function simulate(cfg) {
+    cfg = cfg || {};
+    if (cfg.preset && PRESETS[cfg.preset] && cfg.preset !== PRESET_NAME) applyPreset(cfg.preset);
+    var PD = PRESETS[PRESET_NAME].defaults;
+    var v0 = cfg.v0 != null ? cfg.v0 : PD.v0;
+    var ang = (cfg.angle != null ? cfg.angle : PD.angle) * DEG2RAD;
+    var hBoom = cfg.hBoom != null ? cfg.hBoom : 12;
+    var maxT = cfg.maxTime != null ? cfg.maxTime : 140;
+    var sampleDt = cfg.sampleDt != null ? cfg.sampleDt : 0.01;
+
+    var env = setEnv(cfg.env);
+    var twist = cfg.twist != null ? cfg.twist : SHELL.twist;
+    var spin = cfg.spin != null ? cfg.spin : spinFromTwist(v0, twist);
+    // 自适应积分步长：自转越快，姿态积分需要越小步长（默认 ≤0.5 ms）
+    var dt = cfg.dt != null ? cfg.dt
+      : Math.max(0.0001, Math.min(0.0005, 0.34 / Math.max(1, Math.abs(spin))));
+    var jump = (cfg.jump != null ? cfg.jump : PD.jump) * DEG2RAD;
+    var yaw0 = (cfg.yaw0 != null ? cfg.yaw0 : PD.yaw0) * DEG2RAD;
+    var wy0 = cfg.wy0 != null ? cfg.wy0 : PD.wy0;
+    var wz0 = cfg.wz0 != null ? cfg.wz0 : PD.wz0;
+
+    var seed = cfg.seed != null ? cfg.seed : 2024;   // 默认固定种子，保证结果可复现
+    var oldRng = RNG;
+    RNG = makeLCG(seed);
+    try {
+      var y = new Float64Array(NS);
+      y[0] = 0; y[1] = 0; y[2] = 0;
+      y[3] = v0 * Math.cos(ang);
+      y[4] = v0 * Math.sin(ang);
+      y[5] = 0;
+      // 弹轴指向：射角 + 跳角，含小偏航
+      var q0 = quatFromAngles(ang + jump, yaw0);
+      y[6] = q0[0]; y[7] = q0[1]; y[8] = q0[2]; y[9] = q0[3];
+      y[10] = spin;
+      y[11] = wy0;
+      y[12] = wz0;
+      y[13] = 0; y[14] = 0;
+
+      var samples = [];
+      var state = { t: 0 };
+      deriveKinematics(y, state);
+      samples.push(state);
+
+      var t = 0;
+      var nextSample = sampleDt;
+      var boom = null;
+      var apex = { t: 0, x: 0, alt: 0 };
+      var apexFound = false;
+      var prevY = y[1];
+      var trigger = hBoom > 0.5 ? hBoom : 0;
+      var iter = 0;
+      var MAX_ITER = Math.ceil(maxT / dt);
+      var fuzeReached = false;
+
+      while (iter++ < MAX_ITER) {
+        var oldY = y[1];
+        var oldX = y[0], oldZ = y[2];
+
+        rk4(y, dt);
+        t += dt;
+
+        // 顶点（第一次 vy 由正变负）
+        if (!apexFound && y[4] < 0 && oldY >= 0) {
+          apexFound = true;
+          apex = { t: t, x: y[0], alt: oldY, range: Math.sqrt(y[0] * y[0] + y[2] * y[2]) };
+        }
+
+        var descending = y[4] < 0;
+        // 若弹道顶点低于设定炸高，引信不会在设定高度起爆 → 按触地处理
+        var trig = trigger;
+        if (oldY <= trig) trig = 0;
+        if (descending && oldY > trig && y[1] <= trig && t > 0.2) {
+          // 线性插值到触发面
+          var frac = (oldY - trig) / (oldY - y[1] + 1e-12);
+          frac = Math.max(0, Math.min(1, frac));
+
+          var tmp = new Float64Array(NS);
+          for (var kk = 0; kk < NS; kk++) tmp[kk] = y[kk];
+          tmp[0] = oldX + (y[0] - oldX) * frac;
+          tmp[1] = trig;
+          tmp[2] = oldZ + (y[2] - oldZ) * frac;
+          // 速度/姿态/角速度按 frac 线性插值（与旧值相比此处直接取新步值亦可，
+          // 但用 k1..k4 的加权更准；frac 很小时差异可忽略）
+          var stk = deriveKinematics(tmp, { t: t - dt + dt * frac });
+
+          boom = {
+            t: t - dt + dt * frac,
+            x: tmp[0], y: trig, z: tmp[2],
+            speed: Math.sqrt(tmp[3] * tmp[3] + tmp[4] * tmp[4] + tmp[5] * tmp[5]),
+            vx: tmp[3], vy: tmp[4], vz: tmp[5],
+            quat: [tmp[6], tmp[7], tmp[8], tmp[9]],
+            alpha: stk.alpha,
+            beta: stk.beta,
+            theta: stk.theta,
+            mach: stk.mach,
+            spin: tmp[10],
+            qdyn: stk.qdyn,
+            coriolisDrift: tmp[13],
+            impact: trig < 0.5
+          };
+          fuzeReached = true;
+          break;
+        }
+
+        if (t >= nextSample) {
+          state = { t: t };
+          deriveKinematics(y, state);
+          samples.push(state);
+          nextSample += sampleDt;
+        }
+
+        if (!isFinite(y[0]) || y[1] < -2) break;
+      }
+
+      // 未正常触发：若设定炸高高于弹道顶点，则按触地处理
+      if (!boom) {
+        var stLast = { t: t };
+        deriveKinematics(y, stLast);
+        boom = {
+          t: t, x: y[0], y: Math.max(0, y[1]), z: y[2],
+          speed: Math.sqrt(y[3] * y[3] + y[4] * y[4] + y[5] * y[5]),
+          vx: y[3], vy: y[4], vz: y[5],
+          quat: [y[6], y[7], y[8], y[9]],
+          alpha: stLast.alpha, beta: stLast.beta, theta: stLast.theta,
+          mach: stLast.mach, spin: y[10], qdyn: stLast.qdyn,
+          coriolisDrift: y[13],
+          impact: true
+        };
+      }
+
+      // ------------------------------ 统计 ------------------------------
+      var maxAlt = 0, maxSpeed = 0, maxMach = 0, maxAlpha = 0, maxBeta = 0,
+          maxQ = 0, maxAbsZ = 0, sgMin = Infinity;
+      for (var i = 0; i < samples.length; i++) {
+        var s = samples[i];
+        if (s.y > maxAlt) maxAlt = s.y;
+        if (s.speed > maxSpeed) maxSpeed = s.speed;
+        if (s.mach > maxMach) maxMach = s.mach;
+        if (Math.abs(s.alpha) > maxAlpha) maxAlpha = Math.abs(s.alpha);
+        if (Math.abs(s.beta) > maxBeta) maxBeta = Math.abs(s.beta);
+        if (s.qdyn > maxQ) maxQ = s.qdyn;
+        if (Math.abs(s.z) > maxAbsZ) maxAbsZ = Math.abs(s.z);
+        if (s.sg < sgMin) sgMin = s.sg;
+      }
+
+      var range = Math.sqrt(boom.x * boom.x + boom.z * boom.z);
+      var cnaM = interpTab(TAB.CNa0, samples[0].mach);
+      var cmaM = interpTab(TAB.CMa0, samples[0].mach);
+      var staticMargin = -cmaM / Math.max(Math.abs(cnaM), 1e-9);  // cal，正 = 静稳定
+      var result = {
+        cfg: {
+          v0: v0, angle: cfg.angle != null ? cfg.angle : PD.angle,
+          hBoom: hBoom, twist: twist, spin: spin,
+          fragCount: cfg.fragCount != null ? cfg.fragCount : PD.fragCount,
+          preset: PRESET_NAME, seed: seed
+        },
+        preset: PRESET_NAME,
+        presetName: SHELL.presetName,
+        aeroSource: SHELL.aeroSource,
+        spinStabilized: SHELL.spinMode !== 'none',
+        staticMargin: staticMargin,
+        staticallyStable: cmaM < 0,
+        shell: JSON.parse(JSON.stringify(SHELL)),
+        env: env,
+        samples: samples,
+        sampleDt: sampleDt,
+        dt: dt,
+        boom: boom,
+        apex: apex,
+        fuzeReached: fuzeReached,
+        flightTime: boom.t,
+        range: range,
+        maxAlt: maxAlt,
+        maxSpeed: maxSpeed,
+        maxMach: maxMach,
+        maxAlpha: maxAlpha,
+        maxBeta: maxBeta,
+        maxQ: maxQ,
+        spin0: spin,
+        spinBurst: boom.spin,
+        spinLoss: spin > 0 ? (spin - boom.spin) / spin : 0,
+        Sg0: samples.length ? samples[0].sg : 0,
+        SgMin: isFinite(sgMin) ? sgMin : 0,
+        drift: boom.z,
+        coriolisDrift: boom.coriolisDrift,
+        aeroDrift: boom.z - boom.coriolisDrift,   // 总侧偏扣除科氏累积（气动/初始扰动偏流）
+        impactX: boom.x,
+        impactY: boom.y,
+        impactZ: boom.z,
+        impactSpeed: boom.speed,
+        impactAngle: boom.theta,
+        impactMach: boom.mach
+      };
+
+      result.fragments = simulateFragments(result, cfg);
+      return result;
+    } finally {
+      RNG = oldRng;
+    }
+  }
+
+  /* ------------------------------ 破片仿真 --------------------------------
+   * 说明：fragCount 为 Monte-Carlo 统计样本数（默认 800，可调 200–1600），
+   * 由 Mott 分布描述总体质量分布，质量按壳体金属质量守恒归一；
+   * 它不是特定型号的全部物理破片数。
+   * 1) 质量分布 —— Mott 分布：N(>m) = N0·exp(-√(m/μ))，平均质量 = 2μ
+   *    逆 CDF 采样：m = μ·[ln(1/(1-u))]²
+   * 2) 初速 —— Gurney 公式：v_G = √(2E·β/(1+β/2))，β = C/M
+   *    端部折减 + 分区速度因子 + 小破片略高
+   * 3) 动爆 —— 弹丸速度矢量叠加 + 自转切向速度 ω×r
+   * 4) 飞散角 —— 截短正态，弹头/圆柱/弹底三区
+   * 5) 存速 —— 变密度大气 + 马赫相关 Cd + 风场相对速度
+   * ---------------------------------------------------------------------- */
+  var FRAG_ZONES = [
+    // φ 均值(°) φ 标准差  质量因子  初速因子  质量权重
+    { phi: 42, sig: 13, mf: 0.72, vf: 1.04, w: 0.16 },  // 弹头：前向锥，碎块小
+    { phi: 90, sig: 17, mf: 1.00, vf: 1.00, w: 0.74 },  // 圆柱：赤道带
+    { phi: 139, sig: 15, mf: 1.55, vf: 0.94, w: 0.10 }  // 弹底：后向锥，大块
+  ];
+
+  /* 不规则破片阻力系数（随马赫数；钝体不规则形状量级 1.0–1.5） */
+  function fragCd(mach) {
+    if (mach < 0.6) return 1.02;
+    if (mach < 1.05) return 1.02 + 0.40 * (mach - 0.6) / 0.45;
+    if (mach < 2.0) return 1.42 - 0.14 * (mach - 1.05);
+    return 1.29;
+  }
+
+  /* Mott 分布逆采样 */
+  function sampleMottMass(mu) {
+    var u = rnd();
+    if (u > 0.9994) u = 0.9994;
+    var l = Math.log(1 / (1 - u));
+    return mu * l * l;
+  }
+
+  /* 破片气动加速度（世界系）：阻力 + 重力 + 风场相对速度 */
+  var FRAG_A = new Float64Array(3);
+  function fragAccel(px, py, vx, vy, vz, mass, Aref, out) {
+    var wfx = 0, wfz = 0;
+    if (CUR.useWind && (CUR.windCross !== 0 || CUR.windHead !== 0)) {
+      var wf = windProfile(py);
+      wfx = -CUR.windHead * wf;
+      wfz = CUR.windCross * wf;
+    }
+    var rvx = vx - wfx, rvy = vy, rvz = vz - wfz;
+    var sp = Math.sqrt(rvx * rvx + rvy * rvy + rvz * rvz) + 1e-9;
+    var atm = atmosphere(py, CUR.dT);
+    var kd = 0.5 * atm.rho * fragCd(sp / atm.a) * Aref / mass;
+    out[0] = -kd * sp * rvx;
+    out[1] = -kd * sp * rvy - G0;
+    out[2] = -kd * sp * rvz;
+    return out;
+  }
+
+  function simulateFragments(sim, cfg) {
+    var N = Math.max(50, Math.min(2400, (cfg && cfg.fragCount) || 800));
+    var boom = sim.boom;
+    var R = quatToMatrix(boom.quat);
+
+    // Gurney 初速
+    var betaG = SHELL.charge / SHELL.casing;
+    var vG = Math.sqrt(SHELL.gurney2E * betaG / (1 + betaG / 2)); // ≈1254 m/s
+
+    // Mott 特征质量：μ = 平均质量 / 2
+    var meanM = SHELL.casing / N;
+    var mu = meanM / 2;
+
+    var dt = (cfg && cfg.fragDt) ? cfg.fragDt : 0.005;  // 破片弹道 RK4 步长
+    var sampleDt = 0.02;
+    var maxFlight = 60;
+    var pSpin = boom.spin || 0;
+
+    var i, k, s;
+
+    /* ---- 1) 质量抽样（Mott 逆 CDF）+ 端部分区 ---- */
+    var masses = new Array(N);
+    var zones = new Array(N);
+    var axialU = new Array(N);
+    var sumM = 0;
+
+    for (i = 0; i < N; i++) {
+      var zr = rnd(), zi = 0, acc = 0;
+      for (k = 0; k < FRAG_ZONES.length; k++) {
+        acc += FRAG_ZONES[k].w;
+        if (zr <= acc) { zi = k; break; }
+      }
+      var zone = FRAG_ZONES[zi];
+      var m = sampleMottMass(mu) * zone.mf;
+      m = Math.max(meanM * 0.05, Math.min(meanM * 8, m));
+      masses[i] = m;
+      zones[i] = zi;
+      // 轴向位置 u ∈ [-1,1]，正方向指向弹头
+      if (zi === 0) axialU[i] = 0.55 + 0.45 * rnd();
+      else if (zi === 2) axialU[i] = -0.55 - 0.45 * rnd();
+      else axialU[i] = (rnd() * 2 - 1) * 0.55;
+      sumM += m;
+    }
+    // 质量守恒归一化到弹体金属质量
+    var mScale = SHELL.casing / sumM;
+    for (i = 0; i < N; i++) masses[i] *= mScale;
+
+    /* ---- 2) 逐破片六分量外弹道 ---- */
+    var frags = [];
+    var effectiveCount = 0, totalEnergy = 0, maxRadius = 0, killCount = 0, landedCount = 0;
+    var forwardMax = -1e9, backMin = 1e9, lateralMax = 0;
+    var zoneCount = [0, 0, 0];
+
+    for (i = 0; i < N; i++) {
+      var mass = masses[i];
+      var zone2 = FRAG_ZONES[zones[i]];
+      zoneCount[zones[i]]++;
+
+      // 飞散角 φ（相对弹轴，0°=弹头方向）：截短正态
+      var phi = (zone2.phi + randn() * zone2.sig) * DEG2RAD;
+      if (phi < 8 * DEG2RAD) phi = 8 * DEG2RAD;
+      if (phi > 172 * DEG2RAD) phi = 172 * DEG2RAD;
+      var gamma = rnd() * Math.PI * 2;
+
+      // Gurney 端部折减：越靠近端部初速越低
+      var u = axialU[i];
+      var axial = Math.sqrt(Math.max(0.55, 1 - 0.22 * u * u));
+
+      // 小破片初速略高（当地装填比更高）
+      var vRel = vG * axial * zone2.vf * Math.pow(meanM / mass, 0.13) * (1 + 0.05 * randn());
+      if (vRel < 150) vRel = 150;
+
+      // 弹体系下的飞散方向
+      var sinP = Math.sin(phi), cosP = Math.cos(phi);
+      var dl0 = cosP, dl1 = sinP * Math.cos(gamma), dl2 = sinP * Math.sin(gamma);
+
+      // 破片起始位置：壳体表面（轴向位置 + 半径）
+      var uAx = u * SHELL.L / 2;
+      var py0 = SHELL.wallR * dl1;
+      var pz0 = SHELL.wallR * dl2;
+      var bx0 = uAx; // 简化为轴线位置，径向偏置在 y/z
+
+      // 自转切向速度 v = ω × r（ω ≈ p·x1）
+      var vtx = 0;
+      var vty = -pSpin * pz0;
+      var vtz = pSpin * py0;
+
+      // 弹体系速度 = 径向飞散 + 切向自转速度
+      var vbx = dl0 * vRel + vtx;
+      var vby = dl1 * vRel + vty;
+      var vbz = dl2 * vRel + vtz;
+
+      // 弹体系 → 世界系
+      var dxw = R[0][0] * vbx + R[0][1] * vby + R[0][2] * vbz;
+      var dyw = R[1][0] * vbx + R[1][1] * vby + R[1][2] * vbz;
+      var dzw = R[2][0] * vbx + R[2][1] * vby + R[2][2] * vbz;
+
+      // 动爆：弹丸速度矢量叠加
+      var vx = boom.vx + dxw;
+      var vy = boom.vy + dyw;
+      var vz = boom.vz + dzw;
+
+      var px = boom.x + R[0][1] * py0 + R[0][2] * pz0 + R[0][0] * bx0;
+      var py = boom.y + R[1][1] * py0 + R[1][2] * pz0 + R[1][0] * bx0;
+      var pz = boom.z + R[2][1] * py0 + R[2][2] * pz0 + R[2][0] * bx0;
+
+      var v0f = Math.sqrt(dxw * dxw + dyw * dyw + dzw * dzw);
+
+      // 迎风面积 ~ m^(2/3)，不规则形状因子 1.45
+      var Aref = Math.pow(mass / SHELL.fragDensity, 2 / 3) * 1.45;
+
+      var path = [];
+      var tt = 0;
+      var nextS = 0;
+      var landed = false;
+      var landX = 0, landZ = 0, landV = 0, landT = 0;
+
+      var steps = Math.floor(maxFlight / dt);
+      for (s = 0; s < steps; s++) {
+        if (tt >= nextS) {
+          path.push(px, py, pz);
+          nextS += sampleDt;
+        }
+        var pxPrev = px, pyPrev = py, pzPrev = pz;
+        var vxPrev = vx, vyPrev = vy, vzPrev = vz;
+
+        // 变密度大气 + 马赫相关 Cd + 风场，RK4（位置/速度）
+        var a1 = fragAccel(px, py, vx, vy, vz, mass, Aref, FRAG_A);
+        var a1x = a1[0], a1y = a1[1], a1z = a1[2];
+        var v2x = vx + 0.5 * dt * a1x, v2y = vy + 0.5 * dt * a1y, v2z = vz + 0.5 * dt * a1z;
+        var a2 = fragAccel(px + 0.5 * dt * vx, py + 0.5 * dt * vy, v2x, v2y, v2z, mass, Aref, FRAG_A);
+        var a2x = a2[0], a2y = a2[1], a2z = a2[2];
+        var v3x = vx + 0.5 * dt * a2x, v3y = vy + 0.5 * dt * a2y, v3z = vz + 0.5 * dt * a2z;
+        var a3 = fragAccel(px + 0.5 * dt * v2x, py + 0.5 * dt * v2y, v3x, v3y, v3z, mass, Aref, FRAG_A);
+        var a3x = a3[0], a3y = a3[1], a3z = a3[2];
+        var v4x = vx + dt * a3x, v4y = vy + dt * a3y, v4z = vz + dt * a3z;
+        var a4 = fragAccel(px + dt * v3x, py + dt * v3y, v4x, v4y, v4z, mass, Aref, FRAG_A);
+        var a4x = a4[0], a4y = a4[1], a4z = a4[2];
+
+        px += dt / 6 * (vx + 2 * v2x + 2 * v3x + v4x);
+        py += dt / 6 * (vy + 2 * v2y + 2 * v3y + v4y);
+        pz += dt / 6 * (vz + 2 * v2z + 2 * v3z + v4z);
+        vx += dt / 6 * (a1x + 2 * a2x + 2 * a3x + a4x);
+        vy += dt / 6 * (a1y + 2 * a2y + 2 * a3y + a4y);
+        vz += dt / 6 * (a1z + 2 * a2z + 2 * a3z + a4z);
+        tt += dt;
+
+        if (py <= 0 && pyPrev > 0) {
+          var ff = pyPrev / (pyPrev - py + 1e-12);
+          ff = ff < 0 ? 0 : (ff > 1 ? 1 : ff);
+          landX = pxPrev + (px - pxPrev) * ff;
+          landZ = pzPrev + (pz - pzPrev) * ff;
+          var lvx = vxPrev + (vx - vxPrev) * ff;
+          var lvy = vyPrev + (vy - vyPrev) * ff;
+          var lvz = vzPrev + (vz - vzPrev) * ff;
+          landV = Math.sqrt(lvx * lvx + lvy * lvy + lvz * lvz);
+          landT = boom.t + tt - dt * (1 - ff);
+          landed = true;
+          px = landX; py = 0; pz = landZ;
+          break;
+        }
+      }
+
+      if (!landed) {
+        landX = px; landZ = pz;
+        landV = Math.sqrt(vx * vx + vy * vy + vz * vz);
+        landT = boom.t + tt;
+      }
+      path.push(px, Math.max(0, py), pz);
+
+      var ddx = landX - boom.x;
+      var ddz = landZ - boom.z;
+      var radius = Math.sqrt(ddx * ddx + ddz * ddz);
+      var energy = landed ? 0.5 * mass * landV * landV : 0;
+      if (landed) {
+        totalEnergy += energy;
+        landedCount++;
+        if (energy > 78) killCount++;     // 78 J 人员致伤阈值量级
+        if (landV > 100) effectiveCount++;
+        if (radius > maxRadius) maxRadius = radius;
+        if (ddx > forwardMax) forwardMax = ddx;
+        if (ddx < backMin) backMin = ddx;
+        if (Math.abs(ddz) > lateralMax) lateralMax = Math.abs(ddz);
+      }
+
+      frags.push({
+        m: mass,
+        v0: v0f,
+        zone: zones[i],
+        path: path,
+        pathDt: sampleDt,
+        landed: landed,
+        landX: landX,
+        landZ: landZ,
+        landT: landT,
+        landV: landV,
+        energy: energy,
+        radius: radius
+      });
+    }
+
+    // 散布统计（仅统计已落地破片）
+    var landedFrags = frags.filter(function (f) { return f.landed; });
+    var maxLandT = 0;
+    for (i = 0; i < landedFrags.length; i++) {
+      var lt = landedFrags[i].landT - boom.t;
+      if (lt > maxLandT) maxLandT = lt;
+    }
+    var rs = landedFrags.map(function (f) { return f.radius; }).sort(function (a, b) { return a - b; });
+    var r50 = rs[Math.floor(rs.length * 0.5)] || 0;
+    var r90 = rs[Math.floor(rs.length * 0.9)] || 0;
+    var avgLandV = landedFrags.length
+      ? landedFrags.reduce(function (a, f) { return a + f.landV; }, 0) / landedFrags.length : 0;
+    var maxFragM = 0, meanFragM = 0, massSum = 0;
+    for (i = 0; i < N; i++) {
+      meanFragM += frags[i].m;
+      massSum += frags[i].m;
+      if (frags[i].m > maxFragM) maxFragM = frags[i].m;
+    }
+    meanFragM /= N;
+
+    return {
+      list: frags,
+      vGurney: vG,
+      count: N,
+      landedCount: landedCount,
+      maxRadius: maxRadius,
+      r50: r50,
+      r90: r90,
+      avgLandV: avgLandV,
+      totalEnergy: totalEnergy,
+      killCount: killCount,
+      effectiveCount: effectiveCount,
+      mu: mu,
+      meanMass: meanFragM,
+      maxMass: maxFragM,
+      massSum: massSum,
+      zoneCount: zoneCount,
+      forwardMax: forwardMax > -1e8 ? forwardMax : 0,
+      backMin: backMin < 1e8 ? backMin : 0,
+      lateralMax: lateralMax,
+      duration: maxLandT,
+      unlanded: N - landedCount,
+      spin: pSpin
+    };
+  }
+
+  /* ------------------------------ 导出接口 -------------------------------- */
+  var Ballistics = {
+    SHELL: SHELL,
+    ENV_DEFAULT: ENV_DEFAULT,
+    TAB: function () { return TAB; },
+    AERO_C: AERO_C,
+    PRESETS: PRESETS,
+    applyPreset: applyPreset,
+    getPreset: function () { return PRESET_NAME; },
+    INTERP: interpTab,
+    simulate: simulate,
+    atmosphere: atmosphere,
+    aeroAt: aeroAt,
+    deriveKinematics: deriveKinematics,
+    quatToMatrix: quatToMatrix,
+    spinFromTwist: spinFromTwist,
+    stabilityFactor: stabilityFactor
+  };
+
+  if (typeof module !== 'undefined' && module.exports) module.exports = Ballistics;
+  root.Ballistics = Ballistics;
+
+})(typeof window !== 'undefined' ? window : globalThis);
+
+</script>
+<script>
+/* ===== render3d.js ===== */
+/* =============================================================================
+ * Scene3D — Canvas 2D 手写透视投影渲染器
+ * 120mm 杀爆弹外弹道 + 动爆破片三维可视化
+ * 无外部依赖，ES5/ES2015 兼容
+ * ========================================================================== */
+(function (global) {
+  'use strict';
+
+  var FOV = 40 * Math.PI / 180;
+  var NEAR = 2.0;
+  var DEG = Math.PI / 180;
+
+  var canvas = null, ctx = null;
+  var W = 1, H = 1, W2 = 0.5, H2 = 0.5, dpr = 1, focal = 1;
+
+  var sim = null;
+  var time = 0;
+  var camMode = 'follow';
+  var userControl = false;
+
+  var cam = { yaw: -0.62, pitch: 0.26, dist: 1200, tx: 0, ty: 200, tz: 0 };
+  var camS = { yaw: -0.62, pitch: 0.26, dist: 1200, tx: 0, ty: 200, tz: 0 };
+  var panX = 0, panY = 0, panZ = 0;
+  var landCells = [];
+
+  var camX = 0, camY = 0, camZ = 0;
+  var fwX = 0, fwY = -1, fwZ = 0;
+  var rtX = 1, rtY = 0, rtZ = 0;
+  var upX = 0, upY = 0, upZ = 0;
+
+  var pOut = { x: 0, y: 0, z: 0, ok: false };
+  var skyGrad = null, skyGradH = -1;
+  var lastFrame = 0;
+
+  /* 预分配 */
+  var smoke = [];
+  var fragGroups = [[], [], [], [], [], [], [], [], [], [], [], []];
+  var tmp = { x: 0, y: 0, z: 0 };
+
+  /* ---------------------- 弹体三维模型（旋转体网格） ---------------------- */
+  /* [距弹尖轴向距离 m, 半径 m, 材质 0=引信 1=弹体 2=弹带] */
+  var SHELL_PROFILE = [
+    [0.000, 0.0048, 0], [0.010, 0.0100, 0], [0.022, 0.0142, 0],
+    [0.038, 0.0210, 1], [0.062, 0.0290, 1], [0.092, 0.0372, 1],
+    [0.128, 0.0452, 1], [0.166, 0.0522, 1], [0.205, 0.0572, 1],
+    [0.245, 0.0597, 1], [0.300, 0.0600, 1], [0.370, 0.0600, 1],
+    [0.440, 0.0600, 1], [0.505, 0.0600, 1], [0.532, 0.0602, 1],
+    [0.540, 0.0626, 2], [0.566, 0.0626, 2], [0.574, 0.0602, 1],
+    [0.615, 0.0588, 1], [0.648, 0.0522, 1], [0.676, 0.0470, 1],
+    [0.700, 0.0448, 1]
+  ];
+  var PROF_N = SHELL_PROFILE.length;
+  var RING_SEG = 16;
+  var SHELL_CG = 0.348;       // 质心距弹尖 (m) = xcgD(2.90) × D(0.12)
+  var SHELL_LEN = 0.700;      // 弹长 (m)
+  var MAT_RGB = [[64, 68, 72], [92, 102, 82], [176, 140, 72]];
+  var LIGHT_DIR = (function () {
+    var lx = -0.42, ly = 0.80, lz = 0.43;
+    var ln = Math.sqrt(lx * lx + ly * ly + lz * lz);
+    return [lx / ln, ly / ln, lz / ln];
+  })();
+  var meshBuf = [];
+  for (var mbi = 0; mbi < PROF_N * RING_SEG; mbi++) {
+    meshBuf.push({ wx: 0, wy: 0, wz: 0, sx: 0, sy: 0, sz: 0, ok: false });
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* 工具                                                               */
+  /* ------------------------------------------------------------------ */
+  function clamp(v, a, b) { return v < a ? a : (v > b ? b : v); }
+  function lerp(a, b, t) { return a + (b - a) * t; }
+  function smoothK(dt, rate) { return 1 - Math.exp(-dt * rate); }
+
+  /* ------------------------------------------------------------------ */
+  /* 投影                                                               */
+  /* ------------------------------------------------------------------ */
+  function project(x, y, z) {
+    var dx = x - camX, dy = y - camY, dz = z - camZ;
+    var vz = dx * fwX + dy * fwY + dz * fwZ;
+    if (vz < NEAR) { pOut.ok = false; return pOut; }
+    var vx = dx * rtX + dy * rtY + dz * rtZ;
+    var vy = dx * upX + dy * upY + dz * upZ;
+    var s = focal / vz;
+    pOut.x = W2 + vx * s;
+    pOut.y = H2 - vy * s;
+    pOut.z = vz;
+    pOut.ok = true;
+    return pOut;
+  }
+
+  function projectWorld(x, y, z, out) {
+    var dx = x - camX, dy = y - camY, dz = z - camZ;
+    var vz = dx * fwX + dy * fwY + dz * fwZ;
+    if (vz < NEAR) return false;
+    var vx = dx * rtX + dy * rtY + dz * rtZ;
+    var vy = dx * upX + dy * upY + dz * upZ;
+    var s = focal / vz;
+    out[0] = W2 + vx * s;
+    out[1] = H2 - vy * s;
+    out[2] = vz;
+    return true;
+  }
+
+  /* 世界空间线段绘制，近平面裁剪 */
+  function line3(x1, y1, z1, x2, y2, z2) {
+    var ax = x1 - camX, ay = y1 - camY, az = z1 - camZ;
+    var bx = x2 - camX, by = y2 - camY, bz = z2 - camZ;
+    var az2 = ax * fwX + ay * fwY + az * fwZ;
+    var bz2 = bx * fwX + by * fwY + bz * fwZ;
+
+    if (az2 < NEAR && bz2 < NEAR) return false;
+
+    var ax2, ay2, bx2, by2;
+    if (az2 < NEAR) {
+      var t = (NEAR - az2) / (bz2 - az2);
+      ax += (bx - ax) * t; ay += (by - ay) * t; az += (bz - az) * t;
+      az2 = NEAR;
+    } else if (bz2 < NEAR) {
+      var t2 = (NEAR - bz2) / (az2 - bz2);
+      bx += (ax - bx) * t2; by += (ay - by) * t2; bz += (az - bz) * t2;
+      bz2 = NEAR;
+    }
+
+    ax2 = ax * rtX + ay * rtY + az * rtZ;
+    ay2 = ax * upX + ay * upY + az * upZ;
+    bx2 = bx * rtX + by * rtY + bz * rtZ;
+    by2 = bx * upX + by * upY + bz * upZ;
+
+    var s1 = focal / az2, s2 = focal / bz2;
+    ctx.moveTo(W2 + ax2 * s1, H2 - ay2 * s1);
+    ctx.lineTo(W2 + bx2 * s2, H2 - by2 * s2);
+    return true;
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* 相机                                                               */
+  /* ------------------------------------------------------------------ */
+  function shellState(t) {
+    if (!sim) return null;
+    var s = sim.samples, n = s.length;
+    var f = t / sim.sampleDt;
+    var i = clamp(Math.floor(f), 0, n - 2);
+    var u = clamp(f - i, 0, 1);
+    var a = s[i], b = s[i + 1];
+    return {
+      x: a.x + (b.x - a.x) * u,
+      y: a.y + (b.y - a.y) * u,
+      z: a.z + (b.z - a.z) * u,
+      speed: a.speed + (b.speed - a.speed) * u,
+      quat: a.quat
+    };
+  }
+
+  function desiredCamera() {
+    var t = time;
+    var ft = sim.flightTime;
+    var b = sim.boom;
+
+    if (camMode === 'follow') {
+      if (t < ft) {
+        var sh = shellState(t);
+        return {
+          yaw: -0.62, pitch: 0.30,
+          dist: 1900 + sh.speed * 4.2,
+          tx: sh.x, ty: sh.y * 0.92 + 50, tz: sh.z
+        };
+      }
+      var tau = t - b.t;
+      var k = clamp(tau / 2.5, 0, 1);
+      return {
+        yaw: -0.62, pitch: lerp(0.30, 0.40, k),
+        dist: lerp(1850, 2700, k),
+        tx: b.x, ty: b.y + 30 + 150 * k, tz: b.z
+      };
+    }
+
+    // global / orbit
+    return {
+      yaw: -0.55, pitch: 0.33,
+      dist: sim.range * 1.30,
+      tx: sim.range * 0.50, ty: sim.maxAlt * 0.28, tz: 0
+    };
+  }
+
+  function updateCamera(dt) {
+    if (!sim) return;
+
+    var d = desiredCamera();
+    var k = smoothK(dt, 3.2);
+
+    camS.tx += (d.tx + panX - camS.tx) * k;
+    camS.ty += (d.ty + panY - camS.ty) * k;
+    camS.tz += (d.tz + panZ - camS.tz) * k;
+
+    if (!userControl) {
+      camS.yaw += (d.yaw - camS.yaw) * smoothK(dt, 2.2);
+      camS.pitch += (d.pitch - camS.pitch) * smoothK(dt, 2.2);
+      camS.dist += (d.dist - camS.dist) * smoothK(dt, 2.6);
+    } else {
+      camS.yaw += (cam.yaw - camS.yaw) * smoothK(dt, 6);
+      camS.pitch += (cam.pitch - camS.pitch) * smoothK(dt, 6);
+      camS.dist += (cam.dist - camS.dist) * smoothK(dt, 6);
+    }
+
+    camS.pitch = clamp(camS.pitch, -0.02, 1.45);
+
+    var cp = Math.cos(camS.pitch), sp = Math.sin(camS.pitch);
+    camX = camS.tx + camS.dist * cp * Math.sin(camS.yaw);
+    camY = camS.ty + camS.dist * sp;
+    camZ = camS.tz + camS.dist * cp * Math.cos(camS.yaw);
+
+    var dx = camS.tx - camX, dy = camS.ty - camY, dz = camS.tz - camZ;
+    var L = Math.sqrt(dx * dx + dy * dy + dz * dz) || 1;
+    fwX = dx / L; fwY = dy / L; fwZ = dz / L;
+
+    // right = normalize(cross(forward, worldUp))
+    var rx = -fwZ, ry = 0, rz = fwX;
+    var rl = Math.sqrt(rx * rx + rz * rz) || 1e-6;
+    rtX = rx / rl; rtY = ry; rtZ = rz / rl;
+
+    // up = cross(right, forward)
+    upX = rtY * fwZ - rtZ * fwY;
+    upY = rtZ * fwX - rtX * fwZ;
+    upZ = rtX * fwY - rtY * fwX;
+    var ul = Math.sqrt(upX * upX + upY * upY + upZ * upZ) || 1;
+    upX /= ul; upY /= ul; upZ /= ul;
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* 场景绘制                                                           */
+  /* ------------------------------------------------------------------ */
+  function drawSky(horizonY) {
+    var hh = Math.max(1, Math.min(H, horizonY + 40));
+    if (!skyGrad || skyGradH !== hh) {
+      skyGrad = ctx.createLinearGradient(0, 0, 0, hh);
+      skyGrad.addColorStop(0, '#04070d');
+      skyGrad.addColorStop(0.55, '#06111a');
+      skyGrad.addColorStop(0.85, '#0a1c27');
+      skyGrad.addColorStop(1, '#12303c');
+      skyGradH = hh;
+    }
+    ctx.fillStyle = skyGrad;
+    ctx.fillRect(0, 0, W, hh + 1);
+  }
+
+  function drawGround(horizonY) {
+    var hy = clamp(horizonY, -H * 0.5, H * 1.5);
+    if (hy >= H) return;
+    var g = ctx.createLinearGradient(0, hy, 0, H);
+    g.addColorStop(0, '#123039');
+    g.addColorStop(0.10, '#0c2029');
+    g.addColorStop(0.45, '#08141c');
+    g.addColorStop(1, '#0a1a24');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, hy, W, H - hy);
+
+    // 地平线辉光
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    var gh = ctx.createLinearGradient(0, hy - 34, 0, hy + 22);
+    gh.addColorStop(0, 'rgba(90,220,240,0)');
+    gh.addColorStop(0.70, 'rgba(70,200,225,0.20)');
+    gh.addColorStop(1, 'rgba(70,200,225,0)');
+    ctx.fillStyle = gh;
+    ctx.fillRect(0, hy - 34, W, 56);
+    ctx.restore();
+  }
+
+  function gridAlpha(x, z) {
+    var dx = x - camX, dz = z - camZ;
+    var d = Math.sqrt(dx * dx + dz * dz + camY * camY * 0.25);
+    return clamp(1 - d / 30000, 0, 1);
+  }
+
+  function drawGrid() {
+    if (!sim) return;
+    var xMin = -3000, xMax = sim.range + 4000;
+    var zMin = -8000, zMax = 8000;
+    var step = 1000;
+    var majorStep = 5000;
+
+    ctx.save();
+    ctx.lineWidth = 1;
+
+    // 沿 x 方向线（z 变化）
+    for (var z = zMin; z <= zMax; z += step) {
+      var major = (Math.abs(z) % majorStep === 0);
+      var a = gridAlpha(sim.range * 0.5, z) * (major ? 0.26 : 0.095);
+      if (a < 0.005) continue;
+      ctx.strokeStyle = 'rgba(90,220,240,' + a.toFixed(3) + ')';
+      ctx.beginPath();
+      line3(xMin, 0, z, xMax, 0, z);
+      ctx.stroke();
+    }
+
+    // 沿 z 方向线（x 变化）
+    for (var x = xMin; x <= xMax; x += step) {
+      var m2 = (x % majorStep === 0);
+      var a2 = gridAlpha(x, 0) * (m2 ? 0.26 : 0.095);
+      if (a2 < 0.005) continue;
+      ctx.strokeStyle = 'rgba(90,220,240,' + a2.toFixed(3) + ')';
+      ctx.beginPath();
+      line3(x, 0, zMin, x, 0, zMax);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  function drawGroundCircle(cx, cz, radius, color, alpha, width, dash) {
+    if (radius < 1) return;
+    ctx.save();
+    ctx.beginPath();
+    ctx.setLineDash(dash || []);
+    ctx.strokeStyle = color;
+    ctx.globalAlpha = alpha;
+    ctx.lineWidth = width;
+    var started = false;
+    var seg = 72;
+    for (var i = 0; i <= seg; i++) {
+      var a = i / seg * Math.PI * 2;
+      var p = project(cx + Math.cos(a) * radius, 0.6, cz + Math.sin(a) * radius);
+      if (p.ok) {
+        if (!started) { ctx.moveTo(p.x, p.y); started = true; }
+        else ctx.lineTo(p.x, p.y);
+      } else {
+        started = false;
+      }
+    }
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawRangeRings() {
+    if (!sim || time < sim.boom.t) return;
+    var b = sim.boom, f = sim.fragments;
+    var tau = time - b.t;
+    var k = clamp(tau / 0.35, 0, 1);
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    drawGroundCircle(b.x, b.z, f.r50, '#46d3e6', 0.42 * k, 1.4, [6, 8]);
+    drawGroundCircle(b.x, b.z, f.r90, '#ffb43a', 0.40 * k, 1.4, [6, 8]);
+    drawGroundCircle(b.x, b.z, f.maxRadius, '#ff4d4d', 0.30 * k, 1.2, [3, 10]);
+    ctx.restore();
+  }
+
+  /* --------------------------- 地面风矢量指示 --------------------------- */
+  function drawWindIndicator() {
+    if (!sim || !sim.env) return;
+    var env = sim.env;
+    var wc = env.windCross || 0, wh = env.windHead || 0;
+    if (env.useWind === false || (Math.abs(wc) < 0.5 && Math.abs(wh) < 0.5)) return;
+    // 风矢量：横风 + 吹向 +z（右），纵风 + 为逆风（吹向 -x）
+    var wx = -wh, wz = wc;
+    var mag = Math.sqrt(wx * wx + wz * wz) || 1;
+    var scale = 90 + Math.min(90, mag * 7);
+    var ox = -180, oz = -210;
+    var ex = ox + wx / mag * scale, ez = oz + wz / mag * scale;
+    var a = project(ox, 1, oz);
+    var b = project(ex, 1, ez);
+    if (!a.ok || !b.ok) return;
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.strokeStyle = 'rgba(110, 205, 255, 0.72)';
+    ctx.lineWidth = 1.8;
+    ctx.beginPath();
+    ctx.moveTo(a.x, a.y);
+    ctx.lineTo(b.x, b.y);
+    ctx.stroke();
+    var vx = b.x - a.x, vy = b.y - a.y;
+    var vl = Math.sqrt(vx * vx + vy * vy) || 1;
+    var nx = -vy / vl, ny = vx / vl;
+    ctx.beginPath();
+    ctx.moveTo(b.x, b.y);
+    ctx.lineTo(b.x - vx / vl * 9 + nx * 4, b.y - vy / vl * 9 + ny * 4);
+    ctx.lineTo(b.x - vx / vl * 9 - nx * 4, b.y - vy / vl * 9 - ny * 4);
+    ctx.closePath();
+    ctx.fillStyle = 'rgba(130, 220, 255, 0.85)';
+    ctx.fill();
+    ctx.font = '9px "JetBrains Mono", Consolas, monospace';
+    ctx.fillStyle = 'rgba(150, 220, 240, 0.8)';
+    ctx.fillText('W ' + mag.toFixed(0) + ' m/s', a.x + 8, a.y - 6);
+    ctx.restore();
+  }
+
+  function drawTrajectory() {
+    if (!sim) return;
+    var s = sim.samples, n = s.length;
+    var step = n > 1600 ? 2 : 1;
+    var i, p, started;
+
+    // 全弹道（暗）
+    ctx.save();
+    ctx.strokeStyle = 'rgba(44,125,148,0.55)';
+    ctx.lineWidth = 1.1;
+    ctx.beginPath();
+    started = false;
+    for (i = 0; i < n; i += step) {
+      p = project(s[i].x, s[i].y, s[i].z);
+      if (p.ok) {
+        if (!started) { ctx.moveTo(p.x, p.y); started = true; }
+        else ctx.lineTo(p.x, p.y);
+      } else started = false;
+    }
+    ctx.stroke();
+
+    // 已飞过（亮）
+    var idx = clamp(Math.floor(time / sim.sampleDt), 0, n - 1);
+    ctx.strokeStyle = '#4fe6ff';
+    ctx.lineWidth = 1.9;
+    ctx.shadowColor = 'rgba(79,230,255,0.85)';
+    ctx.shadowBlur = 12;
+    ctx.beginPath();
+    started = false;
+    for (i = 0; i <= idx; i += step) {
+      p = project(s[i].x, s[i].y, s[i].z);
+      if (p.ok) {
+        if (!started) { ctx.moveTo(p.x, p.y); started = true; }
+        else ctx.lineTo(p.x, p.y);
+      } else started = false;
+    }
+    // 连到当前插值位置
+    if (time < sim.flightTime) {
+      var sh = shellState(time);
+      if (sh) {
+        p = project(sh.x, sh.y, sh.z);
+        if (p.ok) {
+          if (!started) { ctx.moveTo(p.x, p.y); started = true; }
+          else ctx.lineTo(p.x, p.y);
+        }
+      }
+    }
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawTicksOnTrajectory() {
+    // 每 5 秒一个刻度点，强化速度感
+    if (!sim) return;
+    var s = sim.samples;
+    var interval = 5;
+    var nextT = 0;
+    ctx.save();
+    ctx.fillStyle = 'rgba(160,240,255,0.55)';
+    for (var i = 0; i < s.length; i++) {
+      if (s[i].t >= nextT && s[i].t <= Math.min(time, sim.flightTime)) {
+        var p = project(s[i].x, s[i].y, s[i].z);
+        if (p.ok) {
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, 1.6, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        nextT += interval;
+      }
+    }
+    ctx.restore();
+  }
+
+  function drawLaunchMarker() {
+    if (!sim) return;
+    var p = project(0, 0, 0);
+    if (!p.ok) return;
+    var x = p.x, y = p.y;
+    ctx.save();
+    ctx.strokeStyle = 'rgba(70,211,230,0.55)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(x - 7, y); ctx.lineTo(x + 7, y);
+    ctx.moveTo(x, y - 7); ctx.lineTo(x, y + 7);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(x, y, 11, 0, Math.PI * 2);
+    ctx.globalAlpha = 0.4;
+    ctx.stroke();
+
+    ctx.globalAlpha = 0.7;
+    ctx.fillStyle = '#7fb9c8';
+    ctx.font = '9px "JetBrains Mono", Consolas, monospace';
+    ctx.fillText('LAUNCH', x + 15, y + 4);
+    ctx.restore();
+  }
+
+  /* ------------------------------ 破片 ------------------------------ */
+  function fragPosition(f, idxF, out) {
+    var n = f.path.length / 3;
+    if (n < 2) { out[0] = f.landX; out[1] = 0; out[2] = f.landZ; return false; }
+    var i = Math.floor(idxF);
+    if (i < 0) i = 0;
+    if (i >= n - 1) {
+      out[0] = f.landX; out[1] = f.landed ? 0 : f.path[f.path.length - 1];
+      out[2] = f.landZ;
+      return false;
+    }
+    var u = idxF - i;
+    var a = i * 3;
+    out[0] = f.path[a] + (f.path[a + 3] - f.path[a]) * u;
+    out[1] = f.path[a + 1] + (f.path[a + 4] - f.path[a + 1]) * u;
+    out[2] = f.path[a + 2] + (f.path[a + 5] - f.path[a + 2]) * u;
+    return true;
+  }
+
+  /* 终态落点密度场：运行末尾淡入，直观呈现圆形 / 椭圆 / 扇形 / 月牙 */
+  function drawLandingField() {
+    if (!sim || !landCells.length) return;
+    var ft = time - sim.boom.t;
+    if (ft < 0) return;
+    var dur = sim.fragments.duration || 0;
+    var a = clamp((ft - (dur - 3.5)) / 3.5, 0, 1) * 0.26;
+    if (a < 0.004) return;
+    var CELL = 40;
+    ctx.save();
+    for (var i = 0; i < landCells.length; i++) {
+      var c = landCells[i];
+      var p0 = project(c.x0, 0.2, c.z0);
+      var p1 = project(c.x0 + CELL, 0.2, c.z0);
+      var p2 = project(c.x0 + CELL, 0.2, c.z0 + CELL);
+      var p3 = project(c.x0, 0.2, c.z0 + CELL);
+      if (!p0.ok || !p1.ok || !p2.ok || !p3.ok) continue;
+      var ac = a * Math.min(1, 0.35 + c.n / 7);
+      ctx.fillStyle = 'rgba(255,146,58,' + ac.toFixed(3) + ')';
+      ctx.beginPath();
+      ctx.moveTo(p0.x, p0.y);
+      ctx.lineTo(p1.x, p1.y);
+      ctx.lineTo(p2.x, p2.y);
+      ctx.lineTo(p3.x, p3.y);
+      ctx.closePath();
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  function drawFragments() {
+    if (!sim) return;
+    var ft = time - sim.boom.t;
+    if (ft < 0) return;
+
+    var list = sim.fragments.list;
+    var n = list.length;
+    var i, j, k, f, idxF, p;
+
+    // 飞行中的破片 —— 按「飞散分区 × 飞行时间」分组着色
+    for (k = 0; k < 12; k++) fragGroups[k].length = 0;
+
+    for (i = 0; i < n; i++) {
+      f = list[i];
+      idxF = ft / f.pathDt;
+      var nPts = f.path.length / 3;
+      if (idxF >= nPts - 1) continue;
+
+      var group;
+      if (ft < 0.12) group = 0;
+      else if (ft < 0.5) group = 1;
+      else if (ft < 1.6) group = 2;
+      else group = 3;
+      fragGroups[(f.zone || 0) * 4 + group].push(i);
+    }
+
+    // 尾迹：飞行初期绘制
+    if (ft < 3.0) {
+      var trailFade = ft < 2.2 ? 1 : Math.max(0, 1 - (ft - 2.2) / 0.8);
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.strokeStyle = 'rgba(255,186,70,' + (0.5 * trailFade).toFixed(3) + ')';
+      ctx.lineWidth = 1.15;
+      ctx.beginPath();
+      for (i = 0; i < n; i++) {
+        f = list[i];
+        idxF = ft / f.pathDt;
+        var nPts2 = f.path.length / 3;
+        if (idxF >= nPts2 - 1) continue;
+        var from = Math.max(0, Math.floor(idxF) - 9);
+        var started = false;
+        for (j = from; j <= Math.floor(idxF); j++) {
+          var a3 = j * 3;
+          p = project(f.path[a3], Math.max(0, f.path[a3 + 1]), f.path[a3 + 2]);
+          if (p.ok) {
+            if (!started) { ctx.moveTo(p.x, p.y); started = true; }
+            else ctx.lineTo(p.x, p.y);
+          } else started = false;
+        }
+      }
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // 破片头：弹头区（前向锥）偏白热，弹底区（后向锥）偏橙红
+    var ZONE_COLORS = [
+      ['#fffdf4', '#fff4cf', '#ffe6a6', '#ffcf74'],
+      ['#fff6d8', '#ffe08a', '#ffb43a', '#ff8a3d'],
+      ['#ffe1bd', '#ffb37a', '#ff7a45', '#e8502a']
+    ];
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    for (var z = 0; z < 3; z++) {
+      for (k = 0; k < 4; k++) {
+        var arr = fragGroups[z * 4 + k];
+        if (!arr.length) continue;
+        ctx.beginPath();
+        for (i = 0; i < arr.length; i++) {
+          f = list[arr[i]];
+          idxF = ft / f.pathDt;
+          fragPosition(f, idxF, tmp);
+          p = project(tmp[0], tmp[1], tmp[2]);
+          if (!p.ok) continue;
+          var r = k === 0 ? 2.7 : (k === 1 ? 2.2 : 1.75);
+          ctx.moveTo(p.x + r, p.y);
+          ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
+        }
+        ctx.fillStyle = ZONE_COLORS[z][k];
+        ctx.fill();
+      }
+    }
+    ctx.restore();
+
+    // 落点
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.beginPath();
+    for (i = 0; i < n; i++) {
+      f = list[i];
+      if (!f.landed) continue;
+      if (ft < f.landT - sim.boom.t) continue;
+      p = project(f.landX, 0.8, f.landZ);
+      if (!p.ok) continue;
+      var r2 = 1.15 + Math.min(2.0, (f.m / 0.028) * 1.0);
+      ctx.moveTo(p.x + r2, p.y);
+      ctx.arc(p.x, p.y, r2, 0, Math.PI * 2);
+    }
+    ctx.globalAlpha = 0.88;
+    ctx.fillStyle = '#ff5a3c';
+    ctx.fill();
+    ctx.restore();
+  }
+
+  /* ------------------------------ 爆炸 ------------------------------ */
+  function drawExplosion() {
+    if (!sim) return;
+    var tau = time - sim.boom.t;
+    if (tau < 0) return;
+    var b = sim.boom;
+    var p = project(b.x, b.y, b.z);
+    if (!p.ok) return;
+    var sx = p.x, sy = p.y;
+    var scale = focal / Math.max(p.z, 40);
+
+    // 全屏冲击白闪
+    if (tau < 0.11) {
+      var f0 = 1 - tau / 0.11;
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.fillStyle = 'rgba(255,246,228,' + (0.22 * f0 * f0) + ')';
+      ctx.fillRect(0, 0, W, H);
+      ctx.restore();
+    }
+
+    // 1. 白热闪光
+    if (tau < 0.55) {
+      var k = tau / 0.55;
+      var fade = Math.pow(1 - k, 1.6);
+      var rad = Math.min((70 + 780 * Math.sqrt(k)) * scale, Math.max(W, H) * 1.15);
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      var g = ctx.createRadialGradient(sx, sy, 0, sx, sy, Math.max(1, rad));
+      g.addColorStop(0, 'rgba(255,255,255,' + (1.0 * fade) + ')');
+      g.addColorStop(0.10, 'rgba(255,247,214,' + (0.95 * fade) + ')');
+      g.addColorStop(0.32, 'rgba(255,196,96,' + (0.62 * fade) + ')');
+      g.addColorStop(0.66, 'rgba(255,112,32,' + (0.26 * fade) + ')');
+      g.addColorStop(1, 'rgba(255,60,0,0)');
+      ctx.fillStyle = g;
+      ctx.fillRect(sx - rad, sy - rad, rad * 2, rad * 2);
+      ctx.restore();
+    }
+
+    // 2. 火球余晖
+    if (tau < 1.7) {
+      var k2 = tau / 1.7;
+      var rad2 = Math.min((46 + 230 * Math.pow(k2, 0.55)) * scale, 520);
+      var a2 = Math.pow(1 - k2, 1.9);
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      var g2 = ctx.createRadialGradient(sx, sy, 0, sx, sy, Math.max(1, rad2));
+      g2.addColorStop(0, 'rgba(255,238,180,' + (0.9 * a2) + ')');
+      g2.addColorStop(0.38, 'rgba(255,150,50,' + (0.55 * a2) + ')');
+      g2.addColorStop(1, 'rgba(190,44,0,0)');
+      ctx.fillStyle = g2;
+      ctx.beginPath();
+      ctx.arc(sx, sy, rad2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    // 3. 地面冲击波（双环）
+    if (tau < 1.9) {
+      var k3 = tau / 1.9;
+      var r = 50 + 1150 * Math.pow(k3, 0.5);
+      var aa = 0.6 * Math.pow(1 - k3, 1.5);
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      drawGroundCircle(b.x, b.z, r, '#ffd6a0', aa, 3.4 * (1 - k3) + 0.8, []);
+      drawGroundCircle(b.x, b.z, r * 0.6, '#ffa050', aa * 0.6, 2.2 * (1 - k3) + 0.5, []);
+      ctx.restore();
+    }
+
+    // 4. 烟云
+    if (tau < 5.0) {
+      var k4 = tau / 5.0;
+      ctx.save();
+      for (var i = 0; i < smoke.length; i++) {
+        var sm = smoke[i];
+        var rise = sm.rise * Math.min(1, k4 * 1.5);
+        var spread = 0.35 + k4 * 1.25;
+        var q = project(b.x + sm.dx * spread, b.y + rise, b.z + sm.dz * spread);
+        if (!q.ok) continue;
+        var rr = (sm.r * (0.35 + k4 * 1.35)) * focal / Math.max(q.z, 40);
+        rr = Math.min(rr, 240);
+        if (rr < 1) continue;
+        var alpha = sm.a * Math.sin(Math.min(1, k4 * 2.4) * Math.PI * 0.5) * Math.pow(1 - k4, 1.35);
+        if (alpha <= 0.004) continue;
+        var gg = ctx.createRadialGradient(q.x, q.y, 0, q.x, q.y, rr);
+        gg.addColorStop(0, 'rgba(168,150,132,' + alpha + ')');
+        gg.addColorStop(0.5, 'rgba(120,106,96,' + (alpha * 0.7) + ')');
+        gg.addColorStop(1, 'rgba(80,70,64,0)');
+        ctx.fillStyle = gg;
+        ctx.beginPath();
+        ctx.arc(q.x, q.y, rr, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+
+    // 5. 爆点持续火光
+    if (tau < 4.5) {
+      var a5 = 0.22 * Math.pow(1 - tau / 4.5, 2.2);
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      var rr5 = Math.min(70 * scale, 90);
+      var g5 = ctx.createRadialGradient(sx, sy, 0, sx, sy, Math.max(1, rr5));
+      g5.addColorStop(0, 'rgba(255,190,110,' + a5 + ')');
+      g5.addColorStop(1, 'rgba(255,120,40,0)');
+      ctx.fillStyle = g5;
+      ctx.beginPath();
+      ctx.arc(sx, sy, Math.max(1, rr5), 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+  }
+
+  /* ------------------------------ 弹丸 ------------------------------ */
+  /* 旋转体网格：任意中心/朝向/投影/光源，主场景与姿态小窗共用 */
+  function drawMeshBody(fr, scale, projFn, camP, light) {
+    var cx0 = fr.c[0], cy0 = fr.c[1], cz0 = fr.c[2];
+    var e1x = fr.e1[0], e1y = fr.e1[1], e1z = fr.e1[2];
+    var e2x = fr.e2[0], e2y = fr.e2[1], e2z = fr.e2[2];
+    var e3x = fr.e3[0], e3y = fr.e3[1], e3z = fr.e3[2];
+    var camPX = camP[0], camPY = camP[1], camPZ = camP[2];
+    var lx = light[0], ly = light[1], lz = light[2];
+
+    var i, j, pr;
+
+    // 投影全部网格点
+    for (i = 0; i < PROF_N; i++) {
+      var t = SHELL_PROFILE[i][0], r = SHELL_PROFILE[i][1];
+      var u = (SHELL_CG - t) * scale;
+      var ax = cx0 + e1x * u, ay = cy0 + e1y * u, az = cz0 + e1z * u;
+      for (j = 0; j < RING_SEG; j++) {
+        var ang = j / RING_SEG * Math.PI * 2;
+        var ca = Math.cos(ang) * r * scale, sa = Math.sin(ang) * r * scale;
+        var b = meshBuf[i * RING_SEG + j];
+        b.wx = ax + e2x * ca + e3x * sa;
+        b.wy = ay + e2y * ca + e3y * sa;
+        b.wz = az + e2z * ca + e3z * sa;
+        pr = projFn(b.wx, b.wy, b.wz);
+        b.sx = pr.x; b.sy = pr.y; b.ok = pr.ok;
+      }
+    }
+
+    // 逐面绘制：背面剔除 + 漫反射 + Blinn-Phong 高光
+    for (i = 0; i < PROF_N - 1; i++) {
+      var mat = SHELL_PROFILE[i][2];
+      var base = MAT_RGB[mat];
+      var u0 = (SHELL_CG - SHELL_PROFILE[i][0]) * scale;
+      var ax0 = cx0 + e1x * u0, ay0 = cy0 + e1y * u0, az0 = cz0 + e1z * u0;
+
+      for (j = 0; j < RING_SEG; j++) {
+        var j2 = (j + 1) % RING_SEG;
+        var pa = meshBuf[i * RING_SEG + j];
+        var pb = meshBuf[i * RING_SEG + j2];
+        var pc = meshBuf[(i + 1) * RING_SEG + j2];
+        var pd = meshBuf[(i + 1) * RING_SEG + j];
+        if (!pa.ok || !pb.ok || !pc.ok || !pd.ok) continue;
+
+        // 面法向（世界系）
+        var ux = pd.wx - pa.wx, uy = pd.wy - pa.wy, uz = pd.wz - pa.wz;
+        var vx = pb.wx - pa.wx, vy = pb.wy - pa.wy, vz = pb.wz - pa.wz;
+        var nx = uy * vz - uz * vy;
+        var ny = uz * vx - ux * vz;
+        var nz = ux * vy - uy * vx;
+        var nl = Math.sqrt(nx * nx + ny * ny + nz * nz);
+        if (nl < 1e-9) continue;
+        nx /= nl; ny /= nl; nz /= nl;
+
+        // 外法向定向
+        var radx = pa.wx - ax0, rady = pa.wy - ay0, radz = pa.wz - az0;
+        if (nx * radx + ny * rady + nz * radz < 0) { nx = -nx; ny = -ny; nz = -nz; }
+
+        // 背面剔除
+        var vcx = camPX - pa.wx, vcy = camPY - pa.wy, vcz = camPZ - pa.wz;
+        var vcl = Math.sqrt(vcx * vcx + vcy * vcy + vcz * vcz) || 1;
+        vcx /= vcl; vcy /= vcl; vcz /= vcl;
+        if (nx * vcx + ny * vcy + nz * vcz <= 0.015) continue;
+
+        var ndl = nx * lx + ny * ly + nz * lz;
+        var diff = 0.24 + 0.76 * (ndl > 0 ? ndl : 0);
+
+        var hx = lx + vcx, hy = ly + vcy, hz = lz + vcz;
+        var hl = Math.sqrt(hx * hx + hy * hy + hz * hz) || 1;
+        var ndh = (nx * hx + ny * hy + nz * hz) / hl;
+        var spec = ndh > 0 ? Math.pow(ndh, 18) * 0.55 : 0;
+
+        var cr = base[0] * diff + 255 * spec;
+        var cg = base[1] * diff + 255 * spec;
+        var cb = base[2] * diff + 255 * spec;
+
+        // 轮廓冷光边缘，避免暗面与背景融为一体
+        var rim = 1 - (nx * vcx + ny * vcy + nz * vcz);
+        rim = rim > 0 ? rim * rim * rim * 0.32 : 0;
+        cr += 34 * rim;
+        cg += 62 * rim;
+        cb += 74 * rim;
+
+        // 弹体纵向标识条，用于观察滚转
+        if (mat === 1 && j === 0) { cr *= 0.80; cg *= 0.80; cb *= 0.80; }
+        if (cr > 255) cr = 255;
+        if (cg > 255) cg = 255;
+        if (cb > 255) cb = 255;
+
+        ctx.fillStyle = 'rgb(' + (cr | 0) + ',' + (cg | 0) + ',' + (cb | 0) + ')';
+        ctx.beginPath();
+        ctx.moveTo(pa.sx, pa.sy);
+        ctx.lineTo(pb.sx, pb.sy);
+        ctx.lineTo(pc.sx, pc.sy);
+        ctx.lineTo(pd.sx, pd.sy);
+        ctx.closePath();
+        ctx.fill();
+      }
+    }
+
+    // 弹底封口
+    var last = PROF_N - 1;
+    if (meshBuf[last * RING_SEG].ok) {
+      var bu = (SHELL_CG - SHELL_PROFILE[last][0]) * scale;
+      var bcx = cx0 + e1x * bu, bcy = cy0 + e1y * bu, bcz = cz0 + e1z * bu;
+      if ((-e1x) * (camPX - bcx) + (-e1y) * (camPY - bcy) + (-e1z) * (camPZ - bcz) > 0) {
+        ctx.beginPath();
+        for (j = 0; j < RING_SEG; j++) {
+          var bp = meshBuf[last * RING_SEG + j];
+          if (!bp.ok) continue;
+          if (j === 0) ctx.moveTo(bp.sx, bp.sy);
+          else ctx.lineTo(bp.sx, bp.sy);
+        }
+        ctx.closePath();
+        ctx.fillStyle = 'rgb(56,60,56)';
+        ctx.fill();
+      }
+    }
+  }
+
+  /* 四元数 → 弹体系三轴（世界系） */
+  function quatAxes(q) {
+    var w = q[0], x = q[1], y = q[2], z = q[3];
+    return [
+      [1 - 2 * (y * y + z * z), 2 * (x * y + w * z), 2 * (x * z - w * y)],
+      [2 * (x * y - w * z), 1 - 2 * (x * x + z * z), 2 * (y * z + w * x)],
+      [2 * (x * z + w * y), 2 * (y * z - w * x), 1 - 2 * (x * x + y * y)]
+    ];
+  }
+
+  /* 主场景弹体：真实姿态 + 按视距自动放大，保持约 84px 可辨识尺寸 */
+  function drawShellMesh(sh, scale) {
+    if (!sh.quat) return;
+    var a = quatAxes(sh.quat);
+    drawMeshBody({ c: [sh.x, sh.y, sh.z], e1: a[0], e2: a[1], e3: a[2] },
+      scale, project, [camX, camY, camZ], LIGHT_DIR);
+  }
+
+  /* 弹体姿态小窗：风轴系正交投影，清楚展示三维外形与攻角 */
+  var INSET_AX = 0.30, INSET_EL = 0.34, INSET_S = 124;
+  var ipOut = { x: 0, y: 0, ok: true };
+
+  function drawBodyInset() {
+    if (!sim || time > sim.flightTime || W < 560 || H < 420) return;
+    var sh = shellState(time);
+    if (!sh || !sh.quat) return;
+
+    var n = sim.samples.length;
+    var smp = sim.samples[clamp(Math.floor(time / sim.sampleDt), 0, n - 2)];
+
+    // 风轴系：ex = 速度方向，ez = 世界上方向正交分量，ey = ez × ex
+    var vl = Math.sqrt(smp.vx * smp.vx + smp.vy * smp.vy + smp.vz * smp.vz) || 1;
+    var exx = smp.vx / vl, exy = smp.vy / vl, exz = smp.vz / vl;
+    var dd = exy;
+    var ezx = -exx * dd, ezy = 1 - exy * dd, ezz = -exz * dd;
+    var el = Math.sqrt(ezx * ezx + ezy * ezy + ezz * ezz);
+    if (el < 1e-4) { ezx = 1; ezy = 0; ezz = 0; el = 1; }
+    ezx /= el; ezy /= el; ezz /= el;
+    var eyx = ezy * exz - ezz * exy;
+    var eyy = ezz * exx - ezx * exz;
+    var eyz = ezx * exy - ezy * exx;
+
+    var qa = quatAxes(sh.quat);
+    var ex = [], k;
+    for (k = 0; k < 3; k++) {
+      ex.push([
+        qa[k][0] * exx + qa[k][1] * exy + qa[k][2] * exz,
+        qa[k][0] * eyx + qa[k][1] * eyy + qa[k][2] * eyz,
+        qa[k][0] * ezx + qa[k][1] * ezy + qa[k][2] * ezz
+      ]);
+    }
+
+    var pw = Math.max(196, Math.min(238, W * 0.26)), ph = 154;
+    var px = W - pw - 14, py = H - ph - 14;
+    var cx = px + pw * 0.60, cy = py + ph * 0.52;
+    var ca = Math.cos(INSET_AX), sa = Math.sin(INSET_AX);
+    var cb = Math.cos(INSET_EL), sb = Math.sin(INSET_EL);
+
+    function insetProj(wx, wy, wz) {
+      var xr = ca * wx - sa * wy;
+      var yr = sa * wx + ca * wy;
+      ipOut.x = cx + xr * INSET_S;
+      ipOut.y = cy - (yr * sb + wz * cb) * INSET_S;
+      return ipOut;
+    }
+
+    // 指向观察者的方向（用于背面剔除）
+    var camP = [-sa * cb * 20, -ca * cb * 20, sb * 20];
+
+    ctx.save();
+
+    // 面板
+    ctx.fillStyle = 'rgba(4,11,17,0.82)';
+    ctx.fillRect(px, py, pw, ph);
+    ctx.strokeStyle = 'rgba(70,211,230,0.26)';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(px + 0.5, py + 0.5, pw - 1, ph - 1);
+    ctx.strokeStyle = 'rgba(70,211,230,0.55)';
+    ctx.beginPath();
+    ctx.moveTo(px, py + 10); ctx.lineTo(px, py); ctx.lineTo(px + 10, py);
+    ctx.moveTo(px + pw - 10, py); ctx.lineTo(px + pw, py); ctx.lineTo(px + pw, py + 10);
+    ctx.stroke();
+
+    // 标题与读数
+    ctx.font = '9px "JetBrains Mono", Consolas, monospace';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'alphabetic';
+    ctx.fillStyle = 'rgba(126,206,222,0.85)';
+    ctx.fillText('弹体姿态  BODY ATTITUDE', px + 10, py + 16);
+    ctx.textAlign = 'right';
+    ctx.fillStyle = 'rgba(120,150,160,0.8)';
+    ctx.fillText('V ' + sh.speed.toFixed(0) + ' · ω ' + (sh.wx || 0).toFixed(0), px + pw - 10, py + 16);
+
+    // 速度参考线（沿 +x 风轴）
+    var v0 = insetProj(-0.40, 0, 0), v0x = v0.x, v0y = v0.y;
+    var v1 = insetProj(0.34, 0, 0), v1x = v1.x, v1y = v1.y;
+    ctx.strokeStyle = 'rgba(70,211,230,0.28)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([3, 4]);
+    ctx.beginPath();
+    ctx.moveTo(v0x, v0y);
+    ctx.lineTo(v1x, v1y);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // 三维网格
+    drawMeshBody({ c: [0, 0, 0], e1: ex[0], e2: ex[1], e3: ex[2] },
+      1, insetProj, camP, [-0.42, -0.48, 0.77]);
+
+    // 弹头前方速度箭头
+    var a0 = insetProj(0.36, 0, 0), a0x = a0.x, a0y = a0.y;
+    var a1 = insetProj(0.62, 0, 0), a1x = a1.x, a1y = a1.y;
+    ctx.strokeStyle = 'rgba(120,240,255,0.85)';
+    ctx.beginPath();
+    ctx.moveTo(a0x, a0y);
+    ctx.lineTo(a1x, a1y);
+    ctx.stroke();
+    var avx = a1x - a0x, avy = a1y - a0y;
+    var avl = Math.sqrt(avx * avx + avy * avy) || 1;
+    var anx = -avy / avl, any = avx / avl;
+    ctx.beginPath();
+    ctx.moveTo(a1x, a1y);
+    ctx.lineTo(a1x - avx / avl * 5.5 + anx * 2.4, a1y - avy / avl * 5.5 + any * 2.4);
+    ctx.lineTo(a1x - avx / avl * 5.5 - anx * 2.4, a1y - avy / avl * 5.5 - any * 2.4);
+    ctx.closePath();
+    ctx.fillStyle = 'rgba(140,245,255,0.95)';
+    ctx.fill();
+
+    // 底部读数
+    ctx.font = '9px "JetBrains Mono", Consolas, monospace';
+    ctx.textAlign = 'left';
+    ctx.fillStyle = 'rgba(140,170,180,0.85)';
+    ctx.fillText('α ' + smp.alpha.toFixed(2) + '°  β ' + smp.beta.toFixed(2) + '°', px + 10, py + ph - 10);
+    ctx.textAlign = 'right';
+    ctx.fillStyle = 'rgba(255,190,120,0.9)';
+    ctx.fillText('Ma ' + smp.mach.toFixed(2), px + pw - 10, py + ph - 10);
+
+    ctx.restore();
+  }
+
+  function drawShell() {
+    if (!sim || time > sim.flightTime) return;
+    var sh = shellState(time);
+    if (!sh) return;
+
+    var p = project(sh.x, sh.y, sh.z);
+    if (!p.ok) return;
+    var sx = p.x, sy = p.y;
+
+    // 垂直投影虚线
+    var gp = project(sh.x, 0, sh.z);
+    if (gp.ok) {
+      ctx.save();
+      ctx.strokeStyle = 'rgba(120,220,240,0.20)';
+      ctx.lineWidth = 1;
+      ctx.setLineDash([2, 5]);
+      ctx.beginPath();
+      ctx.moveTo(sx, sy);
+      ctx.lineTo(gp.x, gp.y);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.beginPath();
+      ctx.moveTo(gp.x - 4, gp.y);
+      ctx.lineTo(gp.x + 4, gp.y);
+      ctx.moveTo(gp.x, gp.y - 3);
+      ctx.lineTo(gp.x, gp.y + 3);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // 尾迹
+    var s = sim.samples;
+    var idx = clamp(Math.floor(time / sim.sampleDt), 0, s.length - 1);
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.lineWidth = 2.4;
+    ctx.lineCap = 'round';
+    for (var k = 0; k < 3; k++) {
+      var from = Math.max(0, idx - 4 - k * 4);
+      var to = Math.max(0, idx - k * 4);
+      if (from >= to) continue;
+      ctx.strokeStyle = ['rgba(120,240,255,0.55)', 'rgba(70,211,230,0.30)', 'rgba(70,211,230,0.12)'][k];
+      ctx.beginPath();
+      var started = false;
+      for (var i = from; i <= to; i += 1) {
+        var q = project(s[i].x, s[i].y, s[i].z);
+        if (q.ok) {
+          if (!started) { ctx.moveTo(q.x, q.y); started = true; }
+          else ctx.lineTo(q.x, q.y);
+        } else started = false;
+      }
+      ctx.stroke();
+    }
+    ctx.restore();
+
+    // 三维弹体模型：按视距放大，保持约 58px 的可辨识尺寸
+    var dxc = sh.x - camX, dyc = sh.y - camY, dzc = sh.z - camZ;
+    var cdist = Math.sqrt(dxc * dxc + dyc * dyc + dzc * dzc);
+    var meshScale = 84 * cdist / (SHELL_LEN * focal);
+    if (meshScale < 1) meshScale = 1;
+    drawShellMesh(sh, meshScale);
+
+    // 姿态轴（弹轴方向，放大显示）
+    var qd = sh.quat;
+    if (qd) {
+      var qw = qd[0], qx = qd[1], qy = qd[2], qz = qd[3];
+      var axX = 1 - 2 * (qy * qy + qz * qz);
+      var axY = 2 * (qx * qy + qw * qz);
+      var axZ = 2 * (qx * qz - qw * qy);
+      var L = 26;
+      var tp = project(sh.x + axX * L, sh.y + axY * L, sh.z + axZ * L);
+      if (tp.ok) {
+        ctx.save();
+        ctx.strokeStyle = 'rgba(150,245,255,0.75)';
+        ctx.lineWidth = 1.3;
+        ctx.beginPath();
+        ctx.moveTo(sx, sy);
+        ctx.lineTo(tp.x, tp.y);
+        ctx.stroke();
+        // 弹头三角
+        var vx2 = tp.x - sx, vy2 = tp.y - sy;
+        var vl = Math.sqrt(vx2 * vx2 + vy2 * vy2) || 1;
+        var nx = -vy2 / vl, ny = vx2 / vl;
+        ctx.beginPath();
+        ctx.moveTo(tp.x, tp.y);
+        ctx.lineTo(tp.x - vx2 / vl * 5 + nx * 2.6, tp.y - vy2 / vl * 5 + ny * 2.6);
+        ctx.lineTo(tp.x - vx2 / vl * 5 - nx * 2.6, tp.y - vy2 / vl * 5 - ny * 2.6);
+        ctx.closePath();
+        ctx.fillStyle = 'rgba(180,250,255,0.9)';
+        ctx.fill();
+        ctx.restore();
+      }
+    }
+
+    // 弹丸位置光点（真实位置标记）
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    var g = ctx.createRadialGradient(sx, sy, 0, sx, sy, 5);
+    g.addColorStop(0, 'rgba(255,255,255,0.7)');
+    g.addColorStop(0.5, 'rgba(170,250,255,0.28)');
+    g.addColorStop(1, 'rgba(70,211,230,0)');
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(sx, sy, 5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,0.65)';
+    ctx.beginPath();
+    ctx.arc(sx, sy, 1.2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  /* ------------------------------ 屏幕装饰 ------------------------------ */
+  function drawVignette() {
+    ctx.save();
+    var g = ctx.createRadialGradient(W2, H2, Math.min(W, H) * 0.35, W2, H2, Math.max(W, H) * 0.78);
+    g.addColorStop(0, 'rgba(0,0,0,0)');
+    g.addColorStop(1, 'rgba(0,0,0,0.42)');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, W, H);
+    ctx.restore();
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* 主渲染                                                             */
+  /* ------------------------------------------------------------------ */
+  function render() {
+    if (!ctx) return;
+
+    var now = performance.now();
+    var dt = lastFrame ? Math.min((now - lastFrame) / 1000, 0.1) : 0.016;
+    lastFrame = now;
+
+    updateCamera(dt);
+
+    var horizonY = H2 - focal * Math.tan(camS.pitch);
+
+    ctx.clearRect(0, 0, W, H);
+    drawSky(horizonY);
+    drawGround(horizonY);
+    drawGrid();
+    drawWindIndicator();
+    drawLaunchMarker();
+    drawLandingField();
+    drawRangeRings();
+    drawTrajectory();
+    drawTicksOnTrajectory();
+    drawFragments();
+    drawExplosion();
+    drawShell();
+    drawVignette();
+    drawBodyInset();
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* 数据 / 尺寸 / 交互                                                 */
+  /* ------------------------------------------------------------------ */
+  function setData(s) {
+    sim = s;
+    time = 0;
+    userControl = false;
+    panX = 0; panY = 0; panZ = 0;
+
+    // 落点密度格网（终态散布形态：圆形 / 椭圆 / 扇形 / 月牙）
+    landCells.length = 0;
+    if (s && s.fragments) {
+      var CELL = 40;
+      var cellMap = {};
+      var fl = s.fragments.list;
+      for (var q = 0; q < fl.length; q++) {
+        if (!fl[q].landed) continue;
+        var gx = Math.floor(fl[q].landX / CELL);
+        var gz = Math.floor(fl[q].landZ / CELL);
+        var key = gx + ':' + gz;
+        var cell = cellMap[key];
+        if (!cell) {
+          cell = { x0: gx * CELL, z0: gz * CELL, n: 0 };
+          cellMap[key] = cell;
+          landCells.push(cell);
+        }
+        cell.n++;
+      }
+    }
+
+    // 烟云种子
+    smoke.length = 0;
+    var seed = 12345;
+    function rnd() { seed = (seed * 1664525 + 1013904223) & 0x7fffffff; return seed / 0x7fffffff; }
+    for (var i = 0; i < 9; i++) {
+      smoke.push({
+        dx: (rnd() - 0.5) * 190,
+        dz: (rnd() - 0.5) * 190,
+        rise: 30 + rnd() * 120,
+        r: 32 + rnd() * 70,
+        a: 0.16 + rnd() * 0.14
+      });
+    }
+
+    if (s) {
+      // 相机预设：全局视角开始（用户点击可切换）
+      camS.tx = s.range * 0.5;
+      camS.ty = s.maxAlt * 0.3;
+      camS.tz = 0;
+      camS.yaw = -0.55;
+      camS.pitch = 0.33;
+      camS.dist = s.range * 1.3;
+      // 起飞后自动切到跟随
+      camMode = 'follow';
+    }
+  }
+
+  function setTime(t) {
+    time = Math.max(0, t);
+  }
+
+  function setCameraMode(mode) {
+    camMode = mode;
+    userControl = false;
+    panX = 0; panY = 0; panZ = 0;
+    if (sim) {
+      var d = desiredCamera();
+      cam.yaw = d.yaw;
+      cam.pitch = d.pitch;
+      cam.dist = d.dist;
+    }
+  }
+
+  function resize() {
+    if (!canvas) return;
+    // 以父容器尺寸为准（canvas 本身由 CSS 100% 撑满）；不改写 canvas.style，
+    // 否则第二次 resize 会读到被锁死的像素尺寸。
+    var host = canvas.parentElement;
+    var cw = (host && host.clientWidth) || canvas.clientWidth || 800;
+    var ch = (host && host.clientHeight) || canvas.clientHeight || 600;
+    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    W = Math.max(1, cw);
+    H = Math.max(1, ch);
+    canvas.width = Math.round(W * dpr);
+    canvas.height = Math.round(H * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    W2 = W / 2;
+    H2 = H / 2;
+    focal = H2 / Math.tan(FOV / 2);
+    skyGrad = null;
+    skyGradH = -1;
+  }
+
+  /* 鼠标交互：左键旋转，右键 / Shift+左键 / 中键平移，滚轮缩放 */
+  var dragMode = null, lastX = 0, lastY = 0;
+
+  function bindMouse() {
+    canvas.addEventListener('mousedown', function (e) {
+      if (e.button === 2 || e.button === 1 || (e.button === 0 && e.shiftKey)) {
+        dragMode = 'pan';
+        canvas.style.cursor = 'move';
+      } else if (e.button === 0) {
+        dragMode = 'orbit';
+        // 与当前显示值对齐，避免首帧跳变
+        cam.yaw = camS.yaw;
+        cam.pitch = camS.pitch;
+        canvas.style.cursor = 'grabbing';
+      } else {
+        return;
+      }
+      lastX = e.clientX;
+      lastY = e.clientY;
+      userControl = true;
+      e.preventDefault();
+    });
+
+    window.addEventListener('mousemove', function (e) {
+      if (!dragMode) return;
+      var dx = e.clientX - lastX;
+      var dy = e.clientY - lastY;
+      lastX = e.clientX;
+      lastY = e.clientY;
+      userControl = true;
+
+      if (dragMode === 'pan') {
+        // 屏幕像素 → 世界位移：按当前视距折算
+        var wpp = camS.dist / focal;
+        panX += (-rtX * dx + upX * dy) * wpp;
+        panY += (upY * dy) * wpp;
+        panZ += (-rtZ * dx + upZ * dy) * wpp;
+      } else {
+        cam.yaw -= dx * 0.006;
+        cam.pitch = clamp(cam.pitch + dy * 0.005, -0.02, 1.45);
+      }
+    });
+
+    window.addEventListener('mouseup', function () {
+      if (!dragMode) return;
+      dragMode = null;
+      canvas.style.cursor = 'grab';
+    });
+
+    canvas.addEventListener('wheel', function (e) {
+      e.preventDefault();
+      userControl = true;
+      var f = Math.exp(e.deltaY * 0.0011);
+      cam.dist = clamp(camS.dist * f, 120, sim ? sim.range * 5 + 2000 : 60000);
+      // 立即同步，避免渐进拖沓
+      camS.dist = cam.dist;
+      e.stopPropagation();
+    }, { passive: false });
+
+    canvas.addEventListener('contextmenu', function (e) { e.preventDefault(); });
+    canvas.style.cursor = 'grab';
+  }
+
+  /* ------------------------------------------------------------------ */
+  function init(c) {
+    canvas = c;
+    ctx = canvas.getContext('2d', { alpha: false });
+    resize();
+    bindMouse();
+
+    window.addEventListener('resize', resize);
+    if (window.ResizeObserver) {
+      try { new ResizeObserver(function () { resize(); }).observe(canvas.parentElement); } catch (err) { /* noop */ }
+    }
+  }
+
+  global.Scene3D = {
+    init: init,
+    setData: setData,
+    setTime: setTime,
+    setCameraMode: setCameraMode,
+    render: render,
+    resize: resize,
+    getCamera: function () {
+      return {
+        camX: camX, camY: camY, camZ: camZ,
+        tx: camS.tx, ty: camS.ty, tz: camS.tz,
+        yaw: camS.yaw, pitch: camS.pitch, dist: camS.dist,
+        panX: panX, panY: panY, panZ: panZ
+      };
+    }
+  };
+
+})(window);
+
+</script>
+<script>
+/* ===== charts.js ===== */
+/* =============================================================================
+ * Charts — 六路弹道参数时间历程曲线（Canvas 2D）
+ * 高度 / 速度-马赫 / 攻角 / 弹道倾角 / 角速度 / 动压
+ * ========================================================================== */
+(function (global) {
+  'use strict';
+
+  var DEFS = [
+    {
+      title: '高度 H',
+      color: '#4fe6ff',
+      pick: function (s) { return s.y; },
+      fmt: function (v) { return v.toFixed(0) + ' m'; }
+    },
+    {
+      title: '速度 V / 马赫 Ma',
+      color: '#4fe6ff',
+      color2: '#b38cff',
+      pick: function (s) { return s.speed; },
+      pick2: function (s) { return s.mach; },
+      fmt: function (v, s) { return v.toFixed(0) + ' m/s · Ma ' + (s ? s.mach.toFixed(2) : '—'); }
+    },
+    {
+      title: '攻角 α / 偏航 β',
+      color: '#ffb43a',
+      colors: ['#ffb43a', '#5ee6a8'],
+      picks: [
+        function (s) { return s.alpha; },
+        function (s) { return s.beta; }
+      ],
+      fmt: function (v, s) {
+        return 'α ' + (v >= 0 ? '+' : '') + v.toFixed(2) + '° · β ' +
+          (s ? ((s.beta >= 0 ? '+' : '') + s.beta.toFixed(2) + '°') : '—');
+      },
+      signed: true,
+      hiRate: true
+    },
+    {
+      title: '弹道倾角 θ',
+      color: '#5ee6a8',
+      pick: function (s) { return s.theta; },
+      fmt: function (v) { return (v >= 0 ? '+' : '') + v.toFixed(1) + '°'; },
+      signed: true
+    },
+    {
+      title: '侧偏 Z（风偏 + 偏流 + 科氏）',
+      color: '#ff9d5c',
+      pick: function (s) { return s.z; },
+      fmt: function (v) { return v.toFixed(1) + ' m'; }
+    },
+    {
+      title: '动压 q',
+      color: '#ff7a5c',
+      pick: function (s) { return s.qdyn; },
+      fmt: function (v) { return v.toFixed(1) + ' kPa'; }
+    },
+    {
+      title: '自转 ωx',
+      color: '#8bd3ff',
+      pick: function (s) { return s.wx; },
+      fmt: function (v) { return v.toFixed(0) + ' rad/s · ' + (v * 60 / (2 * Math.PI)).toFixed(0) + ' rpm'; }
+    }
+  ];
+
+  var container = null;
+  var sim = null;
+  var cells = [];
+  var curT = 0;
+  var ro = null;
+
+  var MONO = '"JetBrains Mono", Consolas, "Microsoft YaHei", monospace';
+
+  /* ------------------------------------------------------------------ */
+  function build() {
+    if (!sim) return;
+    var s = sim.samples;
+    var n = s.length;
+
+    cells.forEach(function (c) {
+      var def = c.def;
+      var maxPts = def.hiRate ? n : 780;
+      var step = Math.max(1, Math.ceil(n / maxPts));
+      c.ts.length = 0;
+      c.lines = def.picks ? def.picks.map(function () { return []; }) : [[]];
+      c.sec = def.pick2 ? [] : null;
+
+      for (var i = 0; i < n; i += step) {
+        var sm = s[i];
+        c.ts.push(sm.t);
+        if (def.picks) {
+          for (var k = 0; k < def.picks.length; k++) c.lines[k].push(def.picks[k](sm));
+        } else {
+          c.lines[0].push(def.pick(sm));
+        }
+        if (c.sec) c.sec.push(def.pick2(sm));
+      }
+
+      // 主范围
+      var mn = Infinity, mx = -Infinity;
+      for (var a = 0; a < c.lines.length; a++) {
+        var arr = c.lines[a];
+        for (var j = 0; j < arr.length; j++) {
+          if (arr[j] < mn) mn = arr[j];
+          if (arr[j] > mx) mx = arr[j];
+        }
+      }
+      if (!isFinite(mn) || !isFinite(mx)) { mn = 0; mx = 1; }
+      if (def.signed) {
+        var m = Math.max(Math.abs(mn), Math.abs(mx), 1e-3) * 1.18;
+        mn = -m; mx = m;
+      } else {
+        var pad = (mx - mn) * 0.10 || 1;
+        mn -= pad; mx += pad;
+        if (mn > 0 && mn < (mx - mn) * 0.06) mn = 0;
+      }
+      if (mx - mn < 1e-9) { mx = mn + 1; }
+      c.min = mn; c.max = mx;
+
+      // 副轴范围
+      if (c.sec) {
+        var m2n = Infinity, m2x = -Infinity;
+        for (var b = 0; b < c.sec.length; b++) {
+          if (c.sec[b] < m2n) m2n = c.sec[b];
+          if (c.sec[b] > m2x) m2x = c.sec[b];
+        }
+        if (!isFinite(m2n)) { m2n = 0; m2x = 1; }
+        var p2 = (m2x - m2n) * 0.12 || 0.1;
+        c.min2 = Math.max(0, m2n - p2);
+        c.max2 = m2x + p2;
+      }
+    });
+  }
+
+  /* ------------------------------------------------------------------ */
+  function fmtTick(v) {
+    var a = Math.abs(v);
+    if (a >= 10000) return (v / 1000).toFixed(0) + 'k';
+    if (a >= 1000) return (v / 1000).toFixed(1) + 'k';
+    if (a >= 100) return v.toFixed(0);
+    if (a >= 10) return v.toFixed(1);
+    if (a >= 1) return v.toFixed(2);
+    return v.toFixed(3);
+  }
+
+  function yOf(c, v, padT, ph) {
+    var t = (v - c.min) / (c.max - c.min);
+    return padT + ph * (1 - t);
+  }
+
+  function yOf2(c, v, padT, ph) {
+    var t = (v - c.min2) / (c.max2 - c.min2);
+    return padT + ph * (1 - t);
+  }
+
+  function strokeSeries(ctx, c, arr, color, alpha, limitT, padL, padT, pw, ph, secondary, glow) {
+    var ft = sim.flightTime || 1;
+    ctx.beginPath();
+    var started = false;
+    for (var i = 0; i < arr.length; i++) {
+      var t = c.ts[i];
+      if (t > limitT) break;
+      var x = padL + (t / ft) * pw;
+      var y = secondary ? yOf2(c, arr[i], padT, ph) : yOf(c, arr[i], padT, ph);
+      if (!started) { ctx.moveTo(x, y); started = true; }
+      else ctx.lineTo(x, y);
+    }
+    if (!started) return;
+    ctx.strokeStyle = color;
+    ctx.globalAlpha = alpha;
+    ctx.lineWidth = 1.2;
+    if (glow) {
+      ctx.shadowColor = color;
+      ctx.shadowBlur = 6;
+    }
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+    ctx.globalAlpha = 1;
+  }
+
+  function drawCell(c) {
+    var ctx = c.ctx, w = c.w, h = c.h;
+    if (!ctx || w < 4 || h < 4) return;
+
+    ctx.clearRect(0, 0, w, h);
+    ctx.fillStyle = '#070c12';
+    ctx.fillRect(0, 0, w, h);
+
+    var padL = 5, padR = 6, padT = 16, padB = 11;
+    var pw = Math.max(4, w - padL - padR);
+    var ph = Math.max(4, h - padT - padB);
+    var ft = sim.flightTime || 1;
+
+    // 水平网格
+    ctx.strokeStyle = 'rgba(120,180,200,0.09)';
+    ctx.lineWidth = 1;
+    for (var g = 0; g <= 4; g++) {
+      var gy = Math.round(padT + ph * g / 4) + 0.5;
+      ctx.beginPath();
+      ctx.moveTo(padL, gy);
+      ctx.lineTo(w - padR, gy);
+      ctx.stroke();
+    }
+
+    // 零线
+    if (c.min < 0 && c.max > 0) {
+      var zy = Math.round(yOf(c, 0, padT, ph)) + 0.5;
+      ctx.strokeStyle = 'rgba(140,200,220,0.18)';
+      ctx.beginPath();
+      ctx.moveTo(padL, zy);
+      ctx.lineTo(w - padR, zy);
+      ctx.stroke();
+    }
+
+    // 起爆时刻
+    if (sim.boom && sim.boom.t > 0) {
+      var bx = padL + (sim.boom.t / ft) * pw;
+      ctx.strokeStyle = 'rgba(255,180,58,0.25)';
+      ctx.setLineDash([2, 3]);
+      ctx.beginPath();
+      ctx.moveTo(bx, padT);
+      ctx.lineTo(bx, padT + ph);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
+    // 副轴（马赫数，先画，置于底层）
+    if (c.sec) {
+      strokeSeries(ctx, c, c.sec, c.def.color2, 0.30, 1e9, padL, padT, pw, ph, true, false);
+      strokeSeries(ctx, c, c.sec, c.def.color2, 0.72, curT, padL, padT, pw, ph, true, false);
+    }
+
+    // 主曲线：全量暗、已飞过亮
+    for (var li = 0; li < c.lines.length; li++) {
+      var col = c.def.colors ? c.def.colors[li] : c.def.color;
+      strokeSeries(ctx, c, c.lines[li], col, 0.26, 1e9, padL, padT, pw, ph, false, false);
+    }
+    for (var lj = 0; lj < c.lines.length; lj++) {
+      var col2 = c.def.colors ? c.def.colors[lj] : c.def.color;
+      strokeSeries(ctx, c, c.lines[lj], col2, 0.95, curT, padL, padT, pw, ph, false, true);
+    }
+
+    // 游标
+    var cx = padL + Math.min(1, Math.max(0, curT / ft)) * pw;
+    ctx.strokeStyle = 'rgba(230,250,255,0.30)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(Math.round(cx) + 0.5, padT);
+    ctx.lineTo(Math.round(cx) + 0.5, padT + ph);
+    ctx.stroke();
+
+    // 当前值点
+    var sample = sampleAt(curT);
+    if (sample) {
+      if (c.lines.length === 1) {
+        var v0 = c.lines[0];
+        // 用原始样本值而非降采样，保证精确
+        var dv = c.def.pick(sample);
+        if (isFinite(dv)) {
+          var dy = yOf(c, dv, padT, ph);
+          ctx.fillStyle = c.def.color;
+          ctx.shadowColor = c.def.color;
+          ctx.shadowBlur = 7;
+          ctx.beginPath();
+          ctx.arc(cx, dy, 2.2, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.shadowBlur = 0;
+        }
+      } else {
+        for (var lk = 0; lk < c.lines.length; lk++) {
+          var dvv = c.def.picks[lk](sample);
+          if (!isFinite(dvv)) continue;
+          ctx.fillStyle = c.def.colors[lk];
+          ctx.beginPath();
+          ctx.arc(cx, yOf(c, dvv, padT, ph), 1.7, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+    }
+
+    // 刻度值
+    ctx.font = '8px ' + MONO;
+    ctx.fillStyle = '#6b8794';
+    ctx.textAlign = 'right';
+    ctx.fillText(fmtTick(c.max), w - padR - 1, padT + 8);
+    ctx.fillText(fmtTick(c.min), w - padR - 1, padT + ph - 1);
+    ctx.textAlign = 'left';
+
+    if (c.isLast) {
+      ctx.fillStyle = '#546c78';
+      ctx.font = '8px ' + MONO;
+      ctx.fillText('0', padL, h - 2);
+      ctx.textAlign = 'right';
+      ctx.fillText('t / s', w - padR, h - 2);
+      ctx.textAlign = 'left';
+    }
+  }
+
+  function sampleAt(t) {
+    if (!sim) return null;
+    var s = sim.samples;
+    var n = s.length;
+    var f = t / sim.sampleDt;
+    var i = Math.floor(f);
+    if (i < 0) i = 0;
+    if (i >= n) i = n - 1;
+    return s[i];
+  }
+
+  function updateReadouts() {
+    var sm = sampleAt(curT);
+    if (!sm) return;
+    cells.forEach(function (c) {
+      var v;
+      if (c.def.picks) v = c.def.picks[0](sm);
+      else v = c.def.pick(sm);
+      var txt = c.def.fmt(v, sm);
+      if (c.curEl.textContent !== txt) c.curEl.textContent = txt;
+    });
+  }
+
+  function drawAll() {
+    if (!sim) return;
+    for (var i = 0; i < cells.length; i++) drawCell(cells[i]);
+    updateReadouts();
+  }
+
+  /* ------------------------------------------------------------------ */
+  function init(el, s) {
+    container = el;
+    sim = s;
+    cells = [];
+    curT = 0;
+    container.innerHTML = '';
+
+    var defs = DEFS.slice();
+    if (s && !s.spinStabilized) {
+      defs[6] = {
+        title: '总攻角 αt',
+        color: '#8bd3ff',
+        pick: function (sm) { return sm.alphaT; },
+        fmt: function (v) { return v.toFixed(2) + '°'; }
+      };
+    }
+
+    defs.forEach(function (def, idx) {
+      var cellEl = document.createElement('div');
+      cellEl.className = 'chart-cell';
+
+      var cv = document.createElement('canvas');
+      cellEl.appendChild(cv);
+
+      var tag = document.createElement('div');
+      tag.className = 'chart-tag';
+      tag.textContent = def.title;
+      cellEl.appendChild(tag);
+
+      var cur = document.createElement('div');
+      cur.className = 'chart-cur';
+      cur.textContent = '—';
+      cellEl.appendChild(cur);
+
+      container.appendChild(cellEl);
+
+      cells.push({
+        def: def,
+        el: cellEl,
+        cv: cv,
+        ctx: cv.getContext('2d'),
+        curEl: cur,
+        w: 0, h: 0, dpr: 1,
+        ts: [], lines: [], sec: null,
+        min: 0, max: 1, min2: 0, max2: 1,
+        isLast: idx === defs.length - 1
+      });
+    });
+
+    build();
+    resize();
+
+    if (window.ResizeObserver) {
+      try {
+        if (ro) ro.disconnect();
+        ro = new ResizeObserver(function () { resize(); });
+        ro.observe(container);
+      } catch (e) { /* noop */ }
+    }
+
+    requestAnimationFrame(function () { resize(); drawAll(); });
+  }
+
+  function resize() {
+    if (!cells.length) return;
+    cells.forEach(function (c) {
+      var rect = c.el.getBoundingClientRect();
+      var w = Math.max(1, Math.round(rect.width));
+      var h = Math.max(1, Math.round(rect.height));
+      var dpr = Math.min(window.devicePixelRatio || 1, 2);
+      if (c.w === w && c.h === h && c.dpr === dpr) return;
+      c.w = w; c.h = h; c.dpr = dpr;
+      c.cv.width = Math.round(w * dpr);
+      c.cv.height = Math.round(h * dpr);
+      c.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    });
+    drawAll();
+  }
+
+  function setTime(t) {
+    if (!sim) return;
+    curT = Math.max(0, t);
+    drawAll();
+  }
+
+  global.Charts = {
+    init: init,
+    setTime: setTime,
+    resize: resize
+  };
+
+})(window);
+
+</script>
+<script>
+/* ===== main.js ===== */
+/* =============================================================================
+ * 主控：仿真调度 / 动画时间轴 / HUD / 环境与模型面板 / UI 交互
+ * ========================================================================== */
+(function () {
+  'use strict';
+
+  var DEFAULT_ENV = {
+    tempC: 15, latitude: 40, azimuth: 0,
+    windCross: 0, windHead: 0,
+    useCoriolis: true, useWind: true
+  };
+
+  var PRESETS = (window.Ballistics && Ballistics.PRESETS) || {};
+  var cfg = {
+    preset: 'mortar120',
+    v0: 318,
+    angle: 45,
+    hBoom: 12,
+    twist: 0,
+    fragCount: 800,
+    seed: 2024,
+    env: Object.assign({}, DEFAULT_ENV)
+  };
+
+  var sim = null;
+  var simTime = 0;
+  var playing = true;
+  var speed = 2;
+  var lastTs = 0;
+  var totalTime = 1;
+  var boomShown = false;
+  var simTimer = 0;
+  var currentPanel = null;
+
+  var $ = function (id) { return document.getElementById(id); };
+
+  var el = {
+    canvas: $('scene'),
+    charts: $('charts'),
+    hudT: $('hud-t'), hudH: $('hud-h'), hudV: $('hud-v'), hudMach: $('hud-mach'),
+    hudAlpha: $('hud-alpha'), hudQ: $('hud-q'), hudX: $('hud-x'), hudZ: $('hud-z'),
+    hudSpin: $('hud-spin'), hudSg: $('hud-sg'),
+    statusDot: $('status-dot'), statusMode: $('status-mode'), statusCode: $('status-code'),
+    toast: $('toast'),
+    btnPlay: $('btn-play'), btnReset: $('btn-reset'),
+    speedSeg: $('speed-seg'),
+    camControls: $('cam-controls'),
+    rngV0: $('rng-v0'), rngAngle: $('rng-angle'), rngBoom: $('rng-boom'), rngWind: $('rng-wind'),
+    valV0: $('val-v0'), valAngle: $('val-angle'), valBoom: $('val-boom'), valWind: $('val-wind'),
+    statRange: $('stat-range'), statAlt: $('stat-alt'), statMach: $('stat-mach'),
+    statDrift: $('stat-drift'), statVimp: $('stat-vimp'), statR90: $('stat-r90'),
+    fragModel: $('frag-model'),
+    windChip: $('wind-chip'),
+    overlay: $('overlay'), panelEnv: $('panel-env'), panelModel: $('panel-model'),
+    btnEnv: $('btn-env'), btnModel: $('btn-model'),
+    envWindCross: $('env-wind-cross'), envWindHead: $('env-wind-head'),
+    envTemp: $('env-temp'), envLat: $('env-lat'), envTwist: $('env-twist'), envFrag: $('env-frag'),
+    envSeed: $('env-seed'),
+    presetSeg: $('preset-seg'), presetNote: $('preset-note'), rowTwist: $('row-twist'),
+    hudStabLabel: $('hud-stab-label'), hudSgUnit: $('hud-sg-unit'),
+    envWindCrossVal: $('env-wind-cross-val'), envWindHeadVal: $('env-wind-head-val'),
+    envTempVal: $('env-temp-val'), envLatVal: $('env-lat-val'),
+    envTwistVal: $('env-twist-val'), envFragVal: $('env-frag-val'), envSeedVal: $('env-seed-val'),
+    envCoriolis: $('env-coriolis'), envWindOn: $('env-wind-on'),
+    envReset: $('env-reset'), envSummary: $('env-summary')
+  };
+
+  var lastHud = {};
+
+  /* ------------------------------ 仿真调度 ------------------------------ */
+  function runSim(autoplay) {
+    var t0 = performance.now();
+    sim = Ballistics.simulate(cfg);
+    var calcMs = performance.now() - t0;
+
+    simTime = 0;
+    boomShown = false;
+    // 运行到最后一枚破片落地为止
+    totalTime = sim.flightTime + (sim.fragments.duration || 0) + 0.15;
+    playing = autoplay !== false;
+
+    if (window.Scene3D && Scene3D.setData) Scene3D.setData(sim);
+    if (window.Charts) {
+      el.charts.innerHTML = '';
+      Charts.init(el.charts, sim);
+    }
+
+    if (sim.spinStabilized) {
+      el.hudStabLabel.textContent = '稳定因子';
+      el.hudSgUnit.textContent = 'Sg';
+    } else {
+      el.hudStabLabel.textContent = '静稳定裕度';
+      el.hudSgUnit.textContent = 'cal';
+    }
+
+    updateStats();
+    updatePlayBtn();
+    updateStatus();
+    updateHUD(true);
+    updateWindChip();
+    updateEnvSummary();
+
+    el.statusCode.textContent = 'SOLVED ' + calcMs.toFixed(0) + 'ms';
+    clearTimeout(runSim._t);
+    runSim._t = setTimeout(function () {
+      if (el.statusCode.textContent.indexOf('SOLVED') === 0) el.statusCode.textContent = 'SYS.READY';
+    }, 2600);
+  }
+
+  function scheduleSim() {
+    clearTimeout(simTimer);
+    simTimer = setTimeout(function () { runSim(true); }, 110);
+  }
+
+  /* ------------------------------ 时间插值 ------------------------------ */
+  function sampleAt(t) {
+    var s = sim.samples;
+    var dt = sim.sampleDt;
+    var f = t / dt;
+    var i = Math.floor(f);
+    if (i < 0) i = 0;
+    if (i >= s.length - 1) return s[s.length - 1];
+    var a = s[i], b = s[i + 1], u = f - i;
+    return {
+      t: t,
+      x: a.x + (b.x - a.x) * u,
+      y: a.y + (b.y - a.y) * u,
+      z: a.z + (b.z - a.z) * u,
+      vx: a.vx + (b.vx - a.vx) * u,
+      vy: a.vy + (b.vy - a.vy) * u,
+      vz: a.vz + (b.vz - a.vz) * u,
+      speed: a.speed + (b.speed - a.speed) * u,
+      mach: a.mach + (b.mach - a.mach) * u,
+      alpha: a.alpha + (b.alpha - a.alpha) * u,
+      beta: a.beta + (b.beta - a.beta) * u,
+      theta: a.theta + (b.theta - a.theta) * u,
+      qdyn: a.qdyn + (b.qdyn - a.qdyn) * u,
+      wx: a.wx + (b.wx - a.wx) * u,
+      sg: a.sg + (b.sg - a.sg) * u
+    };
+  }
+
+  /* ------------------------------ HUD 更新 ------------------------------ */
+  function setText(node, key, value) {
+    if (lastHud[key] === value) return;
+    lastHud[key] = value;
+    node.textContent = value;
+  }
+
+  function updateHUD(force) {
+    if (!sim) return;
+    if (force) lastHud = {};
+
+    var after = simTime >= sim.boom.t;
+    var st = after
+      ? sampleAt(Math.max(0, sim.boom.t - 0.004))
+      : sampleAt(Math.min(simTime, sim.flightTime));
+
+    setText(el.hudT, 't', simTime.toFixed(2));
+    setText(el.hudH, 'h', after ? sim.boom.y.toFixed(1) : Math.max(0, st.y).toFixed(st.y < 100 ? 1 : 0));
+    setText(el.hudV, 'v', (after ? sim.boom.speed : st.speed).toFixed(0));
+    setText(el.hudMach, 'mach', st.mach.toFixed(2));
+    setText(el.hudAlpha, 'alpha', (st.alpha >= 0 ? '+' : '') + st.alpha.toFixed(2));
+    setText(el.hudQ, 'q', st.qdyn.toFixed(1));
+    setText(el.hudX, 'x', Math.sqrt(st.x * st.x + st.z * st.z).toFixed(0));
+    setText(el.hudZ, 'z', (after ? sim.boom.z : st.z).toFixed(1));
+    setText(el.hudSpin, 'spin', (after ? sim.boom.spin : st.wx).toFixed(0));
+    if (sim.spinStabilized) {
+      setText(el.hudSg, 'sg', (isFinite(st.sg) ? st.sg.toFixed(2) : '—'));
+    } else {
+      setText(el.hudSg, 'sg', sim.staticMargin.toFixed(2));
+    }
+  }
+
+  function updateStats() {
+    if (!sim) return;
+    el.statRange.textContent = sim.range.toFixed(0) + ' m';
+    el.statAlt.textContent = sim.maxAlt.toFixed(0) + ' m';
+    el.statMach.textContent = sim.maxMach.toFixed(2);
+    el.statDrift.textContent = (sim.drift >= 0 ? '+' : '') + sim.drift.toFixed(1) + ' m';
+    el.statVimp.textContent = sim.impactSpeed.toFixed(0) + ' m/s';
+    el.statR90.textContent = sim.fragments.r90.toFixed(0) + ' m';
+    var fr = sim.fragments;
+    el.fragModel.textContent =
+      'MOTT μ ' + (fr.mu * 1000).toFixed(1) + ' g · 均值 ' + (fr.meanMass * 1000).toFixed(1) +
+      ' g · GURNEY ' + fr.vGurney.toFixed(0) + ' m/s · 自转 ' + (fr.spin || 0).toFixed(0) +
+      ' rad/s · 破片 ' + fr.count;
+  }
+
+  /* ------------------------------ 状态显示 ------------------------------ */
+  function updateStatus() {
+    if (!sim) return;
+    var dot = el.statusDot;
+    dot.className = 'dot';
+
+    if (simTime + 1e-6 >= totalTime) {
+      dot.classList.add('done');
+      el.statusMode.textContent = '仿真完成';
+    } else if (simTime >= sim.boom.t) {
+      dot.classList.add('boom');
+      el.statusMode.textContent = '破片飞散中';
+    } else if (simTime > 0.05) {
+      dot.classList.add('armed');
+      el.statusMode.textContent = '弹道飞行中';
+    } else {
+      el.statusMode.textContent = '待发射';
+    }
+  }
+
+  function showToast(text) {
+    el.toast.textContent = text;
+    el.toast.classList.add('show');
+    clearTimeout(showToast._t);
+    showToast._t = setTimeout(function () { el.toast.classList.remove('show'); }, 4200);
+  }
+
+  /* --------------------------- 风场/环境显示 ---------------------------- */
+  function windText() {
+    var c = cfg.env.windCross, h = cfg.env.windHead;
+    var parts = [];
+    if (Math.abs(c) >= 0.5) parts.push((c > 0 ? '右风 ' : '左风 ') + Math.abs(c).toFixed(0) + ' m/s');
+    if (Math.abs(h) >= 0.5) parts.push((h > 0 ? '逆风 ' : '顺风 ') + Math.abs(h).toFixed(0) + ' m/s');
+    return parts.length ? parts.join(' · ') : '无风';
+  }
+
+  function updateWindChip() {
+    if (!el.windChip) return;
+    var txt = '风 ' + windText();
+    if (cfg.env.useCoriolis) txt += ' · 科氏 ' + Math.abs(cfg.env.latitude).toFixed(0) + (cfg.env.latitude >= 0 ? '°N' : '°S');
+    el.windChip.textContent = txt;
+  }
+
+  function updateEnvSummary() {
+    if (!el.envSummary) return;
+    el.envSummary.textContent =
+      (sim && sim.presetName ? sim.presetName + ' · ' : '') +
+      'ISA 大气 ' + cfg.env.tempC.toFixed(0) + '°C · 纬度 ' + cfg.env.latitude.toFixed(0) + '° · ' +
+      '风 ' + windText() + ' · ' + (cfg.twist > 0 ? ('缠距 1:' + cfg.twist) : '不旋转') +
+      ' · 破片 ' + cfg.fragCount + ' 片 · 种子 #' + cfg.seed +
+      (cfg.env.useCoriolis ? ' · 科氏力开' : ' · 科氏力关');
+  }
+
+  /* ------------------------------ 播放控制 ------------------------------ */
+  function updatePlayBtn() {
+    el.btnPlay.textContent = playing ? '暂停' : '继续';
+  }
+
+  function togglePlay() {
+    if (simTime + 1e-6 >= totalTime) {
+      simTime = 0;
+      boomShown = false;
+      playing = true;
+    } else {
+      playing = !playing;
+    }
+    updatePlayBtn();
+    updateStatus();
+  }
+
+  /* ------------------------------ 动画循环 ------------------------------ */
+  function loop(ts) {
+    var dt = lastTs ? Math.min((ts - lastTs) / 1000, 0.12) : 0;
+    lastTs = ts;
+
+    if (!sim) {
+      if (window.Scene3D) Scene3D.render();
+      requestAnimationFrame(loop);
+      return;
+    }
+
+    if (playing) {
+      simTime += dt * speed;
+      if (simTime >= totalTime) {
+        simTime = totalTime;
+        playing = false;
+        updatePlayBtn();
+      }
+    }
+
+    if (!boomShown && simTime >= sim.boom.t) {
+      boomShown = true;
+      var fr = sim.fragments;
+      var b = sim.boom;
+      showToast('动爆 · 炸高 ' + b.y.toFixed(0) + ' m · 落速 ' + b.speed.toFixed(0) +
+        ' m/s · 攻角 ' + (b.alpha >= 0 ? '+' : '') + b.alpha.toFixed(1) + '° · 侧偏 ' +
+        (b.z >= 0 ? '+' : '') + b.z.toFixed(0) + ' m · 破片 ' + fr.count +
+        ' 枚 · R90 ' + fr.r90.toFixed(0) + ' m');
+    }
+
+    if (window.Scene3D) {
+      Scene3D.setTime(simTime);
+      Scene3D.render();
+    }
+    if (window.Charts) Charts.setTime(simTime);
+
+    updateHUD();
+    updateStatus();
+    requestAnimationFrame(loop);
+  }
+
+  /* ------------------------------ 面板交互 ------------------------------ */
+  function openPanel(id) {
+    currentPanel = id;
+    el.overlay.hidden = false;
+    el.panelEnv.hidden = id !== 'panel-env';
+    el.panelModel.hidden = id !== 'panel-model';
+    document.body.classList.add('modal-open');
+  }
+
+  function closePanels() {
+    currentPanel = null;
+    el.overlay.hidden = true;
+    document.body.classList.remove('modal-open');
+  }
+
+  /* ------------------------------ 弹型切换 ------------------------------ */
+  function applyPresetUI(presetId, autoplay) {
+    var p = PRESETS[presetId];
+    if (!p) return;
+    if (window.Ballistics && Ballistics.applyPreset) Ballistics.applyPreset(presetId);
+    cfg.preset = presetId;
+    var d = p.defaults;
+    cfg.v0 = d.v0;
+    cfg.angle = d.angle;
+    cfg.twist = d.twist;
+    cfg.fragCount = d.fragCount;
+    cfg.hBoom = 12;
+
+    // 滑杆范围随弹型变化
+    el.rngV0.min = d.v0Min;
+    el.rngV0.max = d.v0Max;
+    el.rngV0.value = cfg.v0;
+    el.valV0.textContent = cfg.v0;
+    el.rngAngle.max = d.angleMax;
+    el.rngAngle.value = cfg.angle;
+    el.valAngle.textContent = cfg.angle;
+    el.rngBoom.value = cfg.hBoom;
+    el.valBoom.textContent = cfg.hBoom;
+
+    // 缠距对尾翼弹不可用
+    var noSpin = d.twist === 0;
+    el.envTwist.disabled = noSpin;
+    el.rowTwist.classList.toggle('disabled', noSpin);
+    el.envTwistVal.textContent = noSpin ? '不旋转' : ('1:' + cfg.twist);
+    el.presetNote.textContent = noSpin
+      ? '当前弹型：120mm 迫弹（尾翼稳定、不旋转；McCoy 附录 C 实测气动系数，v0=318 m/s 为装药 4）'
+      : '当前弹型：120mm 旋转稳定杀爆弹代表弹（线膛炮，1:18 缠距；气动系数按 105mm M1 同类换算，动/静稳定性由 Sg 判定）';
+
+    Array.prototype.forEach.call(el.presetSeg.children, function (b) {
+      b.classList.toggle('active', b.dataset.preset === presetId);
+    });
+
+    syncEnvUI();
+    updateWindChip();
+    updateEnvSummary();
+    if (autoplay !== false) runSim(true);
+  }
+
+  el.presetSeg.addEventListener('click', function (e) {
+    var btn = e.target.closest('button');
+    if (!btn || btn.dataset.preset === cfg.preset) return;
+    applyPresetUI(btn.dataset.preset, true);
+  });
+
+  /* ------------------------------ UI 绑定 ------------------------------ */
+  el.btnPlay.addEventListener('click', togglePlay);
+
+  el.btnReset.addEventListener('click', function () {
+    simTime = 0;
+    boomShown = false;
+    playing = true;
+    updatePlayBtn();
+    updateStatus();
+    updateHUD(true);
+    el.toast.classList.remove('show');
+  });
+
+  el.speedSeg.addEventListener('click', function (e) {
+    var btn = e.target.closest('button');
+    if (!btn) return;
+    speed = Number(btn.dataset.speed);
+    Array.prototype.forEach.call(el.speedSeg.children, function (b) {
+      b.classList.toggle('active', b === btn);
+    });
+  });
+
+  el.camControls.addEventListener('click', function (e) {
+    var btn = e.target.closest('button');
+    if (!btn) return;
+    Array.prototype.forEach.call(el.camControls.children, function (b) {
+      b.classList.toggle('active', b === btn);
+    });
+    if (window.Scene3D) Scene3D.setCameraMode(btn.dataset.mode);
+  });
+
+  function bindSlider(input, label, key, fmt, rebuild) {
+    input.addEventListener('input', function () {
+      var v = Number(input.value);
+      label.textContent = fmt ? fmt(v) : v;
+      cfg[key] = v;
+      if (rebuild) scheduleSim();
+    });
+  }
+
+  bindSlider(el.rngV0, el.valV0, 'v0', null, true);
+  bindSlider(el.rngAngle, el.valAngle, 'angle', null, true);
+  bindSlider(el.rngBoom, el.valBoom, 'hBoom', null, true);
+  // 横风滑杆直接映射到 env.windCross
+  el.rngWind.addEventListener('input', function () {
+    cfg.env.windCross = Number(el.rngWind.value);
+    el.valWind.textContent = cfg.env.windCross;
+    syncEnvUI();
+    updateWindChip();
+    updateEnvSummary();
+    scheduleSim();
+  });
+
+  /* 环境面板控件 */
+  function bindEnvRange(input, label, key, fmt, after, topLevel) {
+    input.addEventListener('input', function () {
+      var v = Number(input.value);
+      if (topLevel) cfg[key] = v;
+      else cfg.env[key] = v;
+      if (label) label.textContent = fmt ? fmt(v) : v;
+      if (after) after();
+      updateWindChip();
+      updateEnvSummary();
+      scheduleSim();
+    });
+  }
+
+  bindEnvRange(el.envWindCross, el.envWindCrossVal, 'windCross', function (v) {
+    return v + ' m/s';
+  }, function () { el.rngWind.value = cfg.env.windCross; el.valWind.textContent = cfg.env.windCross; });
+  bindEnvRange(el.envWindHead, el.envWindHeadVal, 'windHead', function (v) {
+    return (v > 0 ? '逆 ' : v < 0 ? '顺 ' : '') + Math.abs(v) + ' m/s';
+  });
+  bindEnvRange(el.envTemp, el.envTempVal, 'tempC', function (v) { return v + ' °C'; });
+  bindEnvRange(el.envLat, el.envLatVal, 'latitude', function (v) {
+    return Math.abs(v) + (v >= 0 ? '°N' : '°S');
+  });
+  bindEnvRange(el.envTwist, el.envTwistVal, 'twist', function (v) { return '1:' + v; }, null, true);
+  bindEnvRange(el.envFrag, el.envFragVal, 'fragCount', function (v) { return String(v); }, null, true);
+  bindEnvRange(el.envSeed, el.envSeedVal, 'seed', function (v) { return '#' + v; }, null, true);
+
+  el.envCoriolis.addEventListener('change', function () {
+    cfg.env.useCoriolis = el.envCoriolis.checked;
+    updateWindChip();
+    updateEnvSummary();
+    scheduleSim();
+  });
+  el.envWindOn.addEventListener('change', function () {
+    cfg.env.useWind = el.envWindOn.checked;
+    scheduleSim();
+  });
+  el.envReset.addEventListener('click', function () {
+    Object.assign(cfg.env, DEFAULT_ENV);
+    var pd = (PRESETS[cfg.preset] || {}).defaults || {};
+    cfg.twist = pd.twist != null ? pd.twist : 18;
+    cfg.fragCount = pd.fragCount != null ? pd.fragCount : 800;
+    cfg.seed = 2024;
+    syncEnvUI();
+    updateWindChip();
+    updateEnvSummary();
+    runSim(true);
+  });
+
+  function syncEnvUI() {
+    el.envWindCross.value = cfg.env.windCross;
+    el.envWindHead.value = cfg.env.windHead;
+    el.envTemp.value = cfg.env.tempC;
+    el.envLat.value = cfg.env.latitude;
+    el.envTwist.value = cfg.twist > 0 ? cfg.twist : 18;
+    el.envFrag.value = cfg.fragCount;
+    el.envSeed.value = cfg.seed;
+    el.envCoriolis.checked = cfg.env.useCoriolis;
+    el.envWindOn.checked = cfg.env.useWind;
+    el.envWindCrossVal.textContent = cfg.env.windCross + ' m/s';
+    el.envWindHeadVal.textContent = (cfg.env.windHead > 0 ? '逆 ' : cfg.env.windHead < 0 ? '顺 ' : '') +
+      Math.abs(cfg.env.windHead) + ' m/s';
+    el.envTempVal.textContent = cfg.env.tempC + ' °C';
+    el.envLatVal.textContent = Math.abs(cfg.env.latitude) + (cfg.env.latitude >= 0 ? '°N' : '°S');
+    el.envTwistVal.textContent = cfg.twist > 0 ? ('1:' + cfg.twist) : '不旋转';
+    el.envFragVal.textContent = String(cfg.fragCount);
+    el.envSeedVal.textContent = '#' + cfg.seed;
+    el.valWind.textContent = cfg.env.windCross;
+    el.rngWind.value = cfg.env.windCross;
+  }
+
+  /* 面板开关 */
+  el.btnEnv.addEventListener('click', function () { openPanel('panel-env'); });
+  el.btnModel.addEventListener('click', function () { openPanel('panel-model'); });
+  Array.prototype.forEach.call(document.querySelectorAll('[data-close]'), function (b) {
+    b.addEventListener('click', closePanels);
+  });
+  el.overlay.addEventListener('click', function (e) {
+    if (e.target === el.overlay) closePanels();
+  });
+
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && !el.overlay.hidden) { closePanels(); return; }
+    if (e.code === 'Space' && e.target === document.body && el.overlay.hidden) {
+      e.preventDefault();
+      togglePlay();
+    }
+  });
+
+  window.addEventListener('resize', function () {
+    if (window.Scene3D) Scene3D.resize();
+    if (window.Charts) Charts.resize();
+  });
+
+  /* ------------------------------ 启动 ------------------------------ */
+  if (window.Scene3D) Scene3D.init(el.canvas);
+  applyPresetUI('mortar120', false);
+  runSim(true);
+  updatePlayBtn();
+  requestAnimationFrame(loop);
+
+})();
+
+</script>
+</body>
+</html>

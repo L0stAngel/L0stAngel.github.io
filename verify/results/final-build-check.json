@@ -1,0 +1,104 @@
+{
+  "generatedAt": "2026-10-24T03:13:48.642Z",
+  "files": {
+    "physics.js": {
+      "bytes": 46471,
+      "sha256": "41217cc8a140e84a3b35ecc749fda95bbc7778312260026d50f5065a97edc3e7"
+    },
+    "index.html": {
+      "bytes": 22275,
+      "sha256": "03f9c3bf3797dadf7cd7dfbf3c95928058e62e22ddb57f8a4de157cc6c81030c"
+    },
+    "main.js": {
+      "bytes": 18690,
+      "sha256": "7b107f01a85cbacb4ec3202959b3db0bb239526f76ad62a842bc7be00fb387af"
+    },
+    "charts.js": {
+      "bytes": 12098,
+      "sha256": "28637728aa70f83b46270020ea9e37439f32477dfdee2ee544aa127a63dc40c5"
+    },
+    "render3d.js": {
+      "bytes": 44907,
+      "sha256": "265905a798bdee35411e1ef2a356872242fb40ba67f568bba765a7df4560a294"
+    },
+    "styles.css": {
+      "bytes": 19788,
+      "sha256": "7f74fa653739e95396778e3214ce60bf5d943f48d54349b28b89e38e2ce1aace"
+    },
+    "120mm_ballistics.html": {
+      "bytes": 164261,
+      "sha256": "8b5e2a73f36219ceb6324be41b9eb67aaee7dd576b15a00c73121f1d1ac8d0d7"
+    },
+    "README.md": {
+      "bytes": 4477,
+      "sha256": "2d8082aee0d6585715edff4682aebf55834c8f4963b42dace69ea808630ecb45"
+    },
+    "docs/report.md": {
+      "bytes": 17781,
+      "sha256": "c988ec1eab85b76c58d1886ccac243d3bb8e9465f435ada03a452f152222a623"
+    }
+  },
+  "bundle": {
+    "physics.js": {
+      "same": true
+    },
+    "render3d.js": {
+      "same": true
+    },
+    "charts.js": {
+      "same": true
+    },
+    "main.js": {
+      "same": true
+    },
+    "bytes": 153080
+  },
+  "unresolved": false,
+  "references": {
+    "physics": {
+      "GB_T_45846": true,
+      "Orlowski": true,
+      "LiKun": true,
+      "Rettinger": true,
+      "MottSpringer": true
+    },
+    "indexPanel": {
+      "references": true,
+      "MonteCarloNote": true,
+      "Orlowski": true,
+      "LiKun": true,
+      "Gold2007": true,
+      "GB_T_45846": true
+    },
+    "counts": {
+      "readme58": true,
+      "report58": true
+    }
+  },
+  "smoke": {
+    "mortar": {
+      "preset": "mortar120",
+      "range": 7300.768382396201,
+      "t": 41.29434870208999,
+      "alt": 2100.0787013364575,
+      "dt": 0.0005
+    },
+    "spin": {
+      "preset": "spin120",
+      "range": 9778.331907220947,
+      "t": 48.520294974556336,
+      "alt": 2939.776164231964,
+      "spin0": 1308.996938995747,
+      "Sg0": 1.7980406301416276
+    },
+    "aeroAt": [
+      0.35714285714285715,
+      1.714,
+      0.5910735122520419,
+      3.9575
+    ],
+    "aeroDriftField": true,
+    "oldWindDriftField": false
+  },
+  "ok": true
+}
