@@ -57,4 +57,4 @@ function runPreset(id) {
 
 runPreset('mortar120');
 runPreset('spin120');
-console.log('\n提示：完整验证请运行 node test-validation.js（57 项检查）。');
+console.log('\n提示：完整验证请运行 node test-validation.js（58 项检查）。');

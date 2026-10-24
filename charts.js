@@ -406,7 +406,9 @@
 
   function setTime(t) {
     if (!sim) return;
-    curT = Math.max(0, t);
+    t = Math.max(0, t);
+    if (t === curT) return;   // 暂停/未推进时跳过整帧重绘
+    curT = t;
     drawAll();
   }
 

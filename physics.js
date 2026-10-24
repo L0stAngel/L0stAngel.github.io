@@ -242,7 +242,7 @@
   }
   for (var ai = 0; ai < ATM_N; ai++) ATM[ai] = isaBase(ai * 100);
 
-  function atmosphere(h, dT) {
+  function atmosphere(h, dT, out) {
     if (!(h > 0)) h = 0;
     if (h > 32000) h = 32000;
     var f = h * 0.01, i = Math.floor(f), t = f - i;
@@ -250,6 +250,20 @@
     var A = ATM[i], B = ATM[i + 1];
     var T = A.T + (B.T - A.T) * t;
     var p = A.p + (B.p - A.p) * t;
+    if (out) {
+      // 热路径复用调用方缓冲，避免每次调用分配对象
+      out.T = T; out.p = p;
+      if (dT) {
+        T += dT;
+        out.T = T;
+        out.rho = p / (R_AIR * T);
+        out.a = Math.sqrt(GAMMA_AIR * R_AIR * T);
+      } else {
+        out.rho = A.rho + (B.rho - A.rho) * t;
+        out.a = A.a + (B.a - A.a) * t;
+      }
+      return out;
+    }
     if (dT) {
       T += dT;
       return { T: T, p: p, rho: p / (R_AIR * T), a: Math.sqrt(GAMMA_AIR * R_AIR * T) };
@@ -281,6 +295,11 @@
     windHead: 0, windCross: 0, windPower: 0.143, windRefH: 10,
     omgX: 0, omgY: 0, omgZ: 0
   };
+
+  /* atmosphere() 热路径复用缓冲（deriv / deriveKinematics / fragAccel 各自独立） */
+  var ATMO_DERIV = { T: 0, p: 0, rho: 0, a: 0 };
+  var ATMO_KIN = { T: 0, p: 0, rho: 0, a: 0 };
+  var ATMO_FRAG = { T: 0, p: 0, rho: 0, a: 0 };
 
   function setEnv(env) {
     env = env || {};
@@ -332,7 +351,7 @@
     var rvx = vx, rvy = vy, rvz = vz;
     if (CUR.useWind && (CUR.windCross !== 0 || CUR.windHead !== 0)) {
       var wf = windProfile(y[1]);
-      rvx -= -CUR.windHead * wf;
+      rvx += CUR.windHead * wf;   // 纵风 + 为逆风（吹向 -x）
       rvz -= CUR.windCross * wf;
     }
 
@@ -344,7 +363,7 @@
     var V2 = rvx * rvx + rvy * rvy + rvz * rvz;
     var V = Math.sqrt(V2) + 1e-9;
 
-    var atm = atmosphere(y[1], CUR.dT);
+    var atm = atmosphere(y[1], CUR.dT, ATMO_DERIV);
     var mach = V / atm.a;
     var qd = 0.5 * atm.rho * V2;
     var S = SHELL.S, d = SHELL.D;
@@ -516,7 +535,7 @@
     var rvx = vx, rvy = vy, rvz = vz;
     if (CUR.useWind && (CUR.windCross !== 0 || CUR.windHead !== 0)) {
       var wf = windProfile(y[1]);
-      rvx -= -CUR.windHead * wf;
+      rvx += CUR.windHead * wf;   // 纵风 + 为逆风（吹向 -x）
       rvz -= CUR.windCross * wf;
     }
     var V2 = rvx * rvx + rvy * rvy + rvz * rvz;
@@ -525,7 +544,7 @@
     var vb = R01 * rvx + R11 * rvy + R21 * rvz;
     var wb = R02 * rvx + R12 * rvy + R22 * rvz;
 
-    var atm = atmosphere(y[1], CUR.dT);
+    var atm = atmosphere(y[1], CUR.dT, ATMO_KIN);
     var mach = V / atm.a;
     var qd = 0.5 * atm.rho * V2;
 
@@ -542,6 +561,7 @@
     s.t = s.t != null ? s.t : 0;
     s.x = y[0]; s.y = y[1]; s.z = y[2];
     s.vx = vx; s.vy = vy; s.vz = vz;
+    s.rvx = rvx; s.rvy = rvy; s.rvz = rvz;   // 相对空气速度（攻角基准，供 UI 风轴系使用）
     s.speed = speedGround;
     s.mach = mach;
     s.alpha = alpha * RAD2DEG;
@@ -604,18 +624,18 @@
 
   /* ------------------------------ 主仿真函数 ------------------------------
    * @param {Object} cfg
-   *   v0        初速 m/s            (默认 450)
-   *   angle     射角 deg            (默认 45)
+   *   v0        初速 m/s            (默认取当前弹型预设 defaults.v0)
+   *   angle     射角 deg            (默认取当前弹型预设 defaults.angle)
    *   hBoom     空炸高度 m，0=触地  (默认 12)
-   *   twist     膛线缠距 口径/转     (默认 SHELL.twist=18)
+   *   twist     膛线缠距 口径/转     (默认 SHELL.twist)
    *   spin      直接给定炮口转速 rad/s（覆盖 twist 换算，测试用）
-   *   jump      炮口跳角 deg         (默认 0.12)
-   *   yaw0      炮口偏航角 deg       (默认 0.03)
-   *   wy0/wz0   炮口横向角速度 rad/s (默认 0.35 / 0.85)
+   *   jump      炮口跳角 deg         (默认取预设 defaults.jump)
+   *   yaw0      炮口偏航角 deg       (默认取预设 defaults.yaw0)
+   *   wy0/wz0   炮口横向角速度 rad/s (默认取预设 defaults.wy0/wz0)
    *   env       环境参数（见 ENV_DEFAULT）
-   *   dt        积分步长 s           (默认 0.0005)
+   *   dt        积分步长 s           (默认按自转自适应，≤0.5 ms)
    *   sampleDt  采样间隔 s           (默认 0.01)
-   *   maxTime   最大仿真时间 s       (默认 160)
+   *   maxTime   最大仿真时间 s       (默认 140)
    *   fragCount 破片数              (默认 800)
    *   seed      随机种子（可选，可复现破片抽样）
    * ---------------------------------------------------------------------- */
@@ -680,10 +700,10 @@
         rk4(y, dt);
         t += dt;
 
-        // 顶点（第一次 vy 由正变负）
+        // 顶点（第一次 vy 由正变负；记录本步起点状态，更接近 vy=0 时刻）
         if (!apexFound && y[4] < 0 && oldY >= 0) {
           apexFound = true;
-          apex = { t: t, x: y[0], alt: oldY, range: Math.sqrt(y[0] * y[0] + y[2] * y[2]) };
+          apex = { t: t - dt, x: oldX, alt: oldY, range: Math.sqrt(oldX * oldX + oldZ * oldZ) };
         }
 
         var descending = y[4] < 0;
@@ -866,7 +886,7 @@
     }
     var rvx = vx - wfx, rvy = vy, rvz = vz - wfz;
     var sp = Math.sqrt(rvx * rvx + rvy * rvy + rvz * rvz) + 1e-9;
-    var atm = atmosphere(py, CUR.dT);
+    var atm = atmosphere(py, CUR.dT, ATMO_FRAG);
     var kd = 0.5 * atm.rho * fragCd(sp / atm.a) * Aref / mass;
     out[0] = -kd * sp * rvx;
     out[1] = -kd * sp * rvy - G0;

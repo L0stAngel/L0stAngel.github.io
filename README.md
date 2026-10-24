@@ -6,10 +6,9 @@
 
 ## 快速开始
 
-- **直接打开**：`120mm_ballistics.html`（单文件离线版，双击即可）。
-- **开发模式**：打开 `index.html`（与 physics.js / render3d.js / charts.js / main.js 分离）。
-- **重新打包单文件**：`node _build.js`（生成 120mm_ballistics.html，并检查无外部引用）。
-- **物理验证**：`node test-validation.js`（57 项检查：ISA、步长收敛、风/科氏方向性、破片守恒、McCoy 双组基准、性能）。
+- **开发模式**：直接打开 `index.html`（与 physics.js / render3d.js / charts.js / main.js 分离）。
+- **单文件离线版**：`node _build.js` 生成 `120mm_ballistics.html`（打包全部源码，双击即可）。
+- **物理验证**：`node test-validation.js`（58 项检查：ISA、步长收敛、风/科氏方向性、破片守恒、McCoy 双组基准、性能）。
 - **单次仿真摘要**：`node test-physics.js`。
 
 ## 两种可切换弹型预设
@@ -41,29 +40,22 @@
 ## 目录
 
 ```
-120mm_ballistics.html   单文件成品（离线可用）
 index.html / styles.css 源页面
 physics.js              6-DOF + 破片内核（Node/浏览器通用）
 render3d.js             3D 渲染
 charts.js               曲线
 main.js                 主控/UI/面板
-_build.js               单文件打包
+_build.js               单文件打包（生成 120mm_ballistics.html）
 test-validation.js      独立验证套件（57 项）
 test-physics.js         单次仿真摘要
-docs/                   文献综述、优化报告、审计、复验、截图
-refs/                   本地参考 PDF/文本（McCoy 2012、Cilliers 2021）
-verify/                 独立验证脚本与结果
 ```
 
 ## 文献与验证
 
-- 文献综述（58 条，含 DOI/URL 与参数推荐表）：[docs/literature-review.md](docs/literature-review.md)
-- 优化与验证报告：[docs/report.md](docs/report.md)
-- 原模型审计：[docs/physics-audit.md](docs/physics-audit.md)
-- 独立复验：**P0=0 / P1=0 / P2=0**（P3=24 为记录/工程细节），详见 [docs/final-verification.md](docs/final-verification.md)；界面截图见 [docs/screenshots](docs/screenshots/)
-- 关键文献：McCoy R L, *Modern Exterior Ballistics*, 2nd ed., 2012（6-DOF、附录 B/C 气动系数、例 9.2、表 9.5–9.7）；Gurney BRL Report 405 (1943)；Mott & Linfoot (1943, Springer 2006 重印)；ISO 2533:1975 / GB/T 45846-2025；李昆等 (2023, 78 J 判据)；Orłowski 等 (2024, 120mm 迫弹破碎试验)。
+- 关键文献：McCoy R L, *Modern Exterior Ballistics*, 2nd ed., 2012（6-DOF、附录 B/C 气动系数、例 9.2、表 9.5–9.7）；Gurney BRL Report 405 (1943)；Mott & Linfoot (1943, Springer 2006 重印)；ISO 2533:1975 / GB/T 45846-2025；李昆等 (2023, 78 J 判据)；Orłowski 等 (2024, 120mm 迫弹破碎试验)。完整题录见页面"模型与文献"面板。
+- 验证状态：`node test-validation.js` 58 项全部通过 —— McCoy 表 9.7 六组（120mm 迫弹，射程偏差 ≤1.7%）、例 9.2 四组（105mm M1 内核，射程偏差 ≤4.7%）、ISA 大气、步长收敛、风/科氏方向性、破片质量守恒与可复现性、性能（单次仿真 < 400 ms）。
 
 ## 说明
 
 本模型用于教学演示、模型对比与趋势分析，**不用于射表编制或实弹射击诸元计算**。
-120mm 迫弹的装药/壳体/破片统计与旋转弹气动系数为工程估算或同类换算，已在页面"模型与文献"面板和报告中标注。
+120mm 迫弹的装药/壳体/破片统计与旋转弹气动系数为工程估算或同类换算，已在页面"模型与文献"面板中标注。

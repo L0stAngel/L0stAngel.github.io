@@ -36,6 +36,12 @@
   var smoke = [];
   var fragGroups = [[], [], [], [], [], [], [], [], [], [], [], []];
   var tmp = { x: 0, y: 0, z: 0 };
+  /* 破片头配色：弹头区（前向锥）偏白热，弹底区（后向锥）偏橙红；列 = 飞行时段 */
+  var ZONE_COLORS = [
+    ['#fffdf4', '#fff4cf', '#ffe6a6', '#ffcf74'],
+    ['#fff6d8', '#ffe08a', '#ffb43a', '#ff8a3d'],
+    ['#ffe1bd', '#ffb37a', '#ff7a45', '#e8502a']
+  ];
 
   /* ---------------------- 弹体三维模型（旋转体网格） ---------------------- */
   /* [距弹尖轴向距离 m, 半径 m, 材质 0=引信 1=弹体 2=弹带] */
@@ -142,12 +148,19 @@
     var i = clamp(Math.floor(f), 0, n - 2);
     var u = clamp(f - i, 0, 1);
     var a = s[i], b = s[i + 1];
+    var wxI = a.wx + (b.wx - a.wx) * u;
+    // 采样间隔 10 ms 对高速自转（周期可低至 ~5 ms）欠采样，采样四元数的滚转相位
+    // 混叠；按插值角速度绕弹轴重建连续滚转（弹轴方向仍取采样值，不受影响）
+    var hp = wxI * Math.max(0, t - a.t) * 0.5;
+    var c = Math.cos(hp), sn = Math.sin(hp);
+    var qw = a.quat[0], qx = a.quat[1], qy = a.quat[2], qz = a.quat[3];
     return {
       x: a.x + (b.x - a.x) * u,
       y: a.y + (b.y - a.y) * u,
       z: a.z + (b.z - a.z) * u,
       speed: a.speed + (b.speed - a.speed) * u,
-      quat: a.quat
+      wx: wxI,
+      quat: [qw * c - qx * sn, qw * sn + qx * c, qy * c + qz * sn, qz * c - qy * sn]
     };
   }
 
@@ -582,12 +595,7 @@
       ctx.restore();
     }
 
-    // 破片头：弹头区（前向锥）偏白热，弹底区（后向锥）偏橙红
-    var ZONE_COLORS = [
-      ['#fffdf4', '#fff4cf', '#ffe6a6', '#ffcf74'],
-      ['#fff6d8', '#ffe08a', '#ffb43a', '#ff8a3d'],
-      ['#ffe1bd', '#ffb37a', '#ff7a45', '#e8502a']
-    ];
+    // 破片头：弹头区偏白热，弹底区偏橙红（配色见模块级 ZONE_COLORS）
     ctx.save();
     ctx.globalCompositeOperation = 'lighter';
     for (var z = 0; z < 3; z++) {
@@ -882,7 +890,8 @@
       scale, project, [camX, camY, camZ], LIGHT_DIR);
   }
 
-  /* 弹体姿态小窗：风轴系正交投影，清楚展示三维外形与攻角 */
+  /* 弹体姿态小窗：风轴系正交投影，清楚展示三维外形与攻角；
+   * 虚线为相对空气速度方向（α/β 基准），图内标注 α=攻角、β=侧滑角及符号约定 */
   var INSET_AX = 0.30, INSET_EL = 0.34, INSET_S = 124;
   var ipOut = { x: 0, y: 0, ok: true };
 
@@ -894,9 +903,12 @@
     var n = sim.samples.length;
     var smp = sim.samples[clamp(Math.floor(time / sim.sampleDt), 0, n - 2)];
 
-    // 风轴系：ex = 速度方向，ez = 世界上方向正交分量，ey = ez × ex
-    var vl = Math.sqrt(smp.vx * smp.vx + smp.vy * smp.vy + smp.vz * smp.vz) || 1;
-    var exx = smp.vx / vl, exy = smp.vy / vl, exz = smp.vz / vl;
+    // 风轴系：ex = 相对空气速度方向（与 α/β 定义同基准），ez = 世界上方向正交分量，ey = ez × ex
+    var rvx = smp.rvx != null ? smp.rvx : smp.vx;
+    var rvy = smp.rvy != null ? smp.rvy : smp.vy;
+    var rvz = smp.rvz != null ? smp.rvz : smp.vz;
+    var vl = Math.sqrt(rvx * rvx + rvy * rvy + rvz * rvz) || 1;
+    var exx = rvx / vl, exy = rvy / vl, exz = rvz / vl;
     var dd = exy;
     var ezx = -exx * dd, ezy = 1 - exy * dd, ezz = -exz * dd;
     var el = Math.sqrt(ezx * ezx + ezy * ezy + ezz * ezz);
@@ -916,9 +928,9 @@
       ]);
     }
 
-    var pw = Math.max(196, Math.min(238, W * 0.26)), ph = 154;
+    var pw = Math.max(196, Math.min(238, W * 0.26)), ph = 172;
     var px = W - pw - 14, py = H - ph - 14;
-    var cx = px + pw * 0.60, cy = py + ph * 0.52;
+    var cx = px + pw * 0.57, cy = py + ph * 0.52;
     var ca = Math.cos(INSET_AX), sa = Math.sin(INSET_AX);
     var cb = Math.cos(INSET_EL), sb = Math.sin(INSET_EL);
 
@@ -955,12 +967,13 @@
     ctx.fillText('弹体姿态  BODY ATTITUDE', px + 10, py + 16);
     ctx.textAlign = 'right';
     ctx.fillStyle = 'rgba(120,150,160,0.8)';
-    ctx.fillText('V ' + sh.speed.toFixed(0) + ' · ω ' + (sh.wx || 0).toFixed(0), px + pw - 10, py + 16);
+    ctx.fillText('V ' + sh.speed.toFixed(0) + ' · ω ' + sh.wx.toFixed(0), px + pw - 10, py + 16);
 
-    // 速度参考线（沿 +x 风轴）
-    var v0 = insetProj(-0.40, 0, 0), v0x = v0.x, v0y = v0.y;
-    var v1 = insetProj(0.34, 0, 0), v1x = v1.x, v1y = v1.y;
-    ctx.strokeStyle = 'rgba(70,211,230,0.28)';
+    // 速度参考虚线（沿 +x 风轴，穿过弹轴中心）：两端伸出到弹体之外，
+    // 中段被弹体网格遮挡（后绘制、不透明），避免与弹体重叠处看不清
+    var v0 = insetProj(-0.68, 0, 0), v0x = v0.x, v0y = v0.y;
+    var v1 = insetProj(0.44, 0, 0), v1x = v1.x, v1y = v1.y;
+    ctx.strokeStyle = 'rgba(70,211,230,0.55)';
     ctx.lineWidth = 1;
     ctx.setLineDash([3, 4]);
     ctx.beginPath();
@@ -973,9 +986,9 @@
     drawMeshBody({ c: [0, 0, 0], e1: ex[0], e2: ex[1], e3: ex[2] },
       1, insetProj, camP, [-0.42, -0.48, 0.77]);
 
-    // 弹头前方速度箭头
-    var a0 = insetProj(0.36, 0, 0), a0x = a0.x, a0y = a0.y;
-    var a1 = insetProj(0.62, 0, 0), a1x = a1.x, a1y = a1.y;
+    // 弹头前方速度箭头（与虚线同向，指明相对气流来向的行进方向）
+    var a0 = insetProj(0.47, 0, 0), a0x = a0.x, a0y = a0.y;
+    var a1 = insetProj(0.63, 0, 0), a1x = a1.x, a1y = a1.y;
     ctx.strokeStyle = 'rgba(120,240,255,0.85)';
     ctx.beginPath();
     ctx.moveTo(a0x, a0y);
@@ -991,6 +1004,13 @@
     ctx.closePath();
     ctx.fillStyle = 'rgba(140,245,255,0.95)';
     ctx.fill();
+
+    // α/β 定义标注（符号约定与物理内核一致：虚线 = 相对空气速度方向）
+    ctx.font = '9px "JetBrains Mono", Consolas, "Microsoft YaHei", monospace';
+    ctx.textAlign = 'left';
+    ctx.fillStyle = 'rgba(110,140,152,0.85)';
+    ctx.fillText('虚线 = 相对空气速度方向（α/β 基准）', px + 10, py + ph - 31);
+    ctx.fillText('攻角 α+ 弹轴上抬 · 侧滑 β+ 弹轴右偏', px + 10, py + ph - 20);
 
     // 底部读数
     ctx.font = '9px "JetBrains Mono", Consolas, monospace';
@@ -1059,7 +1079,7 @@
     }
     ctx.restore();
 
-    // 三维弹体模型：按视距放大，保持约 58px 的可辨识尺寸
+    // 三维弹体模型：按视距放大，保持弹长约 84px 的可辨识尺寸
     var dxc = sh.x - camX, dyc = sh.y - camY, dzc = sh.z - camZ;
     var cdist = Math.sqrt(dxc * dxc + dyc * dyc + dzc * dzc);
     var meshScale = 84 * cdist / (SHELL_LEN * focal);
@@ -1334,6 +1354,7 @@
     setCameraMode: setCameraMode,
     render: render,
     resize: resize,
+    getCameraMode: function () { return camMode; },
     getCamera: function () {
       return {
         camX: camX, camY: camY, camZ: camZ,

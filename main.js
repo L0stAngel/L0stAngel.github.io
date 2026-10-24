@@ -80,6 +80,7 @@
     playing = autoplay !== false;
 
     if (window.Scene3D && Scene3D.setData) Scene3D.setData(sim);
+    syncCamButtons(window.Scene3D && Scene3D.getCameraMode ? Scene3D.getCameraMode() : 'follow');
     if (window.Charts) {
       el.charts.innerHTML = '';
       Charts.init(el.charts, sim);
@@ -387,11 +388,16 @@
   el.camControls.addEventListener('click', function (e) {
     var btn = e.target.closest('button');
     if (!btn) return;
-    Array.prototype.forEach.call(el.camControls.children, function (b) {
-      b.classList.toggle('active', b === btn);
-    });
+    syncCamButtons(btn.dataset.mode);
     if (window.Scene3D) Scene3D.setCameraMode(btn.dataset.mode);
   });
+
+  /* 相机按钮高亮与实际模式保持一致（重算后 setData 会切回跟随） */
+  function syncCamButtons(mode) {
+    Array.prototype.forEach.call(el.camControls.children, function (b) {
+      b.classList.toggle('active', b.dataset.mode === mode);
+    });
+  }
 
   function bindSlider(input, label, key, fmt, rebuild) {
     input.addEventListener('input', function () {

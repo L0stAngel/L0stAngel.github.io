@@ -85,6 +85,13 @@ check('逆风 → 射程减小', headWind.range < noWind.range - 500,
   noWind.range.toFixed(0) + ' → ' + headWind.range.toFixed(0) + ' m');
 check('顺风 → 射程增大', tailWind.range > noWind.range + 300,
   noWind.range.toFixed(0) + ' → ' + tailWind.range.toFixed(0) + ' m');
+// 样本应记录相对空气速度（姿态小窗风轴系/攻角显示基准）
+const wsmp = sideWind.samples[Math.floor(2.0 / sideWind.sampleDt)];
+const wfExp = Math.pow(Math.max(wsmp.y, 2) / 10, 0.143);
+check('样本相对风速与幂律风场一致（rvz = vz − w·(h/10)^1/7）',
+  wsmp.rvx !== undefined && Math.abs(wsmp.rvx - wsmp.vx) < 1e-9 &&
+  Math.abs(wsmp.rvz - (wsmp.vz - 10 * wfExp)) < 1e-9,
+  'rvz=' + wsmp.rvz.toFixed(2) + ' m/s @ h=' + wsmp.y.toFixed(1) + ' m');
 const north = B.simulate(Object.assign({}, baseCfg, { env: { latitude: 40, useCoriolis: true } }));
 const south = B.simulate(Object.assign({}, baseCfg, { env: { latitude: -40, useCoriolis: true } }));
 const equator = B.simulate(Object.assign({}, baseCfg, { env: { latitude: 0, useCoriolis: true } }));
