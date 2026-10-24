@@ -23,6 +23,8 @@
   var panX = 0, panY = 0, panZ = 0;
   var landCells = [];
 
+  var landVLo = 0, landVHi = 1, landVSpan = 1, landVValid = false;
+
   var camX = 0, camY = 0, camZ = 0;
   var fwX = 0, fwY = -1, fwZ = 0;
   var rtX = 1, rtY = 0, rtZ = 0;
@@ -42,6 +44,34 @@
     ['#fff6d8', '#ffe08a', '#ffb43a', '#ff8a3d'],
     ['#ffe1bd', '#ffb37a', '#ff7a45', '#e8502a']
   ];
+
+  /* 地面落点着速色标：低→高 蓝→青→绿→黄→红；落点着色与色条图例共用同一映射 */
+  var VEL_STOPS = [
+    [0.00, 47, 111, 208],
+    [0.25, 39, 199, 216],
+    [0.50, 111, 224, 122],
+    [0.75, 255, 210, 62],
+    [1.00, 255, 75, 46]
+  ];
+  var VEL_BINS = 24;
+  var VEL_BIN_COLORS = [];
+  var landBins = [];
+  for (var vb = 0; vb < VEL_BINS; vb++) landBins.push([]);
+
+  function velColor(t) {
+    t = clamp(t, 0, 1);
+    for (var i = 1; i < VEL_STOPS.length; i++) {
+      if (t <= VEL_STOPS[i][0]) {
+        var a = VEL_STOPS[i - 1], b = VEL_STOPS[i];
+        var u = clamp((t - a[0]) / (b[0] - a[0]), 0, 1);
+        return 'rgb(' + Math.round(lerp(a[1], b[1], u)) + ',' +
+          Math.round(lerp(a[2], b[2], u)) + ',' +
+          Math.round(lerp(a[3], b[3], u)) + ')';
+      }
+    }
+    return 'rgb(255,75,46)';
+  }
+  for (vb = 0; vb < VEL_BINS; vb++) VEL_BIN_COLORS.push(velColor((vb + 0.5) / VEL_BINS));
 
   /* ---------------------- 弹体三维模型（旋转体网格） ---------------------- */
   /* [距弹尖轴向距离 m, 半径 m, 材质 0=引信 1=弹体 2=弹带] */
@@ -142,7 +172,7 @@
   /* 相机                                                               */
   /* ------------------------------------------------------------------ */
   function shellState(t) {
-    if (!sim) return null;
+    if (!sim || sim.samples.length < 2) return null;
     var s = sim.samples, n = s.length;
     var f = t / sim.sampleDt;
     var i = clamp(Math.floor(f), 0, n - 2);
@@ -160,6 +190,14 @@
       z: a.z + (b.z - a.z) * u,
       speed: a.speed + (b.speed - a.speed) * u,
       wx: wxI,
+      // 相对风速 / 攻角 / 侧滑 / 马赫按同一时刻插值，保证姿态小窗的
+      // 虚线基准（风轴系）、α/β 读数与显示的弹体姿态严格一致
+      rvx: a.rvx + (b.rvx - a.rvx) * u,
+      rvy: a.rvy + (b.rvy - a.rvy) * u,
+      rvz: a.rvz + (b.rvz - a.rvz) * u,
+      alpha: a.alpha + (b.alpha - a.alpha) * u,
+      beta: a.beta + (b.beta - a.beta) * u,
+      mach: a.mach + (b.mach - a.mach) * u,
       quat: [qw * c - qx * sn, qw * sn + qx * c, qy * c + qz * sn, qz * c - qy * sn]
     };
   }
@@ -172,18 +210,24 @@
     if (camMode === 'follow') {
       if (t < ft) {
         var sh = shellState(t);
+        // 远距取构图偏移（弹体略高于画面中心）；近距（滚轮放大检视）时
+        // 偏移按当前视距收敛到 0，目标收敛到弹体本身，保证真实尺寸弹体居中
+        var kF = clamp((camS.dist - 60) / 2000, 0, 1);
         return {
           yaw: -0.62, pitch: 0.30,
           dist: 1900 + sh.speed * 4.2,
-          tx: sh.x, ty: sh.y * 0.92 + 50, tz: sh.z
+          tx: sh.x,
+          ty: sh.y + (50 - sh.y * 0.08) * kF,
+          tz: sh.z
         };
       }
       var tau = t - b.t;
       var k = clamp(tau / 2.5, 0, 1);
+      var kB = clamp((camS.dist - 60) / 2000, 0, 1);
       return {
         yaw: -0.62, pitch: lerp(0.30, 0.40, k),
         dist: lerp(1850, 2700, k),
-        tx: b.x, ty: b.y + 30 + 150 * k, tz: b.z
+        tx: b.x, ty: b.y + (30 + 150 * k) * kB, tz: b.z
       };
     }
 
@@ -369,17 +413,19 @@
     var ox = -180, oz = -210;
     var ex = ox + wx / mag * scale, ez = oz + wz / mag * scale;
     var a = project(ox, 1, oz);
+    if (!a.ok) return;
+    var ax = a.x, ay = a.y;   // project() 返回共享缓冲，先取出再投第二次
     var b = project(ex, 1, ez);
-    if (!a.ok || !b.ok) return;
+    if (!b.ok) return;
     ctx.save();
     ctx.globalCompositeOperation = 'lighter';
     ctx.strokeStyle = 'rgba(110, 205, 255, 0.72)';
     ctx.lineWidth = 1.8;
     ctx.beginPath();
-    ctx.moveTo(a.x, a.y);
+    ctx.moveTo(ax, ay);
     ctx.lineTo(b.x, b.y);
     ctx.stroke();
-    var vx = b.x - a.x, vy = b.y - a.y;
+    var vx = b.x - ax, vy = b.y - ay;
     var vl = Math.sqrt(vx * vx + vy * vy) || 1;
     var nx = -vy / vl, ny = vx / vl;
     ctx.beginPath();
@@ -391,7 +437,7 @@
     ctx.fill();
     ctx.font = '9px "JetBrains Mono", Consolas, monospace';
     ctx.fillStyle = 'rgba(150, 220, 240, 0.8)';
-    ctx.fillText('W ' + mag.toFixed(0) + ' m/s', a.x + 8, a.y - 6);
+    ctx.fillText('W ' + mag.toFixed(0) + ' m/s', ax + 8, ay - 6);
     ctx.restore();
   }
 
@@ -499,7 +545,7 @@
     var i = Math.floor(idxF);
     if (i < 0) i = 0;
     if (i >= n - 1) {
-      out[0] = f.landX; out[1] = f.landed ? 0 : f.path[f.path.length - 1];
+      out[0] = f.landX; out[1] = f.landed ? 0 : f.path[f.path.length - 2];
       out[2] = f.landZ;
       return false;
     }
@@ -619,23 +665,85 @@
     }
     ctx.restore();
 
-    // 落点
-    ctx.save();
-    ctx.globalCompositeOperation = 'lighter';
-    ctx.beginPath();
+    // 落点：按着速 landV 分档着色（蓝→青→绿→黄→红，对应关系见左下角色条）
+    for (k = 0; k < VEL_BINS; k++) landBins[k].length = 0;
     for (i = 0; i < n; i++) {
       f = list[i];
       if (!f.landed) continue;
       if (ft < f.landT - sim.boom.t) continue;
-      p = project(f.landX, 0.8, f.landZ);
-      if (!p.ok) continue;
-      var r2 = 1.15 + Math.min(2.0, (f.m / 0.028) * 1.0);
-      ctx.moveTo(p.x + r2, p.y);
-      ctx.arc(p.x, p.y, r2, 0, Math.PI * 2);
+      var bi = ((f.landV - landVLo) / landVSpan * VEL_BINS) | 0;
+      if (bi < 0) bi = 0;
+      else if (bi >= VEL_BINS) bi = VEL_BINS - 1;
+      landBins[bi].push(f);
     }
-    ctx.globalAlpha = 0.88;
-    ctx.fillStyle = '#ff5a3c';
-    ctx.fill();
+    ctx.save();
+    ctx.globalAlpha = 0.92;
+    for (k = 0; k < VEL_BINS; k++) {
+      var bin = landBins[k];
+      if (!bin.length) continue;
+      ctx.beginPath();
+      for (i = 0; i < bin.length; i++) {
+        f = bin[i];
+        p = project(f.landX, 0.8, f.landZ);
+        if (!p.ok) continue;
+        var r2 = 1.15 + Math.min(2.0, (f.m / 0.028) * 1.0);
+        ctx.moveTo(p.x + r2, p.y);
+        ctx.arc(p.x, p.y, r2, 0, Math.PI * 2);
+      }
+      ctx.fillStyle = VEL_BIN_COLORS[k];
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  /* 着速色条图例：与落点着色共用 VEL_STOPS 映射，起爆后淡入 */
+  function drawVelLegend() {
+    if (!sim || !landVValid) return;
+    var tau = time - sim.boom.t;
+    if (tau < 0 || W < 560 || H < 420) return;
+    var a = clamp(tau / 0.6, 0, 1);
+
+    var x = 26;
+    var bw = Math.min(230, W * 0.32);
+    var bh = 9;
+    var y0 = H - 66;   // 位于左下角静态图例（bottom:24px）上方
+    if (y0 < 120) return;
+
+    ctx.save();
+    ctx.globalAlpha = a;
+    ctx.font = '9px "JetBrains Mono", Consolas, "Microsoft YaHei", monospace';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'alphabetic';
+    ctx.fillStyle = 'rgba(140,175,188,0.95)';
+    ctx.fillText('破片着速 IMPACT SPEED (m/s)', x, y0 - 6);
+
+    var g = ctx.createLinearGradient(x, 0, x + bw, 0);
+    for (var i = 0; i < VEL_STOPS.length; i++) {
+      g.addColorStop(VEL_STOPS[i][0],
+        'rgb(' + VEL_STOPS[i][1] + ',' + VEL_STOPS[i][2] + ',' + VEL_STOPS[i][3] + ')');
+    }
+    ctx.fillStyle = g;
+    ctx.fillRect(x, y0, bw, bh);
+    ctx.strokeStyle = 'rgba(90,200,220,0.35)';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(x + 0.5, y0 + 0.5, bw - 1, bh - 1);
+
+    // 两端与中部刻度
+    ctx.beginPath();
+    ctx.moveTo(x + 0.5, y0 + bh);
+    ctx.lineTo(x + 0.5, y0 + bh + 3);
+    ctx.moveTo(x + bw / 2, y0 + bh);
+    ctx.lineTo(x + bw / 2, y0 + bh + 3);
+    ctx.moveTo(x + bw - 0.5, y0 + bh);
+    ctx.lineTo(x + bw - 0.5, y0 + bh + 3);
+    ctx.strokeStyle = 'rgba(120,160,175,0.5)';
+    ctx.stroke();
+    ctx.fillStyle = 'rgba(150,180,190,0.9)';
+    ctx.fillText(landVLo.toFixed(0), x, y0 + bh + 12);
+    ctx.textAlign = 'center';
+    ctx.fillText(((landVLo + landVHi) * 0.5).toFixed(0), x + bw / 2, y0 + bh + 12);
+    ctx.textAlign = 'right';
+    ctx.fillText(landVHi.toFixed(0), x + bw, y0 + bh + 12);
     ctx.restore();
   }
 
@@ -900,13 +1008,9 @@
     var sh = shellState(time);
     if (!sh || !sh.quat) return;
 
-    var n = sim.samples.length;
-    var smp = sim.samples[clamp(Math.floor(time / sim.sampleDt), 0, n - 2)];
-
-    // 风轴系：ex = 相对空气速度方向（与 α/β 定义同基准），ez = 世界上方向正交分量，ey = ez × ex
-    var rvx = smp.rvx != null ? smp.rvx : smp.vx;
-    var rvy = smp.rvy != null ? smp.rvy : smp.vy;
-    var rvz = smp.rvz != null ? smp.rvz : smp.vz;
+    // 风轴系：ex = 相对空气速度方向（与 α/β 定义同基准），ez = 世界上方向正交分量，ey = ez × ex。
+    // rv 与姿态（含滚转重建）取自同一插值时刻，虚线基准、读数、网格三者一致
+    var rvx = sh.rvx, rvy = sh.rvy, rvz = sh.rvz;
     var vl = Math.sqrt(rvx * rvx + rvy * rvy + rvz * rvz) || 1;
     var exx = rvx / vl, exy = rvy / vl, exz = rvz / vl;
     var dd = exy;
@@ -1012,14 +1116,14 @@
     ctx.fillText('虚线 = 相对空气速度方向（α/β 基准）', px + 10, py + ph - 31);
     ctx.fillText('攻角 α+ 弹轴上抬 · 侧滑 β+ 弹轴右偏', px + 10, py + ph - 20);
 
-    // 底部读数
+    // 底部读数（与显示姿态同一插值时刻）
     ctx.font = '9px "JetBrains Mono", Consolas, monospace';
     ctx.textAlign = 'left';
     ctx.fillStyle = 'rgba(140,170,180,0.85)';
-    ctx.fillText('α ' + smp.alpha.toFixed(2) + '°  β ' + smp.beta.toFixed(2) + '°', px + 10, py + ph - 10);
+    ctx.fillText('α ' + sh.alpha.toFixed(2) + '°  β ' + sh.beta.toFixed(2) + '°', px + 10, py + ph - 10);
     ctx.textAlign = 'right';
     ctx.fillStyle = 'rgba(255,190,120,0.9)';
-    ctx.fillText('Ma ' + smp.mach.toFixed(2), px + pw - 10, py + ph - 10);
+    ctx.fillText('Ma ' + sh.mach.toFixed(2), px + pw - 10, py + ph - 10);
 
     ctx.restore();
   }
@@ -1079,12 +1183,13 @@
     }
     ctx.restore();
 
-    // 三维弹体模型：按视距放大，保持弹长约 84px 的可辨识尺寸
+    // 三维弹体模型：始终按真实尺寸绘制（scale = 1，弹长 0.70 m），
+    // 滚轮拉近/拉远时严格按透视比例缩放。视距过远时投影弹长不足
+    // ~2.5 px，跳过网格填充（保留位置光点与姿态轴指示），避免逐帧
+    // 绘制数百个亚像素面片。
     var dxc = sh.x - camX, dyc = sh.y - camY, dzc = sh.z - camZ;
     var cdist = Math.sqrt(dxc * dxc + dyc * dyc + dzc * dzc);
-    var meshScale = 84 * cdist / (SHELL_LEN * focal);
-    if (meshScale < 1) meshScale = 1;
-    drawShellMesh(sh, meshScale);
+    if (SHELL_LEN * focal / Math.max(cdist, NEAR) >= 2.5) drawShellMesh(sh, 1);
 
     // 姿态轴（弹轴方向，放大显示）
     var qd = sh.quat;
@@ -1175,6 +1280,7 @@
     drawExplosion();
     drawShell();
     drawVignette();
+    drawVelLegend();
     drawBodyInset();
   }
 
@@ -1206,6 +1312,27 @@
         }
         cell.n++;
       }
+
+      // 着速色标范围（落点分档着色与色条图例共用；取整到 10 m/s 便于读数）
+      landVLo = Infinity; landVHi = -Infinity;
+      for (q = 0; q < fl.length; q++) {
+        if (!fl[q].landed) continue;
+        var lv = fl[q].landV;
+        if (lv < landVLo) landVLo = lv;
+        if (lv > landVHi) landVHi = lv;
+      }
+      if (isFinite(landVLo) && landVHi > landVLo) {
+        landVLo = Math.floor(landVLo / 10) * 10;
+        landVHi = Math.ceil(landVHi / 10) * 10;
+        landVValid = true;
+      } else {
+        landVLo = 0; landVHi = 1;
+        landVValid = false;
+      }
+      landVSpan = landVHi - landVLo;
+    } else {
+      landVLo = 0; landVHi = 1; landVSpan = 1;
+      landVValid = false;
     }
 
     // 烟云种子
@@ -1323,8 +1450,9 @@
     canvas.addEventListener('wheel', function (e) {
       e.preventDefault();
       userControl = true;
-      var f = Math.exp(e.deltaY * 0.0011);
-      cam.dist = clamp(camS.dist * f, 120, sim ? sim.range * 5 + 2000 : 60000);
+      // 弹体现为真实尺寸，近距下限放宽到 5 m（约 150 px 弹长）便于检视
+      var f = Math.exp(e.deltaY * 0.0016);
+      cam.dist = clamp(camS.dist * f, 5, sim ? sim.range * 5 + 2000 : 60000);
       // 立即同步，避免渐进拖沓
       camS.dist = cam.dist;
       e.stopPropagation();

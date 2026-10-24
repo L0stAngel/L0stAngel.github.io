@@ -370,8 +370,8 @@
 
     var alpha = 0, beta = 0, alphaT = 0, sinAt = 0;
     if (ub > 0.15 * V) {
-      alpha = Math.atan2(-vb, ub);   // 正攻角 = 弹轴抬高于相对风速
-      beta = Math.atan2(-wb, ub);    // 正偏航角 = 弹轴偏向相对风速右侧
+      alpha = Math.atan2(-vb, ub);   // 弹体系分解（随滚转旋转，仅供气动力/力矩定向）
+      beta = Math.atan2(-wb, ub);    // 对外报告的滚转无关 α/β 见 deriveKinematics
       alphaT = Math.sqrt(alpha * alpha + beta * beta);
       sinAt = Math.sqrt(vb * vb + wb * wb) / V;
     }
@@ -540,22 +540,37 @@
     }
     var V2 = rvx * rvx + rvy * rvy + rvz * rvz;
     var V = Math.sqrt(V2) + 1e-9;
-    var ub = R00 * rvx + R10 * rvy + R20 * rvz;
-    var vb = R01 * rvx + R11 * rvy + R21 * rvz;
-    var wb = R02 * rvx + R12 * rvy + R22 * rvz;
 
     var atm = atmosphere(y[1], CUR.dT, ATMO_KIN);
     var mach = V / atm.a;
     var qd = 0.5 * atm.rho * V2;
 
-    var alpha = 0, beta = 0;
-    if (ub > 0.15 * V) {
-      alpha = Math.atan2(-vb, ub);
-      beta = Math.atan2(-wb, ub);
-    }
-
     // 弹轴方向（世界系）
     var ax = R00, ay = R10, az = R20;
+
+    // 攻角/侧滑角 —— 风轴系、滚转无关定义（与姿态小窗虚线/箭头基准一致）：
+    //   ex = 相对空气速度方向，ez = 世界向上在 ⊥ex 平面内的分量，ey = ez×ex
+    //   α = atan2(n̂·ez, n̂·ex)  → α+ = 弹轴抬高于相对速度方向
+    //   β = atan2(−n̂·ey, n̂·ex) → β+ = 弹轴偏向相对速度右侧
+    // 旧定义（弹体系 vb/wb 分解，见 deriv）随自转滚转混叠：旋转弹读数
+    // 符号按滚转相位随机翻转，与姿态画面和符号约定不符；气动合力计算
+    // 不受影响（deriv 内按 (vb,wb) 定方向本身是滚转不变的）。
+    var exu0 = rvx / V, exu1 = rvy / V, exu2 = rvz / V;
+    var ddu = exu1;
+    var wz_x = -exu0 * ddu, wz_y = 1 - exu1 * ddu, wz_z = -exu2 * ddu;
+    var wzl = Math.sqrt(wz_x * wz_x + wz_y * wz_y + wz_z * wz_z);
+    var alphaK = 0, betaK = 0;
+    if (wzl > 1e-6) {
+      wz_x /= wzl; wz_y /= wzl; wz_z /= wzl;
+      var wy_x = wz_y * exu2 - wz_z * exu1;
+      var wy_y = wz_z * exu0 - wz_x * exu2;
+      var wy_z = wz_x * exu1 - wz_y * exu0;
+      var ndx = ax * exu0 + ay * exu1 + az * exu2;
+      var ndy = ax * wy_x + ay * wy_y + az * wy_z;
+      var ndz = ax * wz_x + ay * wz_y + az * wz_z;
+      alphaK = Math.atan2(ndz, ndx);
+      betaK = Math.atan2(-ndy, ndx);
+    }
 
     var speedGround = Math.sqrt(vx * vx + vy * vy + vz * vz);
     s.t = s.t != null ? s.t : 0;
@@ -564,9 +579,9 @@
     s.rvx = rvx; s.rvy = rvy; s.rvz = rvz;   // 相对空气速度（攻角基准，供 UI 风轴系使用）
     s.speed = speedGround;
     s.mach = mach;
-    s.alpha = alpha * RAD2DEG;
-    s.beta = beta * RAD2DEG;
-    s.alphaT = Math.sqrt(alpha * alpha + beta * beta) * RAD2DEG;
+    s.alpha = alphaK * RAD2DEG;
+    s.beta = betaK * RAD2DEG;
+    s.alphaT = Math.sqrt(alphaK * alphaK + betaK * betaK) * RAD2DEG;
     s.theta = Math.atan2(vy, Math.sqrt(vx * vx + vz * vz)) * RAD2DEG; // 弹道倾角
     s.pitch = Math.asin(Math.max(-1, Math.min(1, ay))) * RAD2DEG;      // 弹轴俯仰
     s.yaw = Math.atan2(-az, ax) * RAD2DEG;
@@ -687,7 +702,6 @@
       var boom = null;
       var apex = { t: 0, x: 0, alt: 0 };
       var apexFound = false;
-      var prevY = y[1];
       var trigger = hBoom > 0.5 ? hBoom : 0;
       var iter = 0;
       var MAX_ITER = Math.ceil(maxT / dt);
@@ -1041,7 +1055,11 @@
         vz += dt / 6 * (a1z + 2 * a2z + 2 * a3z + a4z);
         tt += dt;
 
-        if (py <= 0 && pyPrev > 0) {
+        // 落地判定：常规为自上方穿越地面（pyPrev > 0）。触地爆时部分破片
+        // 起始位置在地平面以下（|wallR| 量级）且速度向下，原条件会让它们
+        // 永不触发落地、白跑满 60 s 并被计为未落地 —— 补充分支：位于地面
+        // 以下且垂直速度非正时立即落地（向上飞的仍正常升空后回落）。
+        if (py <= 0 && (pyPrev > 0 || vy <= 0)) {
           var ff = pyPrev / (pyPrev - py + 1e-12);
           ff = ff < 0 ? 0 : (ff > 1 ? 1 : ff);
           landX = pxPrev + (px - pxPrev) * ff;

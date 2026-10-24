@@ -70,6 +70,31 @@ check('更快缠距 → 更高自转/稳定因子', fastTwist.spin0 > base.spin0
   '1:15 Sg=' + fastTwist.Sg0.toFixed(2) + '  1:18 Sg=' + base.Sg0.toFixed(2) + '  1:21 Sg=' + slowTwist.Sg0.toFixed(2));
 check('更快缠距 → 更大偏流', fastTwist.drift > base.drift && base.drift > slowTwist.drift,
   fastTwist.drift.toFixed(0) + ' / ' + base.drift.toFixed(0) + ' / ' + slowTwist.drift.toFixed(0) + ' m');
+// 姿态一致性回归：报告的 α/β 必须与四元数姿态、风轴系基准严格对应（滚转无关）。
+// 旧弹体系定义随 ~200 rev/s 自转按滚转相位混叠，旋转弹读数与姿态画面矛盾。
+let attErr = 0, attN = 0;
+for (let k = 10; k < base.samples.length; k += 5) {
+  const s2 = base.samples[k];
+  const m = B.quatToMatrix(s2.quat);
+  const nx = m[0][0], ny = m[1][0], nz = m[2][0];          // 弹轴（世界系）
+  const vl = Math.hypot(s2.rvx, s2.rvy, s2.rvz);
+  const ex = [s2.rvx / vl, s2.rvy / vl, s2.rvz / vl];
+  const dd = ex[1];
+  let ez = [-ex[0] * dd, 1 - ex[1] * dd, -ex[2] * dd];
+  const el = Math.hypot(ez[0], ez[1], ez[2]);
+  if (el < 1e-6) continue;
+  ez = ez.map(v => v / el);
+  const ey = [ez[1] * ex[2] - ez[2] * ex[1], ez[2] * ex[0] - ez[0] * ex[2], ez[0] * ex[1] - ez[1] * ex[0]];
+  const ndx = nx * ex[0] + ny * ex[1] + nz * ex[2];
+  const ndy = nx * ey[0] + ny * ey[1] + nz * ey[2];
+  const ndz = nx * ez[0] + ny * ez[1] + nz * ez[2];
+  const aC = Math.atan2(ndz, ndx) * 180 / Math.PI;
+  const bC = Math.atan2(-ndy, ndx) * 180 / Math.PI;
+  attN++;
+  if (Math.abs(aC - s2.alpha) > 1e-6 || Math.abs(bC - s2.beta) > 1e-6) attErr++;
+}
+check('α/β 与姿态四元数一致（风轴系、滚转无关）', attN > 100 && attErr === 0,
+  attN + ' 样本，不一致 ' + attErr);
 
 /* --------------------- 4. 风 / 科氏力 / 温度方向性 --------------------- */
 console.log('\n[4] 风场 / 科氏力 / 温度 / 方向性');
@@ -138,6 +163,19 @@ check('相同随机种子 → 破片结果可复现', simA.fragments.r90 === sim
 const simC = B.simulate({ v0: 450, angle: 45, hBoom: 12, fragCount: 400, seed: 778 });
 check('不同随机种子 → 破片抽样不同', simA.fragments.r90 !== simC.fragments.r90,
   simA.fragments.r90.toFixed(1) + ' vs ' + simC.fragments.r90.toFixed(1) + ' m');
+// 触地爆回归：破片起始位置在地平面 ±wallR 内，出生在地下且向下者必须立即落地
+const gb = B.simulate({ v0: 450, angle: 45, hBoom: 0, fragCount: 300 });
+let gbLo = Infinity, gbHi = -Infinity;
+for (const fg of gb.fragments.list) {
+  if (!fg.landed) continue;
+  if (fg.landV < gbLo) gbLo = fg.landV;
+  if (fg.landV > gbHi) gbHi = fg.landV;
+}
+check('触地爆（hBoom=0）全部破片落地', gb.fragments.unlanded === 0,
+  '落地 ' + gb.fragments.landedCount + '/' + gb.fragments.count);
+check('落地破片均带有效着速（渲染着速色标数据源）',
+  isFinite(gbLo) && gbHi > gbLo && gbLo > 0,
+  'landV ∈ [' + gbLo.toFixed(0) + ', ' + gbHi.toFixed(0) + '] m/s');
 
 /* ------------------- 6. McCoy 105mm HE M1 6-DOF 对照 ------------------- */
 console.log('\n[6] 与 McCoy《Modern Exterior Ballistics》105mm HE M1 6-DOF 数据对照');
