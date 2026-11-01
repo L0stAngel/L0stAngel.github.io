@@ -970,7 +970,7 @@ input:focus-visible {
         <div class="stat"><span>最大高度</span><b class="mono" id="stat-alt">—</b></div>
         <div class="stat"><span>最大马赫</span><b class="mono" id="stat-mach">—</b></div>
         <div class="stat"><span>侧偏</span><b class="mono" id="stat-drift">—</b></div>
-        <div class="stat"><span>落点速度</span><b class="mono" id="stat-vimp">—</b></div>
+        <div class="stat"><span id="stat-vimp-label">落点速度</span><b class="mono" id="stat-vimp">—</b></div>
         <div class="stat"><span>破片 R90</span><b class="mono" id="stat-r90">—</b></div>
       </div>
     </aside>
@@ -1080,14 +1080,14 @@ input:focus-visible {
         <div class="model-col">
           <h4>1 · 弹型预设</h4>
           <ul>
-            <li><b>A · 120mm 迫弹（默认）</b>：尾翼稳定、全程不旋转。质量/惯量取自 McCoy 表 9.5（M934/M930/M929 平均），气动系数取自 McCoy 附录 C（BRL 跨音速靶道自由飞试验）；v0=318 m/s、45° 对应 6-DOF 射程 7315 m。</li>
+            <li><b>A · 120mm 迫弹（默认）</b>：尾翼稳定、全程不旋转。质量/惯量取自 McCoy 表 9.5（M934/M930/M929 平均），气动系数取自 McCoy 附录 C（BRL 跨音速靶道自由飞试验）；v0=318 m/s、45° 对应 6-DOF 地面射程约 7310 m（文献基准 7315 m）。</li>
             <li><b>B · 120mm 旋转稳定杀爆弹代表弹</b>：线膛炮发射，自转由缠距换算（默认 1:18）；气动系数按 McCoy 附录 B 的 105mm HE M1 同类弹换算（<i>估算值</i>），内核以 105mm M1 参数完成验证。</li>
             <li>破片质量分布/初速由 Gurney + Mott 模型给出；装药与壳体质量为工程估算（公开数据缺失），页面已标注。</li>
           </ul>
 
           <h4>2 · 六自由度刚体外弹道</h4>
           <ul>
-            <li>状态量：位置、速度、四元数姿态、弹体系角速度（15 维，含科氏力侧偏累积量）；RK4 积分，步长按自转自适应（≤0.5 ms）。</li>
+            <li>状态量：位置、速度、四元数姿态、弹体系角速度（15 维，含科氏力侧偏累积量）；RK4 积分，步长按初始角速度自适应（≤0.5 ms）。</li>
             <li>弹体动力学：欧拉方程 <span class="mono">I·ω̇ + ω×(Iω) = M</span>；四元数归一化避免欧拉奇异。</li>
             <li>气动角按<b>相对风速</b>计算；风场通过相对速度进入气动力与力矩。</li>
             <li>事件：下降段穿越空炸高度 / 触地，线性插值得到起爆点状态；给出 Sg、偏流、风偏、科氏偏移等诊断量。</li>
@@ -1105,7 +1105,7 @@ input:focus-visible {
 
           <h4>4 · 环境模型</h4>
           <ul>
-            <li>ISA 标准大气分层公式（0–11 / 11–20 / 20–32 km），支持海平面气温偏移（ISO 2533 / GB 1920）。</li>
+            <li>ISA 标准大气分层公式（0–11 / 11–20 / 20–32 km）。海平面气温偏移按密度灵敏度工程近似施加（气压仍取标准剖面），不是完整的高温/低温标准大气（ISO 2533 / GB 1920）。</li>
             <li>风场：横风/纵风 + 幂律高度剖面 <span class="mono">w(h)=w<sub>10</sub>(h/10)<sup>1/7</sup></span>。</li>
             <li>科氏力：<span class="mono">a = −2Ω×v</span>，按纬度与射向计算（40°N、7 km 射程量级 10–20 m）。</li>
             <li>重力随高度衰减 <span class="mono">g(h)=g₀(R/(R+h))²</span>；平面地球假设。</li>
@@ -1113,11 +1113,11 @@ input:focus-visible {
 
           <h4>5 · 动爆破片</h4>
           <ul>
-            <li>质量分布：Mott 分布 <span class="mono">N(&gt;m)=N₀e<sup>−√(m/μ)</sup></span>，平均质量 = 2μ，质量守恒归一。破片数为 Monte-Carlo 统计样本数（默认 800，可调 200–1600），由 Mott 分布描述总体，<b>不等同于该型号全部物理破片数</b>。</li>
+            <li>质量分布：Mott 分布 <span class="mono">N(&gt;m)=N₀e<sup>−√(m/μ)</sup></span>，未截断抽样的平均质量 = 2μ，再作分区、区间内截断条件抽样与质量守恒归一。破片数为<b>合成破片数量</b>（默认 800，可调 200–1600）：既决定统计分辨率，也通过 μ=壳体质量/(2N) 决定特征质量；并非该型号的实测破碎数。</li>
             <li>初速：Gurney 公式 <span class="mono">v<sub>G</sub>=√(2E·β/(1+β/2))</span>，β=C/M；端部折减 + 分区速度因子。</li>
             <li>动爆叠加：弹丸速度矢量 + 自转切向速度 <span class="mono">ω×r</span>；飞散角按弹头/圆柱/弹底三区截短正态。</li>
             <li>存速：变密度大气 + 马赫相关 C<sub>d</sub> + 体积<sup>2/3</sup> 迎风面积 + 风场相对速度（RK4，步长 5 ms；落地速度线性插值）。</li>
-            <li><b>统计口径</b>：R50/R90 为 50%/90% 已落地破片的水平落点半径（相对爆点地面投影），<b>不是杀伤半径</b>；有效破片按落地动能 &gt; 78 J（人员致伤阈值量级，中文出处：李昆等 2023；80 J 另见 Rettinger 2017）统计；随机抽样种子固定可复现。</li>
+            <li><b>统计口径</b>：R50/R90 为已落地破片水平落点半径（相对爆点地面投影）的线性经验 50%/90% 分位，<b>不是杀伤半径</b>；有效破片按落地动能 &gt; 78 J（人员致伤阈值量级，中文出处：李昆等 2023；80 J 另见 Rettinger 2017）统计；随机抽样种子固定可复现。</li>
           </ul>
         </div>
 
@@ -1126,15 +1126,15 @@ input:focus-visible {
           <table class="model-table">
             <thead><tr><th>v0 / QE</th><th>飞行时间 / s</th><th>射程 / m</th><th>最大高度 / m</th></tr></thead>
             <tbody>
-              <tr><td>102 / 45°</td><td>14.6 → <b>14.6</b></td><td>1010 → <b>1008</b></td><td>260 → <b>259</b></td></tr>
-              <tr><td>102 / 65°</td><td>18.6 → <b>18.6</b></td><td>770 → <b>765</b></td><td>420 → <b>423</b></td></tr>
-              <tr><td>102 / 85°</td><td>20.5 → <b>20.5</b></td><td>165 → <b>162</b></td><td>510 → <b>508</b></td></tr>
+              <tr><td>102 / 45°</td><td>14.6 → <b>14.5</b></td><td>1010 → <b>997</b></td><td>260 → <b>257</b></td></tr>
+              <tr><td>102 / 65°</td><td>18.6 → <b>18.5</b></td><td>770 → <b>755</b></td><td>420 → <b>419</b></td></tr>
+              <tr><td>102 / 85°</td><td>20.5 → <b>20.4</b></td><td>165 → <b>158</b></td><td>510 → <b>503</b></td></tr>
               <tr><td>318 / 45°</td><td>41.4 → <b>41.4</b></td><td>7315 → <b>7310</b></td><td>2100 → <b>2100</b></td></tr>
               <tr><td>318 / 65°</td><td>52.6 → <b>52.5</b></td><td>5570 → <b>5572</b></td><td>3380 → <b>3378</b></td></tr>
               <tr><td>318 / 85°</td><td>57.7 → <b>57.7</b></td><td>1275 → <b>1274</b></td><td>4070 → <b>4067</b></td></tr>
             </tbody>
           </table>
-          <p class="panel-note">全部工况偏差 ≤1.7%；85° 高射角弹道顶点攻角（装药 0 约 50°、装药 4 约 13°）与 McCoy 原文（47° / 13°）一致。</p>
+          <p class="panel-note">时间与高度偏差 ≤1.3%；射程最大偏差 4.4%，出现在 102 m/s、85° 的低动压高抛极端工况，其余射程偏差 ≤2.0%。85° 弹道顶点最大攻角约 52°（装药 0）/13°（装药 4），与 McCoy 的 47°/13° 量级一致。</p>
 
           <h4>7 · 验证 B：105mm M1 旋转弹内核（McCoy 例 9.2）</h4>
           <table class="model-table">
@@ -1154,7 +1154,7 @@ input:focus-visible {
             <li>120mm 迫弹气动数据止于 Ma 0.95（实弹 v0≤318 m/s）；提高初速属外推。旋转弹气动系数由 105mm M1 同类换算，非 120mm 实测。</li>
             <li>未计气动不对称、动不平衡、引信延时与炸高散布；空炸高度为标称值。</li>
             <li>破片为自然破片统计模型（装药/壳体/飞散角为工程设定），未计壳体结构强度细节；杀伤仅用动能阈值，未计目标易损性。</li>
-            <li>平面地球 + 常值重力 + 可选科氏力；不含地球曲率、离心力与地形。</li>
+            <li>平面地球 + 随高度衰减的重力 + 可选科氏力；不含地球曲率、离心力与地形。</li>
             <li><b>本模型用于教学演示与趋势分析，不用于射表编制或实弹射击诸元计算。</b></li>
           </ul>
 
@@ -1495,16 +1495,25 @@ input:focus-visible {
   function setEnv(env) {
     env = env || {};
     var e = {
-      tempC: env.tempC != null ? env.tempC : ENV_DEFAULT.tempC,
-      latitude: env.latitude != null ? env.latitude : ENV_DEFAULT.latitude,
-      azimuth: env.azimuth != null ? env.azimuth : ENV_DEFAULT.azimuth,
-      windCross: env.windCross != null ? env.windCross : ENV_DEFAULT.windCross,
-      windHead: env.windHead != null ? env.windHead : ENV_DEFAULT.windHead,
-      windRefH: env.windRefH != null ? env.windRefH : ENV_DEFAULT.windRefH,
-      windPower: env.windPower != null ? env.windPower : ENV_DEFAULT.windPower,
+      tempC: Number(env.tempC != null ? env.tempC : ENV_DEFAULT.tempC),
+      latitude: Number(env.latitude != null ? env.latitude : ENV_DEFAULT.latitude),
+      azimuth: Number(env.azimuth != null ? env.azimuth : ENV_DEFAULT.azimuth),
+      windCross: Number(env.windCross != null ? env.windCross : ENV_DEFAULT.windCross),
+      windHead: Number(env.windHead != null ? env.windHead : ENV_DEFAULT.windHead),
+      windRefH: Number(env.windRefH != null ? env.windRefH : ENV_DEFAULT.windRefH),
+      windPower: Number(env.windPower != null ? env.windPower : ENV_DEFAULT.windPower),
       useCoriolis: env.useCoriolis !== false,
       useWind: env.useWind !== false
     };
+    if (!isFinite(e.tempC) || e.tempC <= -273.15) throw new RangeError('海平面气温必须高于绝对零度');
+    if (216.65 + (e.tempC - 15) <= 0) throw new RangeError('温度偏移使高层大气温度非正，超出模型适用范围');
+    if (!isFinite(e.latitude) || Math.abs(e.latitude) > 90) throw new RangeError('纬度必须在 −90°–90° 之间');
+    if (!isFinite(e.azimuth)) throw new RangeError('射向方位角必须为有限值');
+    if (!isFinite(e.windCross) || !isFinite(e.windHead)) throw new RangeError('风速必须为有限值');
+    if (!isFinite(e.windRefH) || e.windRefH <= 0) throw new RangeError('风速参考高度必须为有限正值');
+    if (!isFinite(e.windPower) || e.windPower < 0 || e.windPower > 1) {
+      throw new RangeError('风剖面指数必须在 0–1 之间');
+    }
     CUR.dT = e.tempC - 15;
     CUR.useWind = e.useWind;
     CUR.useCoriolis = e.useCoriolis;
@@ -1559,12 +1568,14 @@ input:focus-visible {
     var qd = 0.5 * atm.rho * V2;
     var S = SHELL.S, d = SHELL.D;
 
-    var alpha = 0, beta = 0, alphaT = 0, sinAt = 0;
-    if (ub > 0.15 * V) {
-      alpha = Math.atan2(-vb, ub);   // 弹体系分解（随滚转旋转，仅供气动力/力矩定向）
-      beta = Math.atan2(-wb, ub);    // 对外报告的滚转无关 α/β 见 deriveKinematics
-      alphaT = Math.sqrt(alpha * alpha + beta * beta);
-      sinAt = Math.sqrt(vb * vb + wb * wb) / V;
+    // 横流分量与精确总攻角。不能用 √(α²+β²) 近似，也不能在弹轴
+    // 接近垂直来流时突然关闭气动力，否则大攻角段会出现非物理的力跃变。
+    var vtrans = Math.sqrt(vb * vb + wb * wb);
+    var sinAt = V > 1e-12 ? vtrans / V : 0;
+    var dirY = 0, dirZ = 0;
+    if (vtrans > 1e-12) {
+      dirY = -vb / vtrans;
+      dirZ = -wb / vtrans;
     }
     var sa2 = sinAt * sinAt;
 
@@ -1578,10 +1589,10 @@ input:focus-visible {
 
     var Fx = -qd * S * Cd;
     var Fy = 0, Fz = 0;
-    if (sinAt > 1e-9) {
-      var invSin = 1 / (V * sinAt);
-      Fy = qd * S * CN * (-vb) * invSin;
-      Fz = qd * S * CN * (-wb) * invSin;
+    if (vtrans > 1e-12) {
+      var FN = qd * S * CN;
+      Fy = FN * dirY;
+      Fz = FN * dirZ;
     }
 
     // 角速度相关力矩基准：M = (q·S·d²/V)·C·ω（BRL 命名法）
@@ -1589,11 +1600,11 @@ input:focus-visible {
     var pdV = wx * d / V;
 
     // Magnus 力（量级小，默认关闭；仅旋转弹表存在时生效）
-    if (AERO_C.useMagnusForce && TAB.CNp && alphaT > 1e-9) {
+    if (AERO_C.useMagnusForce && TAB.CNp && vtrans > 1e-9) {
       var cnp = interpTab(TAB.CNp, mach);
       var magF = qd * S * pdV * cnp * sinAt;
-      Fy += magF * (beta / alphaT);
-      Fz += magF * (alpha / alphaT);
+      Fy += magF * dirZ;
+      Fz += magF * dirY;
     }
 
     // ---- 翻转力矩（静力矩；CMa>0 为静不稳定，由自转陀螺稳定）----
@@ -1602,9 +1613,9 @@ input:focus-visible {
     var CM = (cma0 + cma2 * sa2) * sinAt;
     var Ms = qd * S * d * CM;
     var My = 0, Mz = 0;
-    if (alphaT > 1e-12) {                 // 攻角为零时静力矩为零，避免 0/0
-      My = -Ms * (beta / alphaT);
-      Mz = Ms * (alpha / alphaT);
+    if (vtrans > 1e-12) {                 // 攻角为零时静力矩为零，避免 0/0
+      My = -Ms * dirZ;
+      Mz = Ms * dirY;
     }
 
     // ---- 俯仰阻尼、滚转阻尼（BRL 归一，含攻角非线性项）----
@@ -1616,12 +1627,12 @@ input:focus-visible {
     Mz += base * cmq * wz;
 
     // ---- Magnus 力矩（旋转弹产生偏流/极限环偏航；尾翼弹表不存在则跳过）----
-    if (AERO_C.useMagnusMoment && TAB.CMp && alphaT > 1e-9) {
+    if (AERO_C.useMagnusMoment && TAB.CMp && vtrans > 1e-9) {
       var cmp = interpTab(TAB.CMp, mach);
       var Mm = base * wx * cmp * sinAt;
-      // 方向垂直于攻角平面：(0, β, -α)（右旋弹 p>0 时产生向右偏流）
-      My += Mm * (beta / alphaT);
-      Mz -= Mm * (alpha / alphaT);
+      // 方向垂直于攻角平面（右旋弹 p>0 时产生向右偏流）
+      My += Mm * dirZ;
+      Mz -= Mm * dirY;
     }
 
     // ---- 合力转到地面系 ----
@@ -1750,13 +1761,14 @@ input:focus-visible {
     var ddu = exu1;
     var wz_x = -exu0 * ddu, wz_y = 1 - exu1 * ddu, wz_z = -exu2 * ddu;
     var wzl = Math.sqrt(wz_x * wz_x + wz_y * wz_y + wz_z * wz_z);
+    var ndx = ax * exu0 + ay * exu1 + az * exu2;
     var alphaK = 0, betaK = 0;
+    var alphaTK = V2 > 1e-18 ? Math.acos(Math.max(-1, Math.min(1, ndx))) : 0;
     if (wzl > 1e-6) {
       wz_x /= wzl; wz_y /= wzl; wz_z /= wzl;
       var wy_x = wz_y * exu2 - wz_z * exu1;
       var wy_y = wz_z * exu0 - wz_x * exu2;
       var wy_z = wz_x * exu1 - wz_y * exu0;
-      var ndx = ax * exu0 + ay * exu1 + az * exu2;
       var ndy = ax * wy_x + ay * wy_y + az * wy_z;
       var ndz = ax * wz_x + ay * wz_y + az * wz_z;
       alphaK = Math.atan2(ndz, ndx);
@@ -1772,7 +1784,7 @@ input:focus-visible {
     s.mach = mach;
     s.alpha = alphaK * RAD2DEG;
     s.beta = betaK * RAD2DEG;
-    s.alphaT = Math.sqrt(alphaK * alphaK + betaK * betaK) * RAD2DEG;
+    s.alphaT = alphaTK * RAD2DEG;   // 精确总攻角，避免 √(α²+β²) 的大角误差
     s.theta = Math.atan2(vy, Math.sqrt(vx * vx + vz * vz)) * RAD2DEG; // 弹道倾角
     s.pitch = Math.asin(Math.max(-1, Math.min(1, ay))) * RAD2DEG;      // 弹轴俯仰
     s.yaw = Math.atan2(-az, ax) * RAD2DEG;
@@ -1786,6 +1798,10 @@ input:focus-visible {
     s.coriolisDrift = y[13];
     s.aeroDrift = y[2] - y[13];
     s.sg = stabilityFactor(y[10], qd, mach);
+    // 当前马赫数下的零升静稳定裕度（cal），供尾翼弹 HUD 随时间更新。
+    var cnaNow = interpTab(TAB.CNa0, mach);
+    var cmaNow = interpTab(TAB.CMa0, mach);
+    s.staticMargin = -cmaNow / Math.max(Math.abs(cnaNow), 1e-9);
     return s;
   }
 
@@ -1839,34 +1855,67 @@ input:focus-visible {
    *   yaw0      炮口偏航角 deg       (默认取预设 defaults.yaw0)
    *   wy0/wz0   炮口横向角速度 rad/s (默认取预设 defaults.wy0/wz0)
    *   env       环境参数（见 ENV_DEFAULT）
-   *   dt        积分步长 s           (默认按自转自适应，≤0.5 ms)
-   *   sampleDt  采样间隔 s           (默认 0.01)
-   *   maxTime   最大仿真时间 s       (默认 140)
-   *   fragCount 破片数              (默认 800)
+   *   dt        积分步长 s           (默认按初始角速度自适应，≤0.5 ms；只能加密，不能超过稳定上限)
+   *   sampleDt  采样间隔 s           (默认 0.01，且不小于实际积分步长)
+   *   maxTime   最大仿真时间 s       (默认 140；到期仅截断，不起爆)
+   *   fragCount 合成破片数           (默认 800，限制 50–2400 并取整数)
+   *   fragDt    破片积分步长 s       (默认 0.005，必须为正值且不超过 0.01)
    *   seed      随机种子（可选，可复现破片抽样）
    * ---------------------------------------------------------------------- */
   function simulate(cfg) {
     cfg = cfg || {};
     if (cfg.preset && PRESETS[cfg.preset] && cfg.preset !== PRESET_NAME) applyPreset(cfg.preset);
     var PD = PRESETS[PRESET_NAME].defaults;
-    var v0 = cfg.v0 != null ? cfg.v0 : PD.v0;
-    var ang = (cfg.angle != null ? cfg.angle : PD.angle) * DEG2RAD;
-    var hBoom = cfg.hBoom != null ? cfg.hBoom : 12;
-    var maxT = cfg.maxTime != null ? cfg.maxTime : 140;
-    var sampleDt = cfg.sampleDt != null ? cfg.sampleDt : 0.01;
+    var v0 = Number(cfg.v0 != null ? cfg.v0 : PD.v0);
+    var angleDeg = Number(cfg.angle != null ? cfg.angle : PD.angle);
+    var ang = angleDeg * DEG2RAD;
+    var hBoom = Number(cfg.hBoom != null ? cfg.hBoom : 12);
+    var maxT = Number(cfg.maxTime != null ? cfg.maxTime : 140);
+    var sampleDt = Number(cfg.sampleDt != null ? cfg.sampleDt : 0.01);
+    if (!isFinite(v0) || v0 <= 0) throw new RangeError('初速必须为有限正值');
+    if (!isFinite(angleDeg) || angleDeg <= 0 || angleDeg > 90) {
+      throw new RangeError('射角必须在 (0°, 90°] 之间');
+    }
+    if (!isFinite(hBoom) || hBoom < 0) throw new RangeError('空炸高度必须为非负有限值');
+    if (!isFinite(maxT) || maxT <= 0) throw new RangeError('最大仿真时间必须为有限正值');
+    if (!isFinite(sampleDt) || sampleDt <= 0) throw new RangeError('采样间隔必须为有限正值');
 
     var env = setEnv(cfg.env);
-    var twist = cfg.twist != null ? cfg.twist : SHELL.twist;
-    var spin = cfg.spin != null ? cfg.spin : spinFromTwist(v0, twist);
-    // 自适应积分步长：自转越快，姿态积分需要越小步长（默认 ≤0.5 ms）
-    var dt = cfg.dt != null ? cfg.dt
-      : Math.max(0.0001, Math.min(0.0005, 0.34 / Math.max(1, Math.abs(spin))));
-    var jump = (cfg.jump != null ? cfg.jump : PD.jump) * DEG2RAD;
-    var yaw0 = (cfg.yaw0 != null ? cfg.yaw0 : PD.yaw0) * DEG2RAD;
-    var wy0 = cfg.wy0 != null ? cfg.wy0 : PD.wy0;
-    var wz0 = cfg.wz0 != null ? cfg.wz0 : PD.wz0;
+    var twist = Number(cfg.twist != null ? cfg.twist : SHELL.twist);
+    if (!isFinite(twist) || twist < 0) throw new RangeError('缠距必须为非负有限值');
+    var spin = Number(cfg.spin != null ? cfg.spin : spinFromTwist(v0, twist));
+    if (!isFinite(spin)) throw new RangeError('自转速率必须为有限值');
 
-    var seed = cfg.seed != null ? cfg.seed : 2024;   // 默认固定种子，保证结果可复现
+    var jump = Number(cfg.jump != null ? cfg.jump : PD.jump) * DEG2RAD;
+    var yaw0 = Number(cfg.yaw0 != null ? cfg.yaw0 : PD.yaw0) * DEG2RAD;
+    var wy0 = Number(cfg.wy0 != null ? cfg.wy0 : PD.wy0);
+    var wz0 = Number(cfg.wz0 != null ? cfg.wz0 : PD.wz0);
+    if (!isFinite(jump) || !isFinite(yaw0) || !isFinite(wy0) || !isFinite(wz0)) {
+      throw new RangeError('炮口扰动参数必须为有限值');
+    }
+
+    // 初始角速度越快，姿态积分需要越小步长。显式 dt 只能进一步加密，
+    // 不能绕过稳定上限；否则 1 ms 步长足以让高转速弹失稳。
+    var rateMax = Math.max(1, Math.abs(spin), Math.abs(wy0), Math.abs(wz0));
+    var dtLimit = Math.min(0.0005, 0.34 / rateMax);
+    var dtRequested = Number(cfg.dt != null ? cfg.dt : dtLimit);
+    if (!isFinite(dtRequested) || dtRequested <= 0) {
+      throw new RangeError('积分步长必须为有限正值');
+    }
+    var dt = Math.min(dtRequested, dtLimit);
+    // 采样点按 sampleDt 等间隔索引，实际输出间隔不能小于积分步长。
+    sampleDt = Math.max(sampleDt, dt);
+
+    var fragCount = Number(cfg.fragCount != null ? cfg.fragCount : PD.fragCount);
+    if (!isFinite(fragCount)) throw new RangeError('破片数量必须为有限数值');
+    fragCount = Math.max(50, Math.min(2400, Math.floor(fragCount)));
+
+    var seed = 2024;   // 默认固定种子，保证结果可复现
+    if (cfg.seed != null) {
+      var seedNum = Number(cfg.seed);
+      if (!isFinite(seedNum)) throw new RangeError('随机种子必须为有限数值');
+      seed = (seedNum >>> 0) || 1;
+    }
     var oldRng = RNG;
     RNG = makeLCG(seed);
     try {
@@ -1893,45 +1942,66 @@ input:focus-visible {
       var boom = null;
       var apex = { t: 0, x: 0, alt: 0 };
       var apexFound = false;
-      var trigger = hBoom > 0.5 ? hBoom : 0;
+      var trigger = hBoom > 0 ? hBoom : 0;
       var iter = 0;
       var MAX_ITER = Math.ceil(maxT / dt);
+      if (MAX_ITER > 10000000) {
+        throw new RangeError('积分步长过小或最大仿真时间过长，积分步数超出安全上限');
+      }
       var fuzeReached = false;
+      var terminationReason = 'maxTime';
+      var yPrev = new Float64Array(NS);
 
       while (iter++ < MAX_ITER) {
-        var oldY = y[1];
-        var oldX = y[0], oldZ = y[2];
+        for (var pi = 0; pi < NS; pi++) yPrev[pi] = y[pi];
+        var oldY = yPrev[1];
+        var oldX = yPrev[0], oldZ = yPrev[2];
+        var h = Math.min(dt, maxT - t);
+        if (!(h > 0)) break;
+        rk4(y, h);
+        t += h;
 
-        rk4(y, dt);
-        t += dt;
-
-        // 顶点（第一次 vy 由正变负；记录本步起点状态，更接近 vy=0 时刻）
-        if (!apexFound && y[4] < 0 && oldY >= 0) {
+        // 顶点：对 vy=0 做事件插值，而不是直接取整步起点
+        if (!apexFound && yPrev[4] > 0 && y[4] <= 0) {
+          var af = yPrev[4] / (yPrev[4] - y[4] + 1e-12);
+          af = Math.max(0, Math.min(1, af));
+          var axp = oldX + (y[0] - oldX) * af;
+          var azp = oldZ + (y[2] - oldZ) * af;
           apexFound = true;
-          apex = { t: t - dt, x: oldX, alt: oldY, range: Math.sqrt(oldX * oldX + oldZ * oldZ) };
+          apex = {
+            t: t - h + h * af,
+            x: axp,
+            alt: oldY + (y[1] - oldY) * af,
+            range: Math.sqrt(axp * axp + azp * azp)
+          };
         }
 
         var descending = y[4] < 0;
-        // 若弹道顶点低于设定炸高，引信不会在设定高度起爆 → 按触地处理
-        var trig = trigger;
-        if (oldY <= trig) trig = 0;
-        if (descending && oldY > trig && y[1] <= trig && t > 0.2) {
+        // 下降段分别判断空炸高度面和地面；顶点低于炸高时自然只触地。
+        var eventY = null;
+        if (descending) {
+          if (trigger > 0 && oldY > trigger && y[1] <= trigger) eventY = trigger;
+          else if (oldY > 0 && y[1] <= 0) eventY = 0;
+        }
+        if (eventY !== null) {
           // 线性插值到触发面
-          var frac = (oldY - trig) / (oldY - y[1] + 1e-12);
+          var frac = (oldY - eventY) / (oldY - y[1] + 1e-12);
           frac = Math.max(0, Math.min(1, frac));
 
           var tmp = new Float64Array(NS);
-          for (var kk = 0; kk < NS; kk++) tmp[kk] = y[kk];
-          tmp[0] = oldX + (y[0] - oldX) * frac;
-          tmp[1] = trig;
-          tmp[2] = oldZ + (y[2] - oldZ) * frac;
-          // 速度/姿态/角速度按 frac 线性插值（与旧值相比此处直接取新步值亦可，
-          // 但用 k1..k4 的加权更准；frac 很小时差异可忽略）
-          var stk = deriveKinematics(tmp, { t: t - dt + dt * frac });
+          // 位置、速度、姿态、角速度和诊断量必须插值到同一事件时刻；
+          // 只插值位置会让破片继承整步末端的速度与滚转相位。
+          for (var kk = 0; kk < NS; kk++) tmp[kk] = yPrev[kk] + (y[kk] - yPrev[kk]) * frac;
+          tmp[1] = eventY;
+          var qn = Math.sqrt(tmp[6] * tmp[6] + tmp[7] * tmp[7] + tmp[8] * tmp[8] + tmp[9] * tmp[9]);
+          if (qn > 0) {
+            tmp[6] /= qn; tmp[7] /= qn; tmp[8] /= qn; tmp[9] /= qn;
+          }
+          var stk = deriveKinematics(tmp, { t: t - h + h * frac });
 
           boom = {
-            t: t - dt + dt * frac,
-            x: tmp[0], y: trig, z: tmp[2],
+            t: t - h + h * frac,
+            x: tmp[0], y: eventY, z: tmp[2],
             speed: Math.sqrt(tmp[3] * tmp[3] + tmp[4] * tmp[4] + tmp[5] * tmp[5]),
             vx: tmp[3], vy: tmp[4], vz: tmp[5],
             quat: [tmp[6], tmp[7], tmp[8], tmp[9]],
@@ -1940,11 +2010,14 @@ input:focus-visible {
             theta: stk.theta,
             mach: stk.mach,
             spin: tmp[10],
+            wy: tmp[11],
+            wz: tmp[12],
             qdyn: stk.qdyn,
             coriolisDrift: tmp[13],
-            impact: trig < 0.5
+            impact: !(eventY > 0)
           };
           fuzeReached = true;
+          terminationReason = eventY > 0 ? 'airburst' : 'impact';
           break;
         }
 
@@ -1955,10 +2028,16 @@ input:focus-visible {
           nextSample += sampleDt;
         }
 
-        if (!isFinite(y[0]) || y[1] < -2) break;
+        if (!isFinite(y[0]) || y[1] < -2) {
+          terminationReason = 'integrationError';
+          break;
+        }
       }
 
-      // 未正常触发：若设定炸高高于弹道顶点，则按触地处理
+      // maxTime 仅截断弹道，不能把空中末状态伪装成触地起爆。
+      if (!boom && terminationReason === 'integrationError') {
+        throw new Error('弹道积分异常终止，无法生成有效结果');
+      }
       if (!boom) {
         var stLast = { t: t };
         deriveKinematics(y, stLast);
@@ -1968,9 +2047,10 @@ input:focus-visible {
           vx: y[3], vy: y[4], vz: y[5],
           quat: [y[6], y[7], y[8], y[9]],
           alpha: stLast.alpha, beta: stLast.beta, theta: stLast.theta,
-          mach: stLast.mach, spin: y[10], qdyn: stLast.qdyn,
+          mach: stLast.mach, spin: y[10], wy: y[11], wz: y[12], qdyn: stLast.qdyn,
           coriolisDrift: y[13],
-          impact: true
+          impact: false,
+          truncated: true
         };
       }
 
@@ -1988,6 +2068,14 @@ input:focus-visible {
         if (Math.abs(s.z) > maxAbsZ) maxAbsZ = Math.abs(s.z);
         if (s.sg < sgMin) sgMin = s.sg;
       }
+      // 事件/截断状态不一定落在 10 ms 采样网格上，极值统计必须并入末状态。
+      if (apexFound && apex.alt > maxAlt) maxAlt = apex.alt;
+      if (boom.y > maxAlt) maxAlt = boom.y;
+      if (boom.speed > maxSpeed) maxSpeed = boom.speed;
+      if (boom.mach > maxMach) maxMach = boom.mach;
+      if (Math.abs(boom.alpha) > maxAlpha) maxAlpha = Math.abs(boom.alpha);
+      if (Math.abs(boom.beta) > maxBeta) maxBeta = Math.abs(boom.beta);
+      if (boom.qdyn > maxQ) maxQ = boom.qdyn;
 
       var range = Math.sqrt(boom.x * boom.x + boom.z * boom.z);
       var cnaM = interpTab(TAB.CNa0, samples[0].mach);
@@ -1997,7 +2085,7 @@ input:focus-visible {
         cfg: {
           v0: v0, angle: cfg.angle != null ? cfg.angle : PD.angle,
           hBoom: hBoom, twist: twist, spin: spin,
-          fragCount: cfg.fragCount != null ? cfg.fragCount : PD.fragCount,
+          fragCount: fragCount,
           preset: PRESET_NAME, seed: seed
         },
         preset: PRESET_NAME,
@@ -2011,9 +2099,14 @@ input:focus-visible {
         samples: samples,
         sampleDt: sampleDt,
         dt: dt,
+        dtRequested: dtRequested,
+        dtLimited: dt < dtRequested - 1e-15,
         boom: boom,
         apex: apex,
         fuzeReached: fuzeReached,
+        detonated: fuzeReached,
+        truncated: !fuzeReached,
+        terminationReason: terminationReason,
         flightTime: boom.t,
         range: range,
         maxAlt: maxAlt,
@@ -2026,7 +2119,7 @@ input:focus-visible {
         spinBurst: boom.spin,
         spinLoss: spin > 0 ? (spin - boom.spin) / spin : 0,
         Sg0: samples.length ? samples[0].sg : 0,
-        SgMin: isFinite(sgMin) ? sgMin : 0,
+        SgMin: sgMin,   // 无有限值时为 Infinity（静稳定），不能用 0 冒充失稳
         drift: boom.z,
         coriolisDrift: boom.coriolisDrift,
         aeroDrift: boom.z - boom.coriolisDrift,   // 总侧偏扣除科氏累积（气动/初始扰动偏流）
@@ -2038,7 +2131,9 @@ input:focus-visible {
         impactMach: boom.mach
       };
 
-      result.fragments = simulateFragments(result, cfg);
+      result.fragments = fuzeReached
+        ? simulateFragments(result, { fragCount: fragCount, fragDt: cfg.fragDt })
+        : emptyFragmentResult();
       return result;
     } finally {
       RNG = oldRng;
@@ -2046,9 +2141,9 @@ input:focus-visible {
   }
 
   /* ------------------------------ 破片仿真 --------------------------------
-   * 说明：fragCount 为 Monte-Carlo 统计样本数（默认 800，可调 200–1600），
-   * 由 Mott 分布描述总体质量分布，质量按壳体金属质量守恒归一；
-   * 它不是特定型号的全部物理破片数。
+   * 说明：fragCount 为合成破片数量 N（默认 800，可调 200–1600），
+   * 同时决定统计分辨率与 Mott 特征质量 μ=壳体质量/(2N)；
+   * 抽样后作分区、截断和壳体金属质量守恒归一，不代表实测破碎数。
    * 1) 质量分布 —— Mott 分布：N(>m) = N0·exp(-√(m/μ))，平均质量 = 2μ
    *    逆 CDF 采样：m = μ·[ln(1/(1-u))]²
    * 2) 初速 —— Gurney 公式：v_G = √(2E·β/(1+β/2))，β = C/M
@@ -2093,29 +2188,58 @@ input:focus-visible {
     var sp = Math.sqrt(rvx * rvx + rvy * rvy + rvz * rvz) + 1e-9;
     var atm = atmosphere(py, CUR.dT, ATMO_FRAG);
     var kd = 0.5 * atm.rho * fragCd(sp / atm.a) * Aref / mass;
+    var rr = R_EARTH + py;
+    var g = G0 * R_EARTH * R_EARTH / (rr * rr);
     out[0] = -kd * sp * rvx;
-    out[1] = -kd * sp * rvy - G0;
+    out[1] = -kd * sp * rvy - g;
     out[2] = -kd * sp * rvz;
     return out;
   }
 
+  function empiricalQuantile(sorted, p) {
+    if (!sorted.length) return 0;
+    var pos = (sorted.length - 1) * p;
+    var lo = Math.floor(pos), hi = Math.ceil(pos);
+    return sorted[lo] + (sorted[hi] - sorted[lo]) * (pos - lo);
+  }
+
+  function emptyFragmentResult() {
+    return {
+      list: [], vGurney: 0, count: 0, landedCount: 0,
+      maxRadius: 0, r50: 0, r90: 0, avgLandV: 0, totalEnergy: 0,
+      killCount: 0, effectiveCount: 0, mu: 0, meanMass: 0, maxMass: 0,
+      massSum: 0, zoneCount: [0, 0, 0], forwardMax: 0, backMin: 0,
+      lateralMax: 0, duration: 0, unlanded: 0, spin: 0,
+      dt: 0, pathDt: 0
+    };
+  }
+
   function simulateFragments(sim, cfg) {
-    var N = Math.max(50, Math.min(2400, (cfg && cfg.fragCount) || 800));
+    var nReq = Number(cfg && cfg.fragCount != null ? cfg.fragCount : 800);
+    if (!isFinite(nReq)) throw new RangeError('破片数量必须为有限数值');
+    var N = Math.max(50, Math.min(2400, Math.floor(nReq)));
     var boom = sim.boom;
     var R = quatToMatrix(boom.quat);
 
     // Gurney 初速
     var betaG = SHELL.charge / SHELL.casing;
-    var vG = Math.sqrt(SHELL.gurney2E * betaG / (1 + betaG / 2)); // ≈1254 m/s
+    var vG = Math.sqrt(SHELL.gurney2E * betaG / (1 + betaG / 2));
 
     // Mott 特征质量：μ = 平均质量 / 2
     var meanM = SHELL.casing / N;
     var mu = meanM / 2;
 
-    var dt = (cfg && cfg.fragDt) ? cfg.fragDt : 0.005;  // 破片弹道 RK4 步长
-    var sampleDt = 0.02;
+    var dtReq = Number(cfg && cfg.fragDt != null ? cfg.fragDt : 0.005);
+    if (!isFinite(dtReq) || dtReq <= 0) throw new RangeError('破片积分步长必须为有限正值');
+    var dt = Math.min(dtReq, 0.01);                    // 破片弹道 RK4 步长上限 10 ms
+    var pathDt = dt * Math.max(1, Math.ceil(0.02 / dt - 1e-12));
     var maxFlight = 60;
+    var steps = Math.ceil(maxFlight / dt);
+    if (steps * N > 60000000) {
+      throw new RangeError('破片数量与积分步长组合的计算量超出安全上限');
+    }
     var pSpin = boom.spin || 0;
+    var pYaw = boom.wy || 0, pPitch = boom.wz || 0;
 
     var i, k, s;
 
@@ -2132,8 +2256,14 @@ input:focus-visible {
         if (zr <= acc) { zi = k; break; }
       }
       var zone = FRAG_ZONES[zi];
-      var m = sampleMottMass(mu) * zone.mf;
-      m = Math.max(meanM * 0.05, Math.min(meanM * 8, m));
+      // 质量上下限采用截断条件抽样，避免把整段低/高质量尾部压成
+      // 同一质量的人为尖峰（旧代码约 27% 样本堆在最小质量上）。
+      var mLo = meanM * 0.05, mHi = meanM * 8;
+      var m = 0, mTries = 0;
+      do {
+        m = sampleMottMass(mu) * zone.mf;
+      } while ((m < mLo || m > mHi) && ++mTries < 64);
+      if (m < mLo || m > mHi) m = mLo + (mHi - mLo) * rnd();
       masses[i] = m;
       zones[i] = zi;
       // 轴向位置 u ∈ [-1,1]，正方向指向弹头
@@ -2181,10 +2311,10 @@ input:focus-visible {
       var pz0 = SHELL.wallR * dl2;
       var bx0 = uAx; // 简化为轴线位置，径向偏置在 y/z
 
-      // 自转切向速度 v = ω × r（ω ≈ p·x1）
-      var vtx = 0;
-      var vty = -pSpin * pz0;
-      var vtz = pSpin * py0;
+      // 刚体转动速度 v = ω × r（含自转及横向摆动角速度）
+      var vtx = pYaw * pz0 - pPitch * py0;
+      var vty = pPitch * bx0 - pSpin * pz0;
+      var vtz = pSpin * py0 - pYaw * bx0;
 
       // 弹体系速度 = 径向飞散 + 切向自转速度
       var vbx = dl0 * vRel + vtx;
@@ -2205,7 +2335,8 @@ input:focus-visible {
       var py = boom.y + R[1][1] * py0 + R[1][2] * pz0 + R[1][0] * bx0;
       var pz = boom.z + R[2][1] * py0 + R[2][2] * pz0 + R[2][0] * bx0;
 
-      var v0f = Math.sqrt(dxw * dxw + dyw * dyw + dzw * dzw);
+      // v0 为地面系总初速；相对爆点的飞散速度另由 dxw/dyw/dzw 描述
+      var v0f = Math.sqrt(vx * vx + vy * vy + vz * vz);
 
       // 迎风面积 ~ m^(2/3)，不规则形状因子 1.45
       var Aref = Math.pow(mass / SHELL.fragDensity, 2 / 3) * 1.45;
@@ -2216,11 +2347,10 @@ input:focus-visible {
       var landed = false;
       var landX = 0, landZ = 0, landV = 0, landT = 0;
 
-      var steps = Math.floor(maxFlight / dt);
       for (s = 0; s < steps; s++) {
-        if (tt >= nextS) {
+        if (tt + 1e-12 >= nextS) {
           path.push(px, py, pz);
-          nextS += sampleDt;
+          nextS += pathDt;
         }
         var pxPrev = px, pyPrev = py, pzPrev = pz;
         var vxPrev = vx, vyPrev = vy, vzPrev = vz;
@@ -2280,8 +2410,10 @@ input:focus-visible {
       if (landed) {
         totalEnergy += energy;
         landedCount++;
-        if (energy > 78) killCount++;     // 78 J 人员致伤阈值量级
-        if (landV > 100) effectiveCount++;
+        if (energy > 78) {
+          killCount++;                    // 78 J 人员致伤阈值量级
+          effectiveCount++;               // 与页面声明的“有效破片”口径一致
+        }
         if (radius > maxRadius) maxRadius = radius;
         if (ddx > forwardMax) forwardMax = ddx;
         if (ddx < backMin) backMin = ddx;
@@ -2293,7 +2425,7 @@ input:focus-visible {
         v0: v0f,
         zone: zones[i],
         path: path,
-        pathDt: sampleDt,
+        pathDt: pathDt,
         landed: landed,
         landX: landX,
         landZ: landZ,
@@ -2312,8 +2444,9 @@ input:focus-visible {
       if (lt > maxLandT) maxLandT = lt;
     }
     var rs = landedFrags.map(function (f) { return f.radius; }).sort(function (a, b) { return a - b; });
-    var r50 = rs[Math.floor(rs.length * 0.5)] || 0;
-    var r90 = rs[Math.floor(rs.length * 0.9)] || 0;
+    // 线性经验分位；floor(n·p) 会系统性偏向更大的半径。
+    var r50 = empiricalQuantile(rs, 0.5);
+    var r90 = empiricalQuantile(rs, 0.9);
     var avgLandV = landedFrags.length
       ? landedFrags.reduce(function (a, f) { return a + f.landV; }, 0) / landedFrags.length : 0;
     var maxFragM = 0, meanFragM = 0, massSum = 0;
@@ -2346,7 +2479,9 @@ input:focus-visible {
       lateralMax: lateralMax,
       duration: maxLandT,
       unlanded: N - landedCount,
-      spin: pSpin
+      spin: pSpin,
+      dt: dt,
+      pathDt: pathDt
     };
   }
 
@@ -3137,7 +3272,7 @@ input:focus-visible {
 
   /* ------------------------------ 爆炸 ------------------------------ */
   function drawExplosion() {
-    if (!sim) return;
+    if (!sim || sim.detonated === false) return;
     var tau = time - sim.boom.t;
     if (tau < 0) return;
     var b = sim.boom;
@@ -4430,7 +4565,8 @@ input:focus-visible {
     rngV0: $('rng-v0'), rngAngle: $('rng-angle'), rngBoom: $('rng-boom'), rngWind: $('rng-wind'),
     valV0: $('val-v0'), valAngle: $('val-angle'), valBoom: $('val-boom'), valWind: $('val-wind'),
     statRange: $('stat-range'), statAlt: $('stat-alt'), statMach: $('stat-mach'),
-    statDrift: $('stat-drift'), statVimp: $('stat-vimp'), statR90: $('stat-r90'),
+    statDrift: $('stat-drift'), statVimp: $('stat-vimp'), statVimpLabel: $('stat-vimp-label'),
+    statR90: $('stat-r90'),
     fragModel: $('frag-model'),
     windChip: $('wind-chip'),
     overlay: $('overlay'), panelEnv: $('panel-env'), panelModel: $('panel-model'),
@@ -4539,7 +4675,7 @@ input:focus-visible {
     if (!sim) return;
     if (force) lastHud = {};
 
-    var after = simTime >= sim.boom.t;
+    var after = sim.detonated !== false && simTime >= sim.boom.t;
     var st = after
       ? sampleAt(Math.max(0, sim.boom.t - 0.004))
       : sampleAt(Math.min(simTime, sim.flightTime));
@@ -4556,7 +4692,7 @@ input:focus-visible {
     if (sim.spinStabilized) {
       setText(el.hudSg, 'sg', (isFinite(st.sg) ? st.sg.toFixed(2) : '—'));
     } else {
-      setText(el.hudSg, 'sg', sim.staticMargin.toFixed(2));
+      setText(el.hudSg, 'sg', (st && isFinite(st.staticMargin) ? st.staticMargin : sim.staticMargin).toFixed(2));
     }
   }
 
@@ -4566,8 +4702,9 @@ input:focus-visible {
     el.statAlt.textContent = sim.maxAlt.toFixed(0) + ' m';
     el.statMach.textContent = sim.maxMach.toFixed(2);
     el.statDrift.textContent = (sim.drift >= 0 ? '+' : '') + sim.drift.toFixed(1) + ' m';
-    el.statVimp.textContent = sim.impactSpeed.toFixed(0) + ' m/s';
-    el.statR90.textContent = sim.fragments.r90.toFixed(0) + ' m';
+    el.statVimpLabel.textContent = sim.detonated === false ? '截断速度' : (sim.boom.impact ? '落点速度' : '起爆速度');
+    el.statVimp.textContent = sim.detonated === false ? '—' : sim.impactSpeed.toFixed(0) + ' m/s';
+    el.statR90.textContent = sim.detonated === false ? '—' : sim.fragments.r90.toFixed(0) + ' m';
     var fr = sim.fragments;
     el.fragModel.textContent =
       'MOTT μ ' + (fr.mu * 1000).toFixed(1) + ' g · 均值 ' + (fr.meanMass * 1000).toFixed(1) +
@@ -4583,8 +4720,8 @@ input:focus-visible {
 
     if (simTime + 1e-6 >= totalTime) {
       dot.classList.add('done');
-      el.statusMode.textContent = '仿真完成';
-    } else if (simTime >= sim.boom.t) {
+      el.statusMode.textContent = sim.detonated === false ? '仿真截断（未起爆）' : '仿真完成';
+    } else if (sim.detonated !== false && simTime >= sim.boom.t) {
       dot.classList.add('boom');
       el.statusMode.textContent = '破片飞散中';
     } else if (simTime > 0.05) {
@@ -4668,7 +4805,7 @@ input:focus-visible {
       }
     }
 
-    if (!boomShown && simTime >= sim.boom.t) {
+    if (!boomShown && sim.detonated !== false && simTime >= sim.boom.t) {
       boomShown = true;
       var fr = sim.fragments;
       var b = sim.boom;
