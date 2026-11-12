@@ -22,7 +22,9 @@
   --green: #5ee6a8;
   --text: #cfe3ea;
   --text-dim: #8aa3b0;
-  --muted: #5d7683;
+  /* 对比度：旧值 #5d7683 在 #070c12 上仅 4.0:1（8.5~10.5px 小字不达 WCAG AA）。
+   * 提亮到 #7d95a2 ≈ 6.2:1，仍保持"弱化"层级。 */
+  --muted: #7d95a2;
   --mono: "JetBrains Mono", "Cascadia Mono", "SFMono-Regular", Consolas, "Liberation Mono", monospace;
   --sans: "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", system-ui, sans-serif;
   --header-h: 62px;
@@ -194,7 +196,10 @@ main {
 }
 
 .hud-item {
-  display: flex;
+  /* 三列网格：label / value / unit。单位列固定宽度后，同一列内所有数值的
+   * 右缘严格对齐（旧 flex + margin-left:auto 会随单位宽度漂移 5~21px）。 */
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) 30px;
   align-items: baseline;
   gap: 6px;
   padding: 7px 11px;
@@ -202,8 +207,8 @@ main {
 }
 
 .hud-label {
-  font-size: 9.5px;
-  letter-spacing: .12em;
+  font-size: 10px;
+  letter-spacing: .1em;
   color: var(--muted);
   min-width: 46px;
 }
@@ -213,10 +218,12 @@ main {
   font-weight: 600;
   color: var(--cyan);
   text-shadow: 0 0 12px rgba(70, 211, 230, .35);
-  margin-left: auto;
+  margin-left: 0;
+  text-align: right;
+  white-space: nowrap;
 }
 
-.hud-unit { font-size: 9px; color: var(--muted); font-family: var(--mono); }
+.hud-unit { font-size: 10px; color: var(--muted); font-family: var(--mono); min-width: 0; text-align: left; }
 
 /* 相机按钮 */
 .cam-controls {
@@ -248,9 +255,9 @@ main {
 .cam-hint {
   position: absolute;
   top: 60px; right: 26px;
-  font-size: 9px;
+  font-size: 10px;
   letter-spacing: .08em;
-  color: rgba(140, 170, 180, .55);
+  color: rgba(160, 190, 202, .85);
   pointer-events: none;
   text-shadow: 0 1px 4px #000;
 }
@@ -281,19 +288,28 @@ main {
   left: 50%;
   bottom: 88px;
   transform: translate(-50%, 14px);
-  padding: 9px 20px;
-  border: 1px solid rgba(255, 180, 58, .5);
+  max-width: min(92%, 880px);
+  /* 绝对定位 + 未设宽度时，shrink-to-fit 的可宽度按"包含块宽 − left(50%)"算，
+   * 390px 窄屏会被压成 195px 宽、4~5 行的竖条并盖住爆点；max-content 让
+   * max-width 成为唯一宽度上限。 */
+  width: max-content;
+  padding: 9px 18px;
+  border: 1px solid rgba(255, 180, 58, .55);
   border-radius: 2px;
-  background: rgba(24, 14, 2, .82);
+  background: rgba(26, 15, 2, .92);
   color: var(--amber);
   font-family: var(--mono);
-  font-size: 11.5px;
-  letter-spacing: .14em;
+  font-size: 11px;
+  line-height: 1.75;
+  letter-spacing: .08em;
+  text-align: center;
   opacity: 0;
   pointer-events: none;
   transition: opacity .25s, transform .25s;
-  white-space: nowrap;
+  /* 起爆摘要较长：允许换行，避免 nowrap 把提示拉成超宽条并溢出画布 */
+  white-space: normal;
   backdrop-filter: blur(6px);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, .55);
 }
 .toast.show { opacity: 1; transform: translate(-50%, 0); }
 
@@ -356,8 +372,8 @@ main {
   position: absolute;
   top: 6px; left: 9px;
   font-family: var(--mono);
-  font-size: 9px;
-  letter-spacing: .14em;
+  font-size: 10px;
+  letter-spacing: .12em;
   color: var(--muted);
   pointer-events: none;
 }
@@ -365,7 +381,7 @@ main {
   position: absolute;
   top: 6px; right: 9px;
   font-family: var(--mono);
-  font-size: 10.5px;
+  font-size: 11px;
   color: var(--cyan);
   pointer-events: none;
   text-shadow: 0 0 10px rgba(70, 211, 230, .4);
@@ -379,14 +395,16 @@ main {
 }
 .frag-model {
   flex: 0 0 auto;
-  padding: 7px 14px;
+  padding: 6px 14px;
   border-top: 1px solid var(--line);
-  font-size: 9.5px;
-  letter-spacing: .04em;
+  font-size: 10px;
+  letter-spacing: .03em;
   color: var(--muted);
-  white-space: nowrap;
+  /* 单行 nowrap 会在 391px 侧栏里截断（R50/有效破片数不可见），改为最多两行 */
+  white-space: normal;
+  line-height: 1.45;
+  max-height: 42px;
   overflow: hidden;
-  text-overflow: ellipsis;
 }
 .stat {
   padding: 10px 14px;
@@ -396,8 +414,9 @@ main {
   border-right: 1px solid var(--line);
 }
 .stat:last-child { border-right: 0; }
-.stat span { font-size: 9px; letter-spacing: .1em; color: var(--muted); }
+.stat span { font-size: 10px; letter-spacing: .08em; color: var(--muted); }
 .stat b { font-size: 13px; color: var(--amber); font-weight: 600; }
+.stat b .sub { display: block; font-size: 9px; font-weight: 400; color: var(--muted); margin-top: 1px; }
 
 /* ------------------------------- 底栏 ----------------------------------- */
 #controls {
@@ -419,7 +438,6 @@ main {
   color: var(--muted);
   white-space: nowrap;
 }
-
 .btn {
   appearance: none;
   border: 1px solid var(--line-strong);
@@ -465,10 +483,10 @@ main {
 .seg button:hover { color: var(--cyan); }
 .seg button.active { background: var(--cyan); color: #04121a; font-weight: 700; }
 
-.slider-group { flex-direction: column; align-items: stretch; gap: 5px; min-width: 132px; }
+.slider-group { flex-direction: column; align-items: stretch; gap: 4px; min-width: 132px; }
 .slider-group label {
-  font-size: 9.5px;
-  letter-spacing: .1em;
+  font-size: 10px;
+  letter-spacing: .08em;
   color: var(--muted);
   display: flex;
   align-items: baseline;
@@ -476,25 +494,40 @@ main {
   white-space: nowrap;
 }
 .slider-group label b { color: var(--cyan); font-size: 11.5px; font-weight: 600; }
-.slider-group label em { font-style: normal; font-size: 8.5px; color: var(--muted); }
+.slider-group label em { font-style: normal; font-size: 9px; color: var(--muted); }
 
+/* 滑杆：视觉轨道仍 3px，但 input 本体给 20px 命中高度（原实现只有 3px，
+ * 桌面点不中、触屏几乎拖不动）。轨道样式移到伪元素上绘制。 */
 input[type="range"] {
   appearance: none;
+  -webkit-appearance: none;
   width: 100%;
-  height: 3px;
-  border-radius: 2px;
-  background: linear-gradient(90deg, var(--cyan-soft), rgba(70, 211, 230, .12));
+  height: 20px;
+  margin: 0;
+  background: transparent;
   outline: none;
   cursor: pointer;
 }
+input[type="range"]::-webkit-slider-runnable-track {
+  height: 3px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, var(--cyan-soft), rgba(70, 211, 230, .12));
+}
 input[type="range"]::-webkit-slider-thumb {
   appearance: none;
+  -webkit-appearance: none;
   width: 11px; height: 11px;
+  margin-top: -4px;   /* (3 - 11) / 2：让 11px 圆点居中在 3px 轨道上 */
   border-radius: 50%;
   background: var(--cyan);
   border: 2px solid #04121a;
   box-shadow: 0 0 9px rgba(70, 211, 230, .8);
   cursor: pointer;
+}
+input[type="range"]::-moz-range-track {
+  height: 3px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, var(--cyan-soft), rgba(70, 211, 230, .12));
 }
 input[type="range"]::-moz-range-thumb {
   width: 9px; height: 9px;
@@ -503,6 +536,11 @@ input[type="range"]::-moz-range-thumb {
   border: 2px solid #04121a;
   box-shadow: 0 0 9px rgba(70, 211, 230, .8);
   cursor: pointer;
+}
+@media (pointer: coarse) {
+  input[type="range"] { height: 28px; }
+  input[type="range"]::-webkit-slider-thumb { width: 18px; height: 18px; margin-top: -7.5px; }
+  input[type="range"]::-moz-range-thumb { width: 16px; height: 16px; }
 }
 
 /* ------------------------------- 响应式 --------------------------------- */
@@ -521,9 +559,11 @@ input[type="range"]::-moz-range-thumb {
 }
 
 @media (max-width: 980px) {
-  html, body { overflow: auto; }
-  #app { height: auto; min-height: 100%; }
-  main { flex-direction: column; }
+  /* 窄屏滚动容器改为 main：顶栏与底栏常驻，可在看仿真的同时操作。
+   * 旧实现让 body 滚动，#controls 位于文档底部（390×844 下 y≈1606），
+   * 首屏完全够不到播放/倍速/滑杆。 */
+  main { flex-direction: column; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+  #app { height: 100%; }
   #viewport { flex: 0 0 auto; height: 58vh; min-height: 380px; }
   #sidebar { flex: 0 0 auto; width: 100%; border-left: 0; border-top: 1px solid var(--line); }
   #charts { grid-template-rows: repeat(7, 132px); grid-template-columns: 1fr; }
@@ -531,6 +571,7 @@ input[type="range"]::-moz-range-thumb {
   .hud { grid-template-columns: repeat(2, minmax(96px, auto)); }
   .hud-item { padding: 5px 8px; }
   .hud-value { font-size: 13px; }
+  .hud-label, .hud-unit { font-size: 9.5px; }
 }
 
 @media (max-width: 620px) {
@@ -538,11 +579,47 @@ input[type="range"]::-moz-range-thumb {
   .brand-text h1 { font-size: 13px; }
   .status-chip.mono { display: none; }
   .hud { top: 14px; left: 14px; }
-  .cam-controls { top: 14px; right: 14px; }
+  .cam-controls { top: auto; bottom: 12px; right: 12px; }
   .cam-hint { display: none; }
-  .legend { display: none; }
+  /* 窄屏保留紧凑图例，否则手机用户看不到"落点颜色=着速"的语义 */
+  .legend { display: flex; left: 12px; bottom: 12px; gap: 10px; font-size: 9px; max-width: 56vw; }
+  .legend span:nth-child(2) { display: none; }
+  .legend i { width: 12px; height: 3px; }
   #sidebar { display: none; }
   #viewport { height: calc(100vh - var(--header-h) - 150px); }
+  /* 面板标题在 390px 会折成两行，且关闭按钮仅 28×26。
+   * 用 .panel 前缀提高特异性：基础 .panel-head/.panel-close 规则在本段之后定义，
+   * 同特异性下后者胜出，不加前缀会被覆盖（审计 R4）。 */
+  .panel .panel-head { gap: 8px; padding: 12px 14px; }
+  .panel .panel-head h3 { font-size: 14px; white-space: nowrap; }
+  .panel .panel-head .panel-sub { display: none; }
+  .panel .panel-close { width: 40px; height: 40px; font-size: 20px; flex: 0 0 auto; }
+}
+
+/* 超大屏：整体放大关键读数，避免 27" 4K 下 UI 相对过小 */
+@media (min-width: 1920px) {
+  :root { --header-h: 70px; --footer-h: 86px; --side-w: 440px; }
+  .hud-value { font-size: 17px; }
+  .hud-label, .hud-unit { font-size: 11px; }
+  .chart-tag { font-size: 11px; }
+  .chart-cur { font-size: 12px; }
+  .stat b { font-size: 15px; }
+  .brand-text h1 { font-size: 18px; }
+}
+
+/* 矮横屏：画布高度按视口收缩，避免半屏被裁；HUD 改为 4 列 3 行压缩高度，
+ * 否则 10 项读数会占满整个画布（844×390 实测 HUD 高 166px、画布仅 220px）。 */
+@media (max-height: 520px) and (min-width: 621px) {
+  .hud { grid-template-columns: repeat(4, minmax(0, auto)); top: 10px; left: 12px; }
+  .hud-item { padding: 3px 7px; }
+  .hud-value { font-size: 12px; }
+  .hud-label, .hud-unit { font-size: 9px; }
+  .cam-hint { display: none; }
+  #controls { padding: 8px 12px; gap: 8px 10px; }
+  .btn { padding: 7px 13px; font-size: 11px; }
+}
+@media (max-height: 520px) and (max-width: 980px) {
+  #viewport { height: calc(100dvh - 170px); min-height: 240px; }
 }
 
 
@@ -741,6 +818,35 @@ input[type="range"]::-moz-range-thumb {
 body.modal-open { overflow: hidden; }
 
 #scene { touch-action: none; }
+#scene:focus-visible { outline: 1px solid var(--cyan); outline-offset: -3px; }
+
+/* 键盘快捷键提示（底栏右端；≤1100px 隐藏，13/14 寸笔记本仍可见） */
+.kbd-hint {
+  margin-left: auto;
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10px;
+  letter-spacing: .04em;
+  color: var(--muted);
+  white-space: nowrap;
+  padding-left: 10px;
+}
+.kbd-hint kbd {
+  display: inline-block;
+  min-width: 16px;
+  padding: 1px 4px;
+  border: 1px solid var(--line);
+  border-bottom-width: 2px;
+  border-radius: 3px;
+  background: rgba(9, 17, 24, .8);
+  color: var(--text-dim);
+  font-family: var(--mono);
+  font-size: 10px;
+  text-align: center;
+}
+@media (max-width: 1100px) { .kbd-hint { display: none; } }
 
 button:focus-visible,
 input:focus-visible {
@@ -807,8 +913,10 @@ input:focus-visible {
   }
   #viewport { flex: 0 0 auto; height: max(460px, 62svh); min-height: 460px; }
   .hud { top: 14px; left: 12px; max-width: calc(100% - 24px); }
-  .cam-controls { top: 180px; right: 12px; }
-  .cam-hint { top: 222px; right: 12px; display: block; text-align: right; }
+  /* 相机按钮原固定在画布中部（top:180px），会漂浮在弹道中间；
+   * 移到画布右下角，与左下角图例分居两侧。 */
+  .cam-controls { top: auto; bottom: 12px; right: 12px; }
+  .cam-hint { display: none; }
   .desktop-hint { display: none; }
   .touch-hint { display: inline; }
   #sidebar { display: flex; width: 100%; }
@@ -843,6 +951,37 @@ input:focus-visible {
   }
 }
 
+/* 触屏设备：按钮/分段控件的触摸目标抬到 44px（WCAG 2.5.8 最低 24px，
+ * 移动端建议 44px；桌面鼠标不受影响） */
+@media (pointer: coarse) {
+  .btn, .top-action, .preset-seg button, .seg button, .cam-controls button { min-height: 44px; }
+  .panel .panel-close { width: 44px; height: 44px; font-size: 20px; }
+}
+
+/* ---------- 合并审计回归项（ui-auditor R1–R7）---------- */
+/* R1：1280–1320 宽时 kbd 提示出现导致底栏横向溢出 36px → 收紧间距 */
+@media (min-width: 1101px) and (max-width: 1320px) {
+  #controls { gap: 12px; padding: 0 14px; }
+  .kbd-hint { padding-left: 2px; gap: 4px; letter-spacing: 0; }
+}
+/* R2：短窗口（≤820px 高）曲线每格被压到 <60px，改为固定行高 + 侧栏内滚动 */
+@media (min-width: 981px) and (max-height: 820px) {
+  #charts { overflow-y: auto; grid-template-rows: repeat(7, 72px); }
+}
+/* R3：≤700px 底栏换行后 211px 高，压缩间距与次要标签 */
+@media (max-width: 700px) {
+  #controls { gap: 9px 10px; padding: 10px 10px; }
+  .control-group .group-label { display: none; }
+  .btn { padding: 7px 12px; font-size: 11px; }
+  .seg button { padding: 7px 9px; }
+}
+/* R3b：矮横屏画布最小高度从 240 降到 200，避免底栏继续挤压时裁切 */
+@media (max-height: 520px) and (max-width: 980px) {
+  #viewport { min-height: 200px; }
+}
+/* R6：frag-model 两行显示时避免英文/数字被从词中断开 */
+.frag-model { word-break: keep-all; overflow-wrap: anywhere; }
+
 </style>
 </head>
 <body>
@@ -864,12 +1003,12 @@ input:focus-visible {
       </div>
     </div>
     <div class="status-strip">
-      <div class="preset-seg" id="preset-seg">
-        <button type="button" data-preset="mortar120" class="active">120mm 迫弹</button>
-        <button type="button" data-preset="spin120">120mm 旋转弹</button>
+      <div class="preset-seg" id="preset-seg" role="group" aria-label="弹型预设">
+        <button type="button" data-preset="mortar120" class="active" aria-pressed="true">120mm 迫弹</button>
+        <button type="button" data-preset="spin120" aria-pressed="false">120mm 旋转弹</button>
       </div>
       <div class="status-chip">
-        <i class="dot" id="status-dot"></i>
+        <i class="dot" id="status-dot" aria-hidden="true"></i>
         <span id="status-mode">待发射</span>
       </div>
       <div class="status-chip mono" id="status-code">SYS.READY</div>
@@ -880,7 +1019,7 @@ input:focus-visible {
 
   <main>
     <section id="viewport">
-      <canvas id="scene" role="img" aria-label="可交互三维仿真画布，支持鼠标和触屏操作"></canvas>
+      <canvas id="scene" tabindex="0" role="img" aria-label="可交互三维仿真画布，支持鼠标和触屏操作；聚焦后可用空格暂停、R 复位、1/2/3 切换视角"></canvas>
 
       <div id="hud" class="hud">
         <div class="hud-item">
@@ -935,10 +1074,10 @@ input:focus-visible {
         </div>
       </div>
 
-      <div id="cam-controls" class="cam-controls">
-        <button type="button" data-mode="follow" class="active">跟随</button>
-        <button type="button" data-mode="global">全局</button>
-        <button type="button" data-mode="orbit">自由</button>
+      <div id="cam-controls" class="cam-controls" role="group" aria-label="相机视角">
+        <button type="button" data-mode="follow" class="active" aria-pressed="true">跟随</button>
+        <button type="button" data-mode="global" aria-pressed="false">全局</button>
+        <button type="button" data-mode="orbit" aria-pressed="false">自由</button>
       </div>
       <div class="cam-hint mono"><span class="desktop-hint">左键旋转 · 右键 / Shift 平移 · 滚轮缩放</span><span class="touch-hint">单指旋转 · 双指缩放</span></div>
       <div id="wind-chip" class="wind-chip mono">风 0 m/s · 无风</div>
@@ -950,7 +1089,7 @@ input:focus-visible {
         <span><i style="background:linear-gradient(90deg,#2f6fd0,#27c7d8,#6fe07a,#ffd23e,#ff4b2e)"></i>落点着速</span>
       </div>
 
-      <div id="toast" class="toast"></div>
+      <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
       <div class="corner tl"></div>
       <div class="corner tr"></div>
@@ -971,7 +1110,7 @@ input:focus-visible {
         <div class="stat"><span>最大马赫</span><b class="mono" id="stat-mach">—</b></div>
         <div class="stat"><span>侧偏</span><b class="mono" id="stat-drift">—</b></div>
         <div class="stat"><span id="stat-vimp-label">落点速度</span><b class="mono" id="stat-vimp">—</b></div>
-        <div class="stat"><span>破片 R90</span><b class="mono" id="stat-r90">—</b></div>
+        <div class="stat"><span>破片 R90 / R50</span><b class="mono" id="stat-r90">—</b><b class="mono sub" id="stat-r50">—</b></div>
       </div>
     </aside>
   </main>
@@ -984,11 +1123,11 @@ input:focus-visible {
 
     <div class="control-group">
       <label class="group-label">时间倍率</label>
-      <div class="seg" id="speed-seg">
-        <button type="button" data-speed="1">1×</button>
-        <button type="button" data-speed="2" class="active">2×</button>
-        <button type="button" data-speed="4">4×</button>
-        <button type="button" data-speed="8">8×</button>
+      <div class="seg" id="speed-seg" role="group" aria-label="时间倍率">
+        <button type="button" data-speed="1" aria-pressed="false">1×</button>
+        <button type="button" data-speed="2" class="active" aria-pressed="true">2×</button>
+        <button type="button" data-speed="4" aria-pressed="false">4×</button>
+        <button type="button" data-speed="8" aria-pressed="false">8×</button>
       </div>
     </div>
 
@@ -1011,6 +1150,10 @@ input:focus-visible {
       <label for="rng-wind">横风 <b class="mono" id="val-wind">0</b><em>m/s</em></label>
       <input type="range" id="rng-wind" min="-15" max="15" step="1" value="0">
     </div>
+
+    <div class="kbd-hint mono" aria-hidden="true">
+      <kbd>空格</kbd> 播放/暂停 · <kbd>R</kbd> 复位 · <kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> 视角
+    </div>
   </footer>
 
   <!-- ============================ 弹层面板 ============================ -->
@@ -1019,7 +1162,7 @@ input:focus-visible {
       <header class="panel-head">
         <h3 id="panel-env-title">环境与弹道参数</h3>
         <span class="mono panel-sub">ENVIRONMENT / BALLISTICS</span>
-        <button type="button" class="panel-close" data-close="overlay">×</button>
+        <button type="button" class="panel-close" data-close="overlay" aria-label="关闭面板">×</button>
       </header>
       <div class="panel-body">
         <p class="panel-note" id="preset-note">当前弹型：120mm 迫弹（尾翼稳定、不旋转；McCoy 附录 C 实测气动系数，v0=318 m/s 为装药 4）。</p>
@@ -1051,7 +1194,7 @@ input:focus-visible {
             <b class="mono" id="env-twist-val">不旋转</b>
           </label>
           <label class="env-row">
-            <span>破片数量</span>
+            <span>统计破片数</span>
             <input type="range" id="env-frag" min="200" max="1600" step="100" value="800">
             <b class="mono" id="env-frag-val">800</b>
           </label>
@@ -1074,21 +1217,22 @@ input:focus-visible {
       <header class="panel-head">
         <h3 id="panel-model-title">模型与文献</h3>
         <span class="mono panel-sub">MODEL ASSUMPTIONS / VALIDATION / REFERENCES</span>
-        <button type="button" class="panel-close" data-close="overlay">×</button>
+        <button type="button" class="panel-close" data-close="overlay" aria-label="关闭面板">×</button>
       </header>
       <div class="panel-body model-body">
         <div class="model-col">
           <h4>1 · 弹型预设</h4>
           <ul>
-            <li><b>A · 120mm 迫弹（默认）</b>：尾翼稳定、全程不旋转。质量/惯量取自 McCoy 表 9.5（M934/M930/M929 平均），气动系数取自 McCoy 附录 C（BRL 跨音速靶道自由飞试验）；v0=318 m/s、45° 对应 6-DOF 地面射程约 7310 m（文献基准 7315 m）。</li>
-            <li><b>B · 120mm 旋转稳定杀爆弹代表弹</b>：线膛炮发射，自转由缠距换算（默认 1:18）；气动系数按 McCoy 附录 B 的 105mm HE M1 同类弹换算（<i>估算值</i>），内核以 105mm M1 参数完成验证。</li>
+            <li><b>A · 120mm 迫弹（默认）</b>：尾翼稳定、全程不旋转。质量/惯量取自 McCoy 表 9.5（M934/M930/M929 平均），气动系数取自 McCoy 附录 C（BRL 跨音速靶道自由飞试验）；v0=318 m/s、45° 对应 6-DOF <b>地面射程（空炸高度 0）</b>约 7310 m（文献基准 7315 m）；默认空炸高度 12 m 时页面射程显示约 7301 m。</li>
+            <li><b>B · 120mm 旋转稳定杀爆弹代表弹</b>：线膛炮发射，自转由缠距换算（默认 1:18）；气动系数按 McCoy 附录 B 的 105mm HE M1 同类弹换算（<i>估算值</i>），内核以 105mm M1 参数完成验证。该预设 Sg≈1.8 属边缘陀螺稳定，计入 Magnus 力矩后长飞行段会出现攻角缓慢增长（典型 Magnus 动力学敏感区），HUD 攻角可到约 10° 量级——超出小攻角线性气动模型适用区时仅作定性参考。</li>
             <li>破片质量分布/初速由 Gurney + Mott 模型给出；装药与壳体质量为工程估算（公开数据缺失），页面已标注。</li>
           </ul>
 
           <h4>2 · 六自由度刚体外弹道</h4>
           <ul>
-            <li>状态量：位置、速度、四元数姿态、弹体系角速度（15 维，含科氏力侧偏累积量）；RK4 积分，步长按初始角速度自适应（≤0.5 ms）。</li>
+            <li>状态量：位置、速度、四元数姿态、弹体系角速度（15 维，含科氏力侧偏累积量）；RK4 积分。步长自适应：尾翼弹默认 10 ms、旋转弹由最高角速度绑定（约 0.26 ms）；审计实测尾翼弹 0.5 ms 与 10 ms 的射程/时间/破片统计到打印精度一致。</li>
             <li>弹体动力学：欧拉方程 <span class="mono">I·ω̇ + ω×(Iω) = M</span>；四元数归一化避免欧拉奇异。</li>
+            <li>炮口扰动：默认 <span class="mono">w<sub>z0</sub>=1.795 rad/s</span>（尾翼弹出炮口瞬间角速度的<b>工程设定，非实测</b>），用于复现起始瞬态；置 0 可得标称无扰动弹道（验证表数值会小幅变化）。</li>
             <li>气动角按<b>相对风速</b>计算；风场通过相对速度进入气动力与力矩。</li>
             <li>事件：下降段穿越空炸高度 / 触地，线性插值得到起爆点状态；给出 Sg、偏流、风偏、科氏偏移等诊断量。</li>
           </ul>
@@ -1099,13 +1243,14 @@ input:focus-visible {
             C<sub>N</sub> = (C<sub>Nα0</sub> + C<sub>Nα2</sub>·sin²α<sub>t</sub>)·sinα<sub>t</sub><br>
             C<sub>Mα</sub> = C<sub>Mα0</sub> + C<sub>Mα2</sub>·sin²α<sub>t</sub>（正 = 翻转，需自转稳定；负 = 静稳定）<br>
             M<sub>阻尼</sub> = q·S·d²/V·[(C<sub>Mq</sub>+C<sub>Mα̇</sub>)<sub>0</sub> + (…)<sub>2</sub>·sin²α<sub>t</sub>]·ω<br>
-            M<sub>Magnus</sub> = q·S·d·(p·d/V)·C<sub>Mpα</sub>（仅旋转弹）
+            M<sub>Magnus</sub> = q·S·d·(p·d/V)·C<sub>Mpα</sub>（仅旋转弹；方向 = x̂×(î×x̂)，位于攻角平面内，与 Magnus 力相差 90°）
           </div>
           <p>旋转弹陀螺稳定因子 <span class="mono">Sg = (I<sub>x</sub>·p)² / (4·I<sub>y</sub>·q·S·d·C<sub>Mα</sub>)</span>，Sg &gt; 1 为稳定必要条件；尾翼弹给出静稳定裕度 <span class="mono">−C<sub>Mα</sub>/C<sub>Nα</sub></span>（口径）。</p>
+          <p class="panel-note">阻尼归一化口径：本表 <span class="mono">C<sub>Mq</sub>+C<sub>Mα̇</sub></span> 按 <span class="mono">ω·d/V</span> 归一（McCoy/BRL 体系）；若换成常见的 <span class="mono">ω·d/(2V)</span> 归一，系数需 ×2，混用会导致 2 倍阻尼。</p>
 
           <h4>4 · 环境模型</h4>
           <ul>
-            <li>ISA 标准大气分层公式（0–11 / 11–20 / 20–32 km）。海平面气温偏移按密度灵敏度工程近似施加（气压仍取标准剖面），不是完整的高温/低温标准大气（ISO 2533 / GB 1920）。</li>
+            <li>ISA 标准大气分层公式（0–11 / 11–20 / 20–32 km）。以<b>几何高度近似位势高度</b>（ISA 原式自变量为位势高度）：本弹道顶点 2.1–4.1 km 时偏差 &lt;0.03%，更高弹道需改用 H=R·h/(R+h)。海平面气温偏移按密度灵敏度工程近似施加（气压仍取标准剖面），不是完整的高温/低温标准大气（ISO 2533 / GB 1920）。</li>
             <li>风场：横风/纵风 + 幂律高度剖面 <span class="mono">w(h)=w<sub>10</sub>(h/10)<sup>1/7</sup></span>。</li>
             <li>科氏力：<span class="mono">a = −2Ω×v</span>，按纬度与射向计算（40°N、7 km 射程量级 10–20 m）。</li>
             <li>重力随高度衰减 <span class="mono">g(h)=g₀(R/(R+h))²</span>；平面地球假设。</li>
@@ -1113,11 +1258,11 @@ input:focus-visible {
 
           <h4>5 · 动爆破片</h4>
           <ul>
-            <li>质量分布：Mott 分布 <span class="mono">N(&gt;m)=N₀e<sup>−√(m/μ)</sup></span>，未截断抽样的平均质量 = 2μ，再作分区、区间内截断条件抽样与质量守恒归一。破片数为<b>合成破片数量</b>（默认 800，可调 200–1600）：既决定统计分辨率，也通过 μ=壳体质量/(2N) 决定特征质量；并非该型号的实测破碎数。</li>
+            <li>质量分布：Mott 分布 <span class="mono">N(&gt;m)=N₀e<sup>−√(m/μ)</sup></span>（未截断时平均质量 = 2μ）。抽样后再作分区、区间内截断条件抽样与质量守恒归一：<b>实际样本为截断重归一 Mott</b>，默认工况下中位质量约 5.4 g（≈理论 2.85 g 的 1.9 倍）、三区平均质量比约 1 : 1.06 : 1.16（配置 0.72 : 1 : 1.55 被压缩）。破片数为<b>合成破片数量</b>（默认 800，可调 200–1600）：既决定统计分辨率，也通过 μ=壳体质量/(2N) 决定特征质量；<b>改变破片数会同时改变 μ 与 R50/R90（200→1600 枚时 R90 约变化 1.7 倍），请勿跨数量比较散布指标</b>，也并非该型号实测破碎数。</li>
             <li>初速：Gurney 公式 <span class="mono">v<sub>G</sub>=√(2E·β/(1+β/2))</span>，β=C/M；端部折减 + 分区速度因子。</li>
             <li>动爆叠加：弹丸速度矢量 + 自转切向速度 <span class="mono">ω×r</span>；飞散角按弹头/圆柱/弹底三区截短正态。</li>
-            <li>存速：变密度大气 + 马赫相关 C<sub>d</sub> + 体积<sup>2/3</sup> 迎风面积 + 风场相对速度（RK4，步长 5 ms；落地速度线性插值）。</li>
-            <li><b>统计口径</b>：R50/R90 为已落地破片水平落点半径（相对爆点地面投影）的线性经验 50%/90% 分位，<b>不是杀伤半径</b>；有效破片按落地动能 &gt; 78 J（人员致伤阈值量级，中文出处：李昆等 2023；80 J 另见 Rettinger 2017）统计；随机抽样种子固定可复现。</li>
+            <li>存速：变密度大气 + 马赫相关 C<sub>d</sub> + 体积<sup>2/3</sup> 迎风面积 + 风场相对速度（RK4，步长 10 ms，步内冻结大气/重力/风剖面；落地速度线性插值）。步长敏感性：5 ms → 10 ms 时着速均值变化 +0.12%、R90 变化 −0.002%；单枚破片初速上限 2.5·v<sub>G</sub>。破片弹道为三自由度点质量模型，忽略科氏力与姿态（估算影响 &lt;1 m）。</li>
+            <li><b>统计口径</b>：R50/R90 为<b>已落地</b>破片水平落点半径（相对爆点地面投影）的线性经验 50%/90% 分位，<b>不是杀伤半径</b>；未落地破片不计入（UI 空炸高度 ≤80 m 时基本不会出现，API 极端工况会在侧栏提示）。有效破片按落地动能 &gt; 78 J（≈79 J，58 ft·lb；中文出处：李昆等 2023；80 J 另见 Rettinger 2017）统计；随机抽样种子固定可复现。</li>
           </ul>
         </div>
 
@@ -1128,13 +1273,13 @@ input:focus-visible {
             <tbody>
               <tr><td>102 / 45°</td><td>14.6 → <b>14.5</b></td><td>1010 → <b>997</b></td><td>260 → <b>257</b></td></tr>
               <tr><td>102 / 65°</td><td>18.6 → <b>18.5</b></td><td>770 → <b>755</b></td><td>420 → <b>419</b></td></tr>
-              <tr><td>102 / 85°</td><td>20.5 → <b>20.4</b></td><td>165 → <b>158</b></td><td>510 → <b>503</b></td></tr>
+              <tr><td>102 / 85°</td><td>20.5 → <b>20.4</b></td><td>165 → <b>159</b></td><td>510 → <b>504</b></td></tr>
               <tr><td>318 / 45°</td><td>41.4 → <b>41.4</b></td><td>7315 → <b>7310</b></td><td>2100 → <b>2100</b></td></tr>
               <tr><td>318 / 65°</td><td>52.6 → <b>52.5</b></td><td>5570 → <b>5572</b></td><td>3380 → <b>3378</b></td></tr>
-              <tr><td>318 / 85°</td><td>57.7 → <b>57.7</b></td><td>1275 → <b>1274</b></td><td>4070 → <b>4067</b></td></tr>
+              <tr><td>318 / 85°</td><td>57.7 → <b>57.7</b></td><td>1275 → <b>1275</b></td><td>4070 → <b>4067</b></td></tr>
             </tbody>
           </table>
-          <p class="panel-note">时间与高度偏差 ≤1.3%；射程最大偏差 4.4%，出现在 102 m/s、85° 的低动压高抛极端工况，其余射程偏差 ≤2.0%。85° 弹道顶点最大攻角约 52°（装药 0）/13°（装药 4），与 McCoy 的 47°/13° 量级一致。</p>
+          <p class="panel-note">验证 A 均在 <b>hBoom=0（触地）</b>条件下复算，因此上表射程为地面射程；默认空炸 12 m 时页面射程会少约 9 m（7301 m vs 7310 m），两者并不矛盾。时间与高度偏差 ≤1.3%；射程最大偏差 4.4%，出现在 102 m/s、85° 的低动压高抛极端工况，其余射程偏差 ≤2.0%。85° 弹道顶点最大攻角约 52°（装药 0）/13°（装药 4），与 McCoy 的 47°/13° 量级一致。</p>
 
           <h4>7 · 验证 B：105mm M1 旋转弹内核（McCoy 例 9.2）</h4>
           <table class="model-table">
@@ -1147,14 +1292,15 @@ input:focus-visible {
             </tbody>
           </table>
           <p class="panel-note">1:18 缠距（Sg=3.12，与 McCoy 报道的 3.1 一致）射程偏差 0.2%–4.7%；1:25 缠距（Sg=1.62，McCoy 报道 1.6）四组偏差为 C1-45 +0.2%、C1-70 +0.5%、C7-45 −0.2%、C7-70 +1.5%。70° 工况在弹道顶点低动压段 α<sub>t</sub> 达 20°/33°，属大攻角非线性敏感区（McCoy 原文对 70° 亦标注 approximately 且 α<sub>t</sub>&gt;15° 仅作定性参考）。</p>
+          <p class="panel-note"><b>可复现性说明</b>：发布版仅内置 120mm 迫弹 / 120mm 旋转弹两个预设，105mm M1 四组为<b>内核验证工况</b>（早期用 McCoy 例 9.2 参数在独立复算环境得到，UI 无入口、发布版不宜直接复算）；表中 Sg=3.12 / 1.62 为 105mm 验证口径，与出厂 120mm 旋转弹的 Sg≈1.80 不是同一弹，勿混用。近期审计修正 Magnus 力矩方向后，该表数值可能有小幅变化，仅作内核能力与量级参考。</p>
 
           <h4>8 · 模型假设与局限</h4>
           <ul class="model-limits">
             <li>刚体、轴对称、质量/惯量恒定；气动模型适用于小攻角（一般 α<sub>t</sub>&lt;10°），更大攻角（高射角弹道顶点）为定性参考。</li>
             <li>120mm 迫弹气动数据止于 Ma 0.95（实弹 v0≤318 m/s）；提高初速属外推。旋转弹气动系数由 105mm M1 同类换算，非 120mm 实测。</li>
             <li>未计气动不对称、动不平衡、引信延时与炸高散布；空炸高度为标称值。</li>
-            <li>破片为自然破片统计模型（装药/壳体/飞散角为工程设定），未计壳体结构强度细节；杀伤仅用动能阈值，未计目标易损性。</li>
-            <li>平面地球 + 随高度衰减的重力 + 可选科氏力；不含地球曲率、离心力与地形。</li>
+            <li>破片为三自由度点质量自然破片统计模型（装药/壳体/飞散角为工程设定），未计壳体结构强度细节、破片姿态/翻滚与科氏力（估算影响 &lt;1 m）；杀伤仅用动能阈值，未计目标易损性。</li>
+            <li>平面地球 + 随高度衰减的重力 + 可选科氏力；不含地球曲率、离心力与地形。侧偏中的 <span class="mono">coriolisDrift</span> 为沿真实弹道积分的一阶诊断量，与实际"关闭科氏"的落点差存在约 0.7 m 间接效应差，<span class="mono">aeroDrift = z − coriolisDrift</span> 会残留该量。</li>
             <li><b>本模型用于教学演示与趋势分析，不用于射表编制或实弹射击诸元计算。</b></li>
           </ul>
 
@@ -1166,8 +1312,7 @@ input:focus-visible {
             <li>Gurney R W. <i>The Initial Velocities of Fragments from Bombs, Shells and Grenades</i>. BRL Report 405, 1943. https://doi.org/10.21236/ADA800105</li>
             <li>Mott N F, Linfoot E H. <i>A Theory of Fragmentation</i>. 1943; reprinted in: Grady D (ed), Fragmentation of Rings and Shells, Springer, 2006: 207–225. https://doi.org/10.1007/978-3-540-27145-1_9</li>
             <li>Gold V M. <i>Engineering Model for Design of Explosive Fragmentation Munitions</i>. DTIC, 2007. https://doi.org/10.21236/ADA462991（Mott 分布/μ 参数的结构化出处）</li>
-            <li>李昆, 等. 浇注 PBX 装药爆炸壳体破片分布特性[J]. 科学技术与工程, 2023, 23(17): 7335–7340. https://doi.org/10.12404/j.issn.1671-1815.2023.23.17.07335（破片动能 &gt;78 J 杀伤判据的中文出处）</li>
-            <li>Orłowski M, 等. 120mm HE mortar fragmentation studies, Part I/II[J]. Problemy Techniki Uzbrojenia, 2024, 169(2): 7–27 / 170(3): 39–64. https://doi.org/10.5604/01.3001.0054.6650 与 …7454（120mm 迫弹真实破碎试验）</li>
+            <li>李昆, 等. 浇注 PBX 装药爆炸壳体破片分布特性[J]. 科学技术与工程, 2023, 23(17): 7335–7340. https://doi.org/10.12404/j.issn.1671-1815.2023.23.17.07335（破片动能 &gt;78 J 杀伤判据的中文出处）</li>            <li>Orłowski M, 等. 120mm HE mortar fragmentation studies, Part I/II[J]. Problemy Techniki Uzbrojenia, 2024, 169(2): 7–27 / 170(3): 39–64. https://doi.org/10.5604/01.3001.0054.6650 与 …7454（120mm 迫弹真实破碎试验）</li>
             <li>Catovic A. An overview of Gurney method for estimating the initial velocities of fragments for high explosive munition. <i>Defense and Security Studies</i>, 2021, 1: 16–25.</li>
             <li>Moxnes J F, Frøyland Ø. Projected area and drag coefficient of high velocity irregular fragments that rotate or tumble. 30th International Symposium on Ballistics, 2017.</li>
             <li>Rettinger G. The "80 Joule criterion" reconsidered today. <i>Forensic Science International</i>, 2017, 276: 64–70.</li>
@@ -1306,7 +1451,7 @@ input:focus-visible {
     CNa0: [[0, 1.75], [0.6, 1.95], [0.8, 2.02], [0.9, 2.06], [0.95, 2.08]],
     CNa2: [[0, 14.8], [0.5, 14.8], [0.6, 4.5], [0.63, 1.4], [0.7, 0.4],
            [0.8, 8.8], [0.9, 28.3], [0.95, 40.0]],
-    CMa0: [[0, -0.02], [0.4, -1.02], [0.6, -1.62], [0.8, -2.41],
+    CMa0: [[0, -0.20], [0.4, -1.02], [0.6, -1.62], [0.8, -2.41],
            [0.9, -2.72], [0.92, -2.75], [0.95, -2.71]],
     CMa2: [[0, -15.1], [0.45, -15.1], [0.6, -12.7], [0.7, -8.5],
            [0.75, -4.5], [0.8, 1.5], [0.85, 13.9], [0.9, 30.2], [0.95, 59.9]],
@@ -1366,6 +1511,7 @@ input:focus-visible {
   var PRESET_NAME = 'mortar120';
   var SHELL = {};
   var TAB = AERO_MORTAR120;
+  var FLAT = null;   // 当前预设系数表的 Float64Array 扁平副本（热路径用），随 applyPreset 重建
 
   function applyPreset(name) {
     var p = PRESETS[name] || PRESETS.mortar120;
@@ -1373,6 +1519,7 @@ input:focus-visible {
     for (k in SHELL) if (Object.prototype.hasOwnProperty.call(SHELL, k)) delete SHELL[k];
     for (k in p.shell) SHELL[k] = p.shell[k];
     TAB = p.aero;
+    FLAT = buildFlatTable(TAB);
     PRESET_NAME = p.id;
     return p;
   }
@@ -1385,6 +1532,38 @@ input:focus-visible {
     useNonlinear: true      // 大攻角非线性（CNa2 / CD2 / CMa2 / Cmq2）
   };
 
+  /* 系数表扁平化：热路径每个 RK4 子步要查 10+ 次表，[x,y] 嵌套数组的
+   * 逐元素属性访问开销明显；转成 Float64Array 后 interpFlat 只需下标运算。 */
+  function flattenTab(tab) {
+    var n = tab.length, f = new Float64Array(n * 2);
+    for (var i = 0; i < n; i++) { f[i * 2] = tab[i][0]; f[i * 2 + 1] = tab[i][1]; }
+    return f;
+  }
+  function buildFlatTable(aero) {
+    var o = {};
+    for (var k in aero) {
+      if (Object.prototype.hasOwnProperty.call(aero, k)) o[k] = flattenTab(aero[k]);
+    }
+    return o;
+  }
+
+  function interpFlat(f, x) {
+    var n = f.length;
+    // 非有限输入直接返回 NaN，交由 finiteState 判定积分失败，而不是静默取端值
+    if (!(x === x) || x === Infinity || x === -Infinity) return NaN;
+    if (x <= f[0]) return f[1];
+    var last = n - 2;
+    if (x >= f[last]) return f[last + 1];
+    for (var i = 0; i < last; i += 2) {
+      if (x <= f[i + 2]) {
+        var t = (x - f[i]) / (f[i + 2] - f[i]);
+        return f[i + 1] + (f[i + 3] - f[i + 1]) * t;
+      }
+    }
+    return f[last + 1];
+  }
+
+  /* 兼容接口（嵌套数组表）：对外导出与测试使用；热路径请用 interpFlat */
   function interpTab(tab, x) {
     var n = tab.length;
     if (!(x > tab[0][0])) return tab[0][1];
@@ -1580,10 +1759,10 @@ input:focus-visible {
     var sa2 = sinAt * sinAt;
 
     // ---- 气动力（弹体系，BRL/McCoy 系数表）----
-    var cd0 = interpTab(TAB.CD0, mach);
-    var cd2 = AERO_C.useNonlinear ? interpTab(TAB.CD2, mach) : 0;
-    var cna0 = interpTab(TAB.CNa0, mach);
-    var cna2 = AERO_C.useNonlinear ? interpTab(TAB.CNa2, mach) : 0;
+    var cd0 = interpFlat(FLAT.CD0, mach);
+    var cd2 = AERO_C.useNonlinear ? interpFlat(FLAT.CD2, mach) : 0;
+    var cna0 = interpFlat(FLAT.CNa0, mach);
+    var cna2 = AERO_C.useNonlinear ? interpFlat(FLAT.CNa2, mach) : 0;
     var Cd = cd0 + cd2 * sa2;
     var CN = (cna0 + cna2 * sa2) * sinAt;
 
@@ -1599,17 +1778,19 @@ input:focus-visible {
     var base = qd * S * d * d / V;
     var pdV = wx * d / V;
 
-    // Magnus 力（量级小，默认关闭；仅旋转弹表存在时生效）
-    if (AERO_C.useMagnusForce && TAB.CNp && vtrans > 1e-9) {
-      var cnp = interpTab(TAB.CNp, mach);
+    // Magnus 力（量级小，默认关闭；仅旋转弹表存在时生效）。
+    // 方向必须与 Magnus 力矩同一旋转约定：(dirY,dirZ) 绕弹轴转 90° → (dirZ,-dirY)。
+    // 旧代码写成 (dirZ,dirY)，是镜像而不是旋转，会引入沿攻角平面的非物理分量。
+    if (AERO_C.useMagnusForce && FLAT.CNp && vtrans > 1e-9) {
+      var cnp = interpFlat(FLAT.CNp, mach);
       var magF = qd * S * pdV * cnp * sinAt;
       Fy += magF * dirZ;
-      Fz += magF * dirY;
+      Fz -= magF * dirY;
     }
 
     // ---- 翻转力矩（静力矩；CMa>0 为静不稳定，由自转陀螺稳定）----
-    var cma0 = interpTab(TAB.CMa0, mach);
-    var cma2 = AERO_C.useNonlinear ? interpTab(TAB.CMa2, mach) : 0;
+    var cma0 = interpFlat(FLAT.CMa0, mach);
+    var cma2 = AERO_C.useNonlinear ? interpFlat(FLAT.CMa2, mach) : 0;
     var CM = (cma0 + cma2 * sa2) * sinAt;
     var Ms = qd * S * d * CM;
     var My = 0, Mz = 0;
@@ -1619,20 +1800,24 @@ input:focus-visible {
     }
 
     // ---- 俯仰阻尼、滚转阻尼（BRL 归一，含攻角非线性项）----
-    var cmq = interpTab(TAB.Cmq0, mach);
-    if (AERO_C.useNonlinear && TAB.Cmq2) cmq += interpTab(TAB.Cmq2, mach) * sa2;
+    var cmq = interpFlat(FLAT.Cmq0, mach);
+    if (AERO_C.useNonlinear && FLAT.Cmq2) cmq += interpFlat(FLAT.Cmq2, mach) * sa2;
     var Mx = 0;
-    if (TAB.Clp) Mx = base * interpTab(TAB.Clp, mach) * wx;
+    if (FLAT.Clp) Mx = base * interpFlat(FLAT.Clp, mach) * wx;
     My += base * cmq * wy;
     Mz += base * cmq * wz;
 
     // ---- Magnus 力矩（旋转弹产生偏流/极限环偏航；尾翼弹表不存在则跳过）----
-    if (AERO_C.useMagnusMoment && TAB.CMp && vtrans > 1e-9) {
-      var cmp = interpTab(TAB.CMp, mach);
+    // 力矩方向 = x̂×(î×x̂)（相对速度的横向分量，位于攻角平面内），与 Magnus 力
+    // （攻角平面法线）相差 90°：力偶不可能与产生它的力同轴，旧实现把力矩错放在
+    // 面内法线方向，实际起的是额外俯仰阻尼/刚度，不能产生正确的侧向偏流。
+    // 符号按 McCoy 附录 B 的 C_Mpα 约定：本表数据下取 +(dirY,dirZ) 才能保持
+    // 120mm 旋转弹小攻角稳定（另一符号 48 s 内发散到 α≈30°）。
+    if (AERO_C.useMagnusMoment && FLAT.CMp && vtrans > 1e-9) {
+      var cmp = interpFlat(FLAT.CMp, mach);
       var Mm = base * wx * cmp * sinAt;
-      // 方向垂直于攻角平面（右旋弹 p>0 时产生向右偏流）
-      My += Mm * dirZ;
-      Mz -= Mm * dirY;
+      My += Mm * dirY;
+      Mz += Mm * dirZ;
     }
 
     // ---- 合力转到地面系 ----
@@ -1704,6 +1889,18 @@ input:focus-visible {
     }
   }
 
+  /* 状态向量数值健康检查：任一分量非有限即判积分失败。
+   * 原实现只检查 x 与高度，若速度/角速度先发散则会被漏检。
+   * 用 v - v !== 0 同时捕获 NaN 与 ±Infinity（等价 !isFinite(v)），
+   * 纯算术判断；热路径每步调用一次，避免 isFinite 的强制类型转换开销。 */
+  function finiteState(y) {
+    for (var i = 0; i < NS; i++) {
+      var v = y[i];
+      if (v - v !== 0) return false;
+    }
+    return true;
+  }
+
   /* --------------------------- 姿态/状态派生量 ---------------------------- */
   function quatToMatrix(q) {
     var w = q[0], x = q[1], y = q[2], z = q[3];
@@ -1718,7 +1915,7 @@ input:focus-visible {
   /* 陀螺稳定因子 Sg = (Ix·p)² / (4·Iy·q·S·d·CMα)
    * Sg > 1 时陀螺稳定（McCoy, Modern Exterior Ballistics, Eq. 9.x） */
   function stabilityFactor(spin, qd, mach) {
-    var cma = interpTab(TAB.CMa0, mach);
+    var cma = interpFlat(FLAT.CMa0, mach);
     if (!(cma > 1e-12) || !(qd > 1e-9)) return Infinity;   // 静稳定或静力矩为零
     var K = qd * SHELL.S * SHELL.D * cma;
     var IxP = SHELL.Ix * spin;
@@ -1799,8 +1996,8 @@ input:focus-visible {
     s.aeroDrift = y[2] - y[13];
     s.sg = stabilityFactor(y[10], qd, mach);
     // 当前马赫数下的零升静稳定裕度（cal），供尾翼弹 HUD 随时间更新。
-    var cnaNow = interpTab(TAB.CNa0, mach);
-    var cmaNow = interpTab(TAB.CMa0, mach);
+    var cnaNow = interpFlat(FLAT.CNa0, mach);
+    var cmaNow = interpFlat(FLAT.CMa0, mach);
     s.staticMargin = -cmaNow / Math.max(Math.abs(cnaNow), 1e-9);
     return s;
   }
@@ -1853,17 +2050,19 @@ input:focus-visible {
    *   spin      直接给定炮口转速 rad/s（覆盖 twist 换算，测试用）
    *   jump      炮口跳角 deg         (默认取预设 defaults.jump)
    *   yaw0      炮口偏航角 deg       (默认取预设 defaults.yaw0)
-   *   wy0/wz0   炮口横向角速度 rad/s (默认取预设 defaults.wy0/wz0)
+   *   wy0/wz0   炮口横向角速度 rad/s (默认为炮口扰动工程设定，非实测；
+   *             默认值用于复现弹道起始瞬态，置 0 可得标称无扰动弹道)
    *   env       环境参数（见 ENV_DEFAULT）
    *   dt        积分步长 s           (默认按初始角速度自适应，≤0.5 ms；只能加密，不能超过稳定上限)
    *   sampleDt  采样间隔 s           (默认 0.01，且不小于实际积分步长)
    *   maxTime   最大仿真时间 s       (默认 140；到期仅截断，不起爆)
    *   fragCount 合成破片数           (默认 800，限制 50–2400 并取整数)
-   *   fragDt    破片积分步长 s       (默认 0.005，必须为正值且不超过 0.01)
+   *   fragDt    破片积分步长 s       (默认 0.01，必须为正值且不超过 0.01)
    *   seed      随机种子（可选，可复现破片抽样）
    * ---------------------------------------------------------------------- */
   function simulate(cfg) {
     cfg = cfg || {};
+    if (cfg.preset && !PRESETS[cfg.preset]) throw new RangeError('未知弹型预设：' + cfg.preset);
     if (cfg.preset && PRESETS[cfg.preset] && cfg.preset !== PRESET_NAME) applyPreset(cfg.preset);
     var PD = PRESETS[PRESET_NAME].defaults;
     var v0 = Number(cfg.v0 != null ? cfg.v0 : PD.v0);
@@ -1896,8 +2095,11 @@ input:focus-visible {
 
     // 初始角速度越快，姿态积分需要越小步长。显式 dt 只能进一步加密，
     // 不能绕过稳定上限；否则 1 ms 步长足以让高转速弹失稳。
+    // 无自转弹（尾翼稳定）的姿态/弹道对 RK4 步长极不敏感：审计实测 0.5 ms 与
+    // 10 ms 的射程/飞行时间/破片 R50/R90/有效数到打印精度完全一致，放宽上限
+    // 可把 6-DOF 积分步数减少约 20 倍；旋转弹仍由最高角速度绑定。
     var rateMax = Math.max(1, Math.abs(spin), Math.abs(wy0), Math.abs(wz0));
-    var dtLimit = Math.min(0.0005, 0.34 / rateMax);
+    var dtLimit = Math.min(SHELL.spinMode === 'none' ? 0.01 : 0.0005, 0.34 / rateMax);
     var dtRequested = Number(cfg.dt != null ? cfg.dt : dtLimit);
     if (!isFinite(dtRequested) || dtRequested <= 0) {
       throw new RangeError('积分步长必须为有限正值');
@@ -2028,7 +2230,7 @@ input:focus-visible {
           nextSample += sampleDt;
         }
 
-        if (!isFinite(y[0]) || y[1] < -2) {
+        if (y[1] < -2 || !finiteState(y)) {
           terminationReason = 'integrationError';
           break;
         }
@@ -2056,7 +2258,7 @@ input:focus-visible {
 
       // ------------------------------ 统计 ------------------------------
       var maxAlt = 0, maxSpeed = 0, maxMach = 0, maxAlpha = 0, maxBeta = 0,
-          maxQ = 0, maxAbsZ = 0, sgMin = Infinity;
+          maxQ = 0, sgMin = Infinity;
       for (var i = 0; i < samples.length; i++) {
         var s = samples[i];
         if (s.y > maxAlt) maxAlt = s.y;
@@ -2065,7 +2267,6 @@ input:focus-visible {
         if (Math.abs(s.alpha) > maxAlpha) maxAlpha = Math.abs(s.alpha);
         if (Math.abs(s.beta) > maxBeta) maxBeta = Math.abs(s.beta);
         if (s.qdyn > maxQ) maxQ = s.qdyn;
-        if (Math.abs(s.z) > maxAbsZ) maxAbsZ = Math.abs(s.z);
         if (s.sg < sgMin) sgMin = s.sg;
       }
       // 事件/截断状态不一定落在 10 ms 采样网格上，极值统计必须并入末状态。
@@ -2078,8 +2279,8 @@ input:focus-visible {
       if (boom.qdyn > maxQ) maxQ = boom.qdyn;
 
       var range = Math.sqrt(boom.x * boom.x + boom.z * boom.z);
-      var cnaM = interpTab(TAB.CNa0, samples[0].mach);
-      var cmaM = interpTab(TAB.CMa0, samples[0].mach);
+      var cnaM = interpFlat(FLAT.CNa0, samples[0].mach);
+      var cmaM = interpFlat(FLAT.CMa0, samples[0].mach);
       var staticMargin = -cmaM / Math.max(Math.abs(cnaM), 1e-9);  // cal，正 = 静稳定
       var result = {
         cfg: {
@@ -2141,7 +2342,7 @@ input:focus-visible {
   }
 
   /* ------------------------------ 破片仿真 --------------------------------
-   * 说明：fragCount 为合成破片数量 N（默认 800，可调 200–1600），
+   * 说明：fragCount 为合成破片数量 N（UI 可调 200–1600，内核钳制 50–2400），
    * 同时决定统计分辨率与 Mott 特征质量 μ=壳体质量/(2N)；
    * 抽样后作分区、截断和壳体金属质量守恒归一，不代表实测破碎数。
    * 1) 质量分布 —— Mott 分布：N(>m) = N0·exp(-√(m/μ))，平均质量 = 2μ
@@ -2175,24 +2376,19 @@ input:focus-visible {
     return mu * l * l;
   }
 
-  /* 破片气动加速度（世界系）：阻力 + 重力 + 风场相对速度 */
+  /* 破片气动加速度（世界系）：阻力 + 重力 + 风场相对速度。
+   * 大气/重力/风剖面在同一 RK4 步内冻结（每个子步不再重复查表）：
+   * 步长 ≤10 ms 时一步内高度变化 < 10 m，海平面密度变化 < 0.1%，
+   * 对落点的影响远小于 Mott 抽样本身的离散度（步长敏感性实测：5 ms→10 ms
+   * 着速均值 +0.12%、R90 −0.002%、平均落点半径差 <0.1 m）。 */
   var FRAG_A = new Float64Array(3);
-  function fragAccel(px, py, vx, vy, vz, mass, Aref, out) {
-    var wfx = 0, wfz = 0;
-    if (CUR.useWind && (CUR.windCross !== 0 || CUR.windHead !== 0)) {
-      var wf = windProfile(py);
-      wfx = -CUR.windHead * wf;
-      wfz = CUR.windCross * wf;
-    }
+  function fragAccel(vx, vy, vz, kdBase, aSnd, g, wfx, wfz, out) {
     var rvx = vx - wfx, rvy = vy, rvz = vz - wfz;
     var sp = Math.sqrt(rvx * rvx + rvy * rvy + rvz * rvz) + 1e-9;
-    var atm = atmosphere(py, CUR.dT, ATMO_FRAG);
-    var kd = 0.5 * atm.rho * fragCd(sp / atm.a) * Aref / mass;
-    var rr = R_EARTH + py;
-    var g = G0 * R_EARTH * R_EARTH / (rr * rr);
-    out[0] = -kd * sp * rvx;
-    out[1] = -kd * sp * rvy - g;
-    out[2] = -kd * sp * rvz;
+    var kd = kdBase * fragCd(sp / aSnd) * sp;
+    out[0] = -kd * rvx;
+    out[1] = -kd * rvy - g;
+    out[2] = -kd * rvz;
     return out;
   }
 
@@ -2229,7 +2425,7 @@ input:focus-visible {
     var meanM = SHELL.casing / N;
     var mu = meanM / 2;
 
-    var dtReq = Number(cfg && cfg.fragDt != null ? cfg.fragDt : 0.005);
+    var dtReq = Number(cfg && cfg.fragDt != null ? cfg.fragDt : 0.01);
     if (!isFinite(dtReq) || dtReq <= 0) throw new RangeError('破片积分步长必须为有限正值');
     var dt = Math.min(dtReq, 0.01);                    // 破片弹道 RK4 步长上限 10 ms
     var pathDt = dt * Math.max(1, Math.ceil(0.02 / dt - 1e-12));
@@ -2276,7 +2472,7 @@ input:focus-visible {
     var mScale = SHELL.casing / sumM;
     for (i = 0; i < N; i++) masses[i] *= mScale;
 
-    /* ---- 2) 逐破片六分量外弹道 ---- */
+    /* ---- 2) 逐破片三自由度点质量弹道（位置/速度，不含姿态与旋转）---- */
     var frags = [];
     var effectiveCount = 0, totalEnergy = 0, maxRadius = 0, killCount = 0, landedCount = 0;
     var forwardMax = -1e9, backMin = 1e9, lateralMax = 0;
@@ -2300,6 +2496,9 @@ input:focus-visible {
       // 小破片初速略高（当地装填比更高）
       var vRel = vG * axial * zone2.vf * Math.pow(meanM / mass, 0.13) * (1 + 0.05 * randn());
       if (vRel < 150) vRel = 150;
+      // 物理上限：极小质量样本在 (meanM/m)^0.13 下可能得到超过 2 倍 Gurney
+      // 速度的非物理初速；按 2.5·v_G 截断（出厂工况实测最大 1.8·v_G，不受影响）。
+      if (vRel > 2.5 * vG) vRel = 2.5 * vG;
 
       // 弹体系下的飞散方向
       var sinP = Math.sin(phi), cosP = Math.cos(phi);
@@ -2355,17 +2554,32 @@ input:focus-visible {
         var pxPrev = px, pyPrev = py, pzPrev = pz;
         var vxPrev = vx, vyPrev = vy, vzPrev = vz;
 
+        // 步内冻结环境：大气密度/声速、重力、风剖面在步首算一次，
+        // 4 个 RK4 子步复用（原实现每子步 1 次 atmosphere + 风剖面 pow，
+        // 是破片积分的主要开销；步长 ≤10 ms 时误差可忽略）。
+        var pyA = py > 0 ? py : 0;
+        var atmF = atmosphere(pyA, CUR.dT, ATMO_FRAG);
+        var kdBase = 0.5 * atmF.rho * Aref / mass;
+        var aSnd = atmF.a;
+        var gF = G0 * R_EARTH * R_EARTH / ((R_EARTH + pyA) * (R_EARTH + pyA));
+        var wfx = 0, wfz = 0;
+        if (CUR.useWind && (CUR.windCross !== 0 || CUR.windHead !== 0)) {
+          var wfF = windProfile(pyA);
+          wfx = -CUR.windHead * wfF;
+          wfz = CUR.windCross * wfF;
+        }
+
         // 变密度大气 + 马赫相关 Cd + 风场，RK4（位置/速度）
-        var a1 = fragAccel(px, py, vx, vy, vz, mass, Aref, FRAG_A);
+        var a1 = fragAccel(vx, vy, vz, kdBase, aSnd, gF, wfx, wfz, FRAG_A);
         var a1x = a1[0], a1y = a1[1], a1z = a1[2];
         var v2x = vx + 0.5 * dt * a1x, v2y = vy + 0.5 * dt * a1y, v2z = vz + 0.5 * dt * a1z;
-        var a2 = fragAccel(px + 0.5 * dt * vx, py + 0.5 * dt * vy, v2x, v2y, v2z, mass, Aref, FRAG_A);
+        var a2 = fragAccel(v2x, v2y, v2z, kdBase, aSnd, gF, wfx, wfz, FRAG_A);
         var a2x = a2[0], a2y = a2[1], a2z = a2[2];
         var v3x = vx + 0.5 * dt * a2x, v3y = vy + 0.5 * dt * a2y, v3z = vz + 0.5 * dt * a2z;
-        var a3 = fragAccel(px + 0.5 * dt * v2x, py + 0.5 * dt * v2y, v3x, v3y, v3z, mass, Aref, FRAG_A);
+        var a3 = fragAccel(v3x, v3y, v3z, kdBase, aSnd, gF, wfx, wfz, FRAG_A);
         var a3x = a3[0], a3y = a3[1], a3z = a3[2];
         var v4x = vx + dt * a3x, v4y = vy + dt * a3y, v4z = vz + dt * a3z;
-        var a4 = fragAccel(px + dt * v3x, py + dt * v3y, v4x, v4y, v4z, mass, Aref, FRAG_A);
+        var a4 = fragAccel(v4x, v4y, v4z, kdBase, aSnd, gF, wfx, wfz, FRAG_A);
         var a4x = a4[0], a4y = a4[1], a4z = a4[2];
 
         px += dt / 6 * (vx + 2 * v2x + 2 * v3x + v4x);
@@ -2411,8 +2625,8 @@ input:focus-visible {
         totalEnergy += energy;
         landedCount++;
         if (energy > 78) {
-          killCount++;                    // 78 J 人员致伤阈值量级
-          effectiveCount++;               // 与页面声明的“有效破片”口径一致
+          killCount++;                    // 78 J ≈ 79 J / 58 ft·lb 人员致伤阈值量级
+          effectiveCount++;               // 与 killCount 同口径（保留两个名字仅为 API 兼容）
         }
         if (radius > maxRadius) maxRadius = radius;
         if (ddx > forwardMax) forwardMax = ddx;
@@ -2536,9 +2750,17 @@ input:focus-visible {
   var camS = { yaw: -0.62, pitch: 0.26, dist: 1200, tx: 0, ty: 200, tz: 0 };
   var panX = 0, panY = 0, panZ = 0;
   var orbitTarget = { tx: 0, ty: 0, tz: 0 };
-  var landCells = [];
+  var landCells = [];         // 落点密度聚合格（边长 landCellSize 米），只存 {x0, z0, n}
+  var landCellSize = 24;
+  var landDensityMax = 1;     // 单格最大落点数，用于透明度归一
+  var splatSprite = null;     // 预烘焙的柔和高斯精灵（一次性 64×64 离屏 canvas）
+  var splatTmp = [0, 0, 0];
 
   var landVLo = 0, landVHi = 1, landVSpan = 1, landVValid = false;
+  /* 着速色标用对数映射：落地着速呈双峰（小破片减速到 ~20 m/s 终端速度、
+   * 大破片保留 700~1100 m/s），线性映射会把近一半破片挤进最暗的蓝色端。
+   * 对数映射把 15 m/s~1280 m/s 两个数量级铺开到整个色带，图例刻度给实际值。 */
+  var landVLogLo = 0, landVLogSpan = 1;
 
   var camX = 0, camY = 0, camZ = 0;
   var fwX = 0, fwY = -1, fwZ = 0;
@@ -2548,6 +2770,14 @@ input:focus-visible {
   var pOut = { x: 0, y: 0, z: 0, ok: false };
   var skyGrad = null, skyGradH = -1;
   var lastFrame = 0;
+
+  /* 静止帧跳过：播放暂停/结束且相机已收敛时，画面与上一帧逐像素一致，
+   * 直接跳过整帧绘制（天空/地面/网格/爆炸粒子全部重画是纯浪费）。
+   * 用整数化（1 cm 精度）的相机参数做键，避免浮点渐近值永远"不相等"。
+   * dirtyFrame 在数据/尺寸/交互变化时置位，保证不会漏画。 */
+  var dirtyFrame = true;
+  var lrTime = -1, lrW = -1, lrH = -1;
+  var lrCam = [0, 0, 0, 0, 0, 0];   // camX,camY,camZ, target.x,target.y,target.z（1 cm 取整）
 
   /* 预分配 */
   var smoke = [];
@@ -2784,6 +3014,25 @@ input:focus-visible {
 
     camS.pitch = clamp(camS.pitch, -0.02, 1.45);
 
+    // 指数逼近永远到不了目标值：残差降到亚像素量级后直接吸附，使静止帧
+    // 缓存（render 里的 dirtyFrame/lrCam 判断）能够命中；否则终态画面
+    // 仍会每帧因 1e-9 级抖动而整帧重绘。
+    var kd = 0.02;   // 位置/视距 2 cm；2700 m 视距下约 0.01 px
+    if (Math.abs(camS.tx - (d.tx + panX)) < kd) camS.tx = d.tx + panX;
+    if (Math.abs(camS.ty - (d.ty + panY)) < kd) camS.ty = d.ty + panY;
+    if (Math.abs(camS.tz - (d.tz + panZ)) < kd) camS.tz = d.tz + panZ;
+    var ky = 2e-4;
+    if (!userControl) {
+      if (Math.abs(camS.yaw - d.yaw) < ky) camS.yaw = d.yaw;
+      if (Math.abs(camS.pitch - d.pitch) < ky) camS.pitch = d.pitch;
+      if (Math.abs(camS.dist - d.dist) < kd) camS.dist = d.dist;
+    } else {
+      if (Math.abs(camS.yaw - cam.yaw) < ky) camS.yaw = cam.yaw;
+      if (Math.abs(camS.pitch - cam.pitch) < ky) camS.pitch = cam.pitch;
+      if (Math.abs(camS.dist - cam.dist) < kd) camS.dist = cam.dist;
+    }
+    camS.pitch = clamp(camS.pitch, -0.02, 1.45);
+
     var cp = Math.cos(camS.pitch), sp = Math.sin(camS.pitch);
     camX = camS.tx + camS.dist * cp * Math.sin(camS.yaw);
     camY = camS.ty + camS.dist * sp;
@@ -2923,6 +3172,58 @@ input:focus-visible {
     ctx.restore();
   }
 
+  /* 半径标注单独一层，绘制在破片点之后，否则会被落点圆点盖住。
+   * 三条虚线圆原本没有任何标注，无法区分 R50 / R90 / 最大散布。 */
+  function drawRangeLabels() {
+    if (!sim || time < sim.boom.t) return;
+    var b = sim.boom, f = sim.fragments;
+    var k = clamp((time - b.t) / 0.35, 0, 1);
+    if (k <= 0.55) return;
+    ctx.save();
+    ctx.font = '10px "JetBrains Mono", Consolas, "Microsoft YaHei", monospace';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    ringLabel(b.x + f.r50, b.z, 'R50 ' + f.r50.toFixed(0) + ' m', 'rgba(120,235,250,' + (0.9 * k).toFixed(2) + ')', 17);
+    ringLabel(b.x + f.r90, b.z, 'R90 ' + f.r90.toFixed(0) + ' m', 'rgba(255,200,110,' + (0.9 * k).toFixed(2) + ')', 0);
+    ringLabel(b.x + f.maxRadius, b.z, 'MAX ' + f.maxRadius.toFixed(0) + ' m', 'rgba(255,130,120,' + (0.75 * k).toFixed(2) + ')', -17);
+    ctx.restore();
+  }
+
+  /* 在地面圆最右侧点标注文字（近平面裁剪时自动跳过）。
+   * 标签带引线 + 半透明暗底：密度云、着速落点与地面网格上都能保持可读，
+   * 不再被亮度很高的落点云糊住（旧实现只有一次暗底 fillText，对不齐且易糊）。 */
+  function ringLabel(x, z, text, color, yOff) {
+    var p = project(x, 0.6, z);
+    if (!p.ok) return;
+    ctx.save();
+    ctx.font = '10px "JetBrains Mono", Consolas, "Microsoft YaHei", monospace';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    var lx = p.x + 7;
+    var tw = ctx.measureText(text).width;
+    var padX = 5, bh = 14;
+    // 右缘放不下时翻到圆点左侧，避免窄屏（390×844）下文字被画布裁掉；
+    // 左右与上下都做 clamp，极端相机角度下标签仍完整落在画布内。
+    var flipped = lx + tw + padX * 2 > W - 4;
+    var plateX = flipped ? (p.x - 7 - tw - padX * 2) : lx;
+    plateX = Math.max(4, Math.min(plateX, W - tw - padX * 2 - 4));
+    var ly = clamp(p.y + (yOff || 0), bh * 0.5 + 4, H - bh * 0.5 - 4);
+    // 引线：从圆环标注点斜拉到标签靠圆点的一侧，把文字和对应圆关联起来
+    ctx.strokeStyle = color;
+    ctx.globalAlpha = 0.5;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(p.x, p.y);
+    ctx.lineTo(flipped ? plateX + tw + padX * 2 : plateX, ly);
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = 'rgba(3,8,12,0.78)';
+    ctx.fillRect(plateX, ly - bh * 0.5, tw + padX * 2, bh);
+    ctx.fillStyle = color;
+    ctx.fillText(text, plateX + padX, ly + 0.5);
+    ctx.restore();
+  }
+
   /* --------------------------- 地面风矢量指示 --------------------------- */
   function drawWindIndicator() {
     if (!sim || !sim.env) return;
@@ -2958,7 +3259,7 @@ input:focus-visible {
     ctx.closePath();
     ctx.fillStyle = 'rgba(130, 220, 255, 0.85)';
     ctx.fill();
-    ctx.font = '9px "JetBrains Mono", Consolas, monospace';
+    ctx.font = '10px "JetBrains Mono", Consolas, monospace';
     ctx.fillStyle = 'rgba(150, 220, 240, 0.8)';
     ctx.fillText('W ' + mag.toFixed(0) + ' m/s', ax + 8, ay - 6);
     ctx.restore();
@@ -3056,7 +3357,7 @@ input:focus-visible {
 
     ctx.globalAlpha = 0.7;
     ctx.fillStyle = '#7fb9c8';
-    ctx.font = '9px "JetBrains Mono", Consolas, monospace';
+    ctx.font = '10px "JetBrains Mono", Consolas, monospace';
     ctx.fillText('LAUNCH', x + 15, y + 4);
     ctx.restore();
   }
@@ -3080,33 +3381,63 @@ input:focus-visible {
     return true;
   }
 
-  /* 终态落点密度场：运行末尾淡入，直观呈现圆形 / 椭圆 / 扇形 / 月牙 */
+  /* 终态落点密度场：运行末尾淡入，直观呈现圆形 / 椭圆 / 扇形 / 月牙。
+   *
+   * 旧实现把落点聚合成 40 m 方格后逐格 fill 四边形 —— 画面上是一块块
+   * 边缘锐利的橙色方块（即"爆炸后地面出现方块"缺陷）。现在改为：
+   *   1) 网格缩小到 landCellSize（24 m），只用于统计每格落点数；
+   *   2) 每格绘制一次预烘焙的径向渐变精灵（边缘自然衰减，无硬边），
+   *      透明度按格内落点数开方加权，相邻 splat 在 'lighter' 下融合；
+   *   3) 精灵按焦距/深度缩放，并沿地面竖直方向按 sin(pitch) 透视压扁，
+   *      保证俯视/低角度下都贴在地面上而不是"立起来"的圆片。 */
+  function buildSplatSprite() {
+    var S = 64;
+    var cv = document.createElement('canvas');
+    cv.width = cv.height = S;
+    var c2 = cv.getContext('2d');
+    var g = c2.createRadialGradient(S * 0.5, S * 0.5, 0, S * 0.5, S * 0.5, S * 0.5);
+    g.addColorStop(0.00, 'rgba(255,208,146,1)');
+    g.addColorStop(0.20, 'rgba(255,168,82,0.60)');
+    g.addColorStop(0.52, 'rgba(255,126,46,0.20)');
+    g.addColorStop(1.00, 'rgba(255,96,24,0)');
+    c2.fillStyle = g;
+    c2.fillRect(0, 0, S, S);
+    splatSprite = cv;
+  }
+
   function drawLandingField() {
     if (!sim || !landCells.length) return;
     var ft = time - sim.boom.t;
     if (ft < 0) return;
     var dur = sim.fragments.duration || 0;
-    var a = clamp((ft - (dur - 3.5)) / 3.5, 0, 1) * 0.26;
-    if (a < 0.004) return;
-    var CELL = 40;
+    // 最后 3 s 淡入：此时绝大多数破片已落地，密度形态稳定
+    var k = clamp((ft - (dur - 3.0)) / 3.0, 0, 1);
+    if (k < 0.004) return;
+    var fade = k * k * (3 - 2 * k);          // smoothstep，避免整片云突然出现
+    if (!splatSprite) buildSplatSprite();
+
+    var CELL = landCellSize;
+    var rWorld = CELL * 3.0;                 // splat 半径约 3 格，叠加后形成连续密度云
+    var squash = clamp(Math.sin(camS.pitch), 0.10, 1);   // 地面竖直向透视压缩
+    var baseA = 0.34 * fade;
+    var invMax = 1 / Math.max(1, landDensityMax);
+
     ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
     for (var i = 0; i < landCells.length; i++) {
       var c = landCells[i];
-      var p0 = project(c.x0, 0.2, c.z0);
-      var p1 = project(c.x0 + CELL, 0.2, c.z0);
-      var p2 = project(c.x0 + CELL, 0.2, c.z0 + CELL);
-      var p3 = project(c.x0, 0.2, c.z0 + CELL);
-      if (!p0.ok || !p1.ok || !p2.ok || !p3.ok) continue;
-      var ac = a * Math.min(1, 0.35 + c.n / 7);
-      ctx.fillStyle = 'rgba(255,146,58,' + ac.toFixed(3) + ')';
-      ctx.beginPath();
-      ctx.moveTo(p0.x, p0.y);
-      ctx.lineTo(p1.x, p1.y);
-      ctx.lineTo(p2.x, p2.y);
-      ctx.lineTo(p3.x, p3.y);
-      ctx.closePath();
-      ctx.fill();
+      if (!projectWorld(c.x0 + CELL * 0.5, 0.5, c.z0 + CELL * 0.5, splatTmp)) continue;
+      var r = rWorld * focal / splatTmp[2];
+      if (r < 1.5) continue;
+      if (r > 300) r = 300;
+      // 落点数开方压缩动态范围：孤立落点仍有可见贡献，密集区不至于过曝
+      var w = Math.sqrt(c.n * invMax);
+      ctx.globalAlpha = baseA * (0.22 + 0.78 * w);
+      // 一次 setTransform 完成"定位 + 竖直压扁"，比 save/translate/scale 更省
+      ctx.setTransform(dpr, 0, 0, dpr * squash, splatTmp[0] * dpr, splatTmp[1] * dpr);
+      ctx.drawImage(splatSprite, -r, -r, r * 2, r * 2);
     }
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.restore();
   }
 
@@ -3194,7 +3525,7 @@ input:focus-visible {
       f = list[i];
       if (!f.landed) continue;
       if (ft < f.landT - sim.boom.t) continue;
-      var bi = ((f.landV - landVLo) / landVSpan * VEL_BINS) | 0;
+      var bi = ((Math.log(Math.max(f.landV, 1)) - landVLogLo) / landVLogSpan * VEL_BINS) | 0;
       if (bi < 0) bi = 0;
       else if (bi >= VEL_BINS) bi = VEL_BINS - 1;
       landBins[bi].push(f);
@@ -3219,26 +3550,28 @@ input:focus-visible {
     ctx.restore();
   }
 
-  /* 着速色条图例：与落点着色共用 VEL_STOPS 映射，起爆后淡入 */
+  /* 着速色条图例：与落点着色共用 VEL_STOPS 映射（对数刻度），起爆后淡入 */
   function drawVelLegend() {
     if (!sim || !landVValid) return;
     var tau = time - sim.boom.t;
-    if (tau < 0 || W < 560 || H < 420) return;
+    if (tau < 0 || W < 360 || H < 320) return;
     var a = clamp(tau / 0.6, 0, 1);
 
-    var x = 26;
-    var bw = Math.min(230, W * 0.32);
-    var bh = 9;
-    var y0 = H - 66;   // 位于左下角静态图例（bottom:24px）上方
+    // 窄屏（手机）仍保留着速色标，否则只有彩色落点、没有颜色语义
+    var narrow = W < 560;
+    var x = narrow ? 12 : 26;
+    var bw = narrow ? Math.min(170, W - 24) : Math.min(230, W * 0.32);
+    var bh = 10;
+    var y0 = narrow ? H - 58 : H - 66;   // 位于左下角静态图例（bottom:24px）上方
     if (y0 < 120) return;
 
     ctx.save();
     ctx.globalAlpha = a;
-    ctx.font = '9px "JetBrains Mono", Consolas, "Microsoft YaHei", monospace';
+    ctx.font = '10px "JetBrains Mono", Consolas, "Microsoft YaHei", monospace';
     ctx.textAlign = 'left';
     ctx.textBaseline = 'alphabetic';
     ctx.fillStyle = 'rgba(140,175,188,0.95)';
-    ctx.fillText('破片着速 IMPACT SPEED (m/s)', x, y0 - 6);
+    ctx.fillText('破片着速 IMPACT SPEED (m/s · 对数)', x, y0 - 6);
 
     var g = ctx.createLinearGradient(x, 0, x + bw, 0);
     for (var i = 0; i < VEL_STOPS.length; i++) {
@@ -3251,7 +3584,7 @@ input:focus-visible {
     ctx.lineWidth = 1;
     ctx.strokeRect(x + 0.5, y0 + 0.5, bw - 1, bh - 1);
 
-    // 两端与中部刻度
+    // 对数色带上的 0 / 1/2 / 1 三处刻度（几何中点，不是算术中点）
     ctx.beginPath();
     ctx.moveTo(x + 0.5, y0 + bh);
     ctx.lineTo(x + 0.5, y0 + bh + 3);
@@ -3261,12 +3594,17 @@ input:focus-visible {
     ctx.lineTo(x + bw - 0.5, y0 + bh + 3);
     ctx.strokeStyle = 'rgba(120,160,175,0.5)';
     ctx.stroke();
+    function fmtV(v) {
+      if (v >= 1000) return (v / 1000).toFixed(1) + 'k';
+      if (v >= 100) return v.toFixed(0);
+      return v.toFixed(0);
+    }
     ctx.fillStyle = 'rgba(150,180,190,0.9)';
-    ctx.fillText(landVLo.toFixed(0), x, y0 + bh + 12);
+    ctx.fillText(fmtV(landVLo), x, y0 + bh + 12);
     ctx.textAlign = 'center';
-    ctx.fillText(((landVLo + landVHi) * 0.5).toFixed(0), x + bw / 2, y0 + bh + 12);
+    ctx.fillText(fmtV(Math.exp(landVLogLo + landVLogSpan * 0.5)), x + bw / 2, y0 + bh + 12);
     ctx.textAlign = 'right';
-    ctx.fillText(landVHi.toFixed(0), x + bw, y0 + bh + 12);
+    ctx.fillText(fmtV(landVHi), x + bw, y0 + bh + 12);
     ctx.restore();
   }
 
@@ -3555,7 +3893,7 @@ input:focus-visible {
       ]);
     }
 
-    var pw = Math.max(196, Math.min(238, W * 0.26)), ph = 172;
+    var pw = Math.max(210, Math.min(256, W * 0.26)), ph = 182;
     var px = W - pw - 14, py = H - ph - 14;
     var cx = px + pw * 0.57, cy = py + ph * 0.52;
     var ca = Math.cos(INSET_AX), sa = Math.sin(INSET_AX);
@@ -3587,7 +3925,7 @@ input:focus-visible {
     ctx.stroke();
 
     // 标题与读数
-    ctx.font = '9px "JetBrains Mono", Consolas, monospace';
+    ctx.font = '10px "JetBrains Mono", Consolas, monospace';
     ctx.textAlign = 'left';
     ctx.textBaseline = 'alphabetic';
     ctx.fillStyle = 'rgba(126,206,222,0.85)';
@@ -3633,14 +3971,14 @@ input:focus-visible {
     ctx.fill();
 
     // α/β 定义标注（符号约定与物理内核一致：虚线 = 相对空气速度方向）
-    ctx.font = '9px "JetBrains Mono", Consolas, "Microsoft YaHei", monospace';
+    ctx.font = '10px "JetBrains Mono", Consolas, "Microsoft YaHei", monospace';
     ctx.textAlign = 'left';
     ctx.fillStyle = 'rgba(110,140,152,0.85)';
     ctx.fillText('虚线 = 相对空气速度方向（α/β 基准）', px + 10, py + ph - 31);
     ctx.fillText('攻角 α+ 弹轴上抬 · 侧滑 β+ 弹轴右偏', px + 10, py + ph - 20);
 
     // 底部读数（与显示姿态同一插值时刻）
-    ctx.font = '9px "JetBrains Mono", Consolas, monospace';
+    ctx.font = '10px "JetBrains Mono", Consolas, monospace';
     ctx.textAlign = 'left';
     ctx.fillStyle = 'rgba(140,170,180,0.85)';
     ctx.fillText('α ' + sh.alpha.toFixed(2) + '°  β ' + sh.beta.toFixed(2) + '°', px + 10, py + ph - 10);
@@ -3787,6 +4125,22 @@ input:focus-visible {
 
     updateCamera(dt);
 
+    // 静止帧跳过：时间未推进、尺寸未变、相机（位置与观察中心）已收敛到 1 cm
+    // 以内时，本帧画面与上一帧完全一致，直接返回。播放结束后页面会停在终态，
+    // 旧实现仍以 60 fps 全量重绘（每帧 0.7~0.9 ms 绘制 + 大量临时对象），
+    // 这里是空闲时 CPU/GPU 占用的主要浪费。
+    var cx = Math.round(camX * 100), cy = Math.round(camY * 100), cz = Math.round(camZ * 100);
+    var tx = Math.round(camS.tx * 100), ty = Math.round(camS.ty * 100), tz = Math.round(camS.tz * 100);
+    if (!dirtyFrame && time === lrTime && W === lrW && H === lrH &&
+        cx === lrCam[0] && cy === lrCam[1] && cz === lrCam[2] &&
+        tx === lrCam[3] && ty === lrCam[4] && tz === lrCam[5]) {
+      return;
+    }
+    lrTime = time; lrW = W; lrH = H;
+    lrCam[0] = cx; lrCam[1] = cy; lrCam[2] = cz;
+    lrCam[3] = tx; lrCam[4] = ty; lrCam[5] = tz;
+    dirtyFrame = false;
+
     var horizonY = H2 - focal * Math.tan(camS.pitch);
 
     ctx.clearRect(0, 0, W, H);
@@ -3800,6 +4154,7 @@ input:focus-visible {
     drawTrajectory();
     drawTicksOnTrajectory();
     drawFragments();
+    drawRangeLabels();   // 标注压在破片落点之上，保证 R50/R90/MAX 可读
     drawExplosion();
     drawShell();
     drawVignette();
@@ -3815,25 +4170,75 @@ input:focus-visible {
     time = 0;
     userControl = false;
     panX = 0; panY = 0; panZ = 0;
+    dirtyFrame = true;
 
-    // 落点密度格网（终态散布形态：圆形 / 椭圆 / 扇形 / 月牙）
+    // 落点密度格网（终态散布形态：圆形 / 椭圆 / 扇形 / 月牙）。仅做聚合统计，
+    // 实际渲染由 drawLandingField() 用柔和高斯 splat 完成，避免硬边方格。
+    // 关键：先做两遍 3×3 盒式模糊再交给渲染。原始计数是泊松稀疏的，
+    // 直接按计数画会在近心区留下一个个"麻点"；模糊后每格密度已是连续场，
+    // 叠加的 splat 才能融合成一片平滑的密度云。
     landCells.length = 0;
+    landDensityMax = 1;
     if (s && s.fragments) {
-      var CELL = 40;
-      var cellMap = {};
+      var CELL = 24;
+      landCellSize = CELL;
       var fl = s.fragments.list;
-      for (var q = 0; q < fl.length; q++) {
+      var q, mnX = Infinity, mxX = -Infinity, mnZ = Infinity, mxZ = -Infinity, hit = 0;
+      for (q = 0; q < fl.length; q++) {
         if (!fl[q].landed) continue;
-        var gx = Math.floor(fl[q].landX / CELL);
-        var gz = Math.floor(fl[q].landZ / CELL);
-        var key = gx + ':' + gz;
-        var cell = cellMap[key];
-        if (!cell) {
-          cell = { x0: gx * CELL, z0: gz * CELL, n: 0 };
-          cellMap[key] = cell;
-          landCells.push(cell);
+        hit++;
+        if (fl[q].landX < mnX) mnX = fl[q].landX;
+        if (fl[q].landX > mxX) mxX = fl[q].landX;
+        if (fl[q].landZ < mnZ) mnZ = fl[q].landZ;
+        if (fl[q].landZ > mxZ) mxZ = fl[q].landZ;
+      }
+      if (hit > 0 && isFinite(mnX)) {
+        var pad = CELL * 4;
+        var gx0 = Math.floor((mnX - pad) / CELL), gx1 = Math.floor((mxX + pad) / CELL);
+        var gz0 = Math.floor((mnZ - pad) / CELL), gz1 = Math.floor((mxZ + pad) / CELL);
+        var nX = gx1 - gx0 + 1, nZ = gz1 - gz0 + 1;
+        var grid = new Float64Array(nX * nZ);
+        var tmpG = new Float64Array(nX * nZ);
+        for (q = 0; q < fl.length; q++) {
+          if (!fl[q].landed) continue;
+          var ix = Math.floor(fl[q].landX / CELL) - gx0;
+          var iz = Math.floor(fl[q].landZ / CELL) - gz0;
+          grid[iz * nX + ix] += 1;
         }
-        cell.n++;
+        // 两遍可分离 3×3 盒式模糊（等价于 [1,2,1]×[1,2,1] 的近似平滑）
+        var pass, ix2, iz2;
+        for (pass = 0; pass < 2; pass++) {
+          for (iz2 = 0; iz2 < nZ; iz2++) {
+            var rowOff = iz2 * nX;
+            for (ix2 = 0; ix2 < nX; ix2++) {
+              var i0 = rowOff + ix2;
+              tmpG[i0] = (grid[i0] +
+                (ix2 > 0 ? grid[i0 - 1] : 0) + (ix2 < nX - 1 ? grid[i0 + 1] : 0)) / 3;
+            }
+          }
+          for (iz2 = 0; iz2 < nZ; iz2++) {
+            var rowOff2 = iz2 * nX;
+            for (ix2 = 0; ix2 < nX; ix2++) {
+              var j0 = rowOff2 + ix2;
+              grid[j0] = (tmpG[j0] +
+                (iz2 > 0 ? tmpG[j0 - nX] : 0) + (iz2 < nZ - 1 ? tmpG[j0 + nX] : 0)) / 3;
+            }
+          }
+        }
+        for (iz2 = 0; iz2 < nZ; iz2++) {
+          for (ix2 = 0; ix2 < nX; ix2++) {
+            var v = grid[iz2 * nX + ix2];
+            if (v > landDensityMax) landDensityMax = v;
+            if (v > 0) landCells.push({ x0: (gx0 + ix2) * CELL, z0: (gz0 + iz2) * CELL, n: v });
+          }
+        }
+        // 丢弃低于峰值 2% 的远场微云，减少无意义的 splat 数量
+        var floorW = landDensityMax * 0.02;
+        var kept = 0;
+        for (q = 0; q < landCells.length; q++) {
+          if (landCells[q].n >= floorW) landCells[kept++] = landCells[q];
+        }
+        landCells.length = kept;
       }
 
       // 着速色标范围（落点分档着色与色条图例共用；取整到 10 m/s 便于读数）
@@ -3845,16 +4250,21 @@ input:focus-visible {
         if (lv > landVHi) landVHi = lv;
       }
       if (isFinite(landVLo) && landVHi > landVLo) {
-        landVLo = Math.floor(landVLo / 10) * 10;
+        landVLo = Math.max(1, Math.floor(landVLo / 5) * 5);
         landVHi = Math.ceil(landVHi / 10) * 10;
+        if (landVHi <= landVLo) landVHi = landVLo + 10;
+        landVLogLo = Math.log(landVLo);
+        landVLogSpan = Math.log(landVHi) - landVLogLo;
         landVValid = true;
       } else {
         landVLo = 0; landVHi = 1;
+        landVLogLo = 0; landVLogSpan = 1;
         landVValid = false;
       }
       landVSpan = landVHi - landVLo;
     } else {
       landVLo = 0; landVHi = 1; landVSpan = 1;
+      landVLogLo = 0; landVLogSpan = 1;
       landVValid = false;
     }
 
@@ -3905,6 +4315,7 @@ input:focus-visible {
     }
     camMode = mode;
     panX = 0; panY = 0; panZ = 0;
+    dirtyFrame = true;
     if (sim && mode !== 'orbit') {
       var d = desiredCamera();
       cam.yaw = d.yaw;
@@ -3931,6 +4342,7 @@ input:focus-visible {
     focal = H2 / Math.tan(FOV / 2);
     skyGrad = null;
     skyGradH = -1;
+    dirtyFrame = true;   // 尺寸变化 → 必须重绘
   }
 
   /* 鼠标交互：左键旋转，右键 / Shift+左键 / 中键平移，滚轮缩放 */
@@ -3985,6 +4397,10 @@ input:focus-visible {
 
     canvas.addEventListener('wheel', function (e) {
       e.preventDefault();
+      // 接管镜头前先把朝向上已收敛的实际值同步给 cam，否则仅滚轮缩放（不拖动）时
+      // updateCamera 会把 yaw/pitch 拉回到上次拖拽遗留的旧值，画面突然跳转。
+      cam.yaw = camS.yaw;
+      cam.pitch = camS.pitch;
       userControl = true;
       // 弹体现为真实尺寸，近距下限放宽到 5 m（约 150 px 弹长）便于检视
       var f = Math.exp(e.deltaY * 0.0016);
@@ -4006,13 +4422,14 @@ input:focus-visible {
     canvas.addEventListener('touchstart', function (e) {
       if (!e.touches.length) return;
       e.preventDefault();
+      // 捏合缩放同样需要先把当前朝向同步给 cam，原因见 wheel 处理
+      cam.yaw = camS.yaw;
+      cam.pitch = camS.pitch;
       userControl = true;
       if (e.touches.length >= 2) {
         // 第二根手指加入时保留此前的手势目标，避免撤销单指旋转。
         touchDistance = touchSeparation(e.touches);
       } else {
-        cam.yaw = camS.yaw;
-        cam.pitch = camS.pitch;
         cam.dist = camS.dist;
         touchDistance = 0;
         lastX = e.touches[0].clientX;
@@ -4219,6 +4636,7 @@ input:focus-visible {
         c.min2 = Math.max(0, m2n - p2);
         c.max2 = m2x + p2;
       }
+      c.staticDirty = true;   // 数据/量程变化 → 静态层需重建
     });
   }
 
@@ -4268,63 +4686,104 @@ input:focus-visible {
     ctx.globalAlpha = 1;
   }
 
-  function drawCell(c) {
-    var ctx = c.ctx, w = c.w, h = c.h;
-    if (!ctx || w < 4 || h < 4) return;
+  /* 静态层：背景、网格、刻度、起爆线、全量暗曲线。只在尺寸或数据变化时重绘，
+   * 每帧仅重绘"已飞过"的亮曲线、游标与当前值点。七幅曲线原本每帧都全量重画
+   * （长弹道 4000+ 采样点 × 2 条线 × 2 遍），是播放时的主要前端开销。 */
+  function renderStatic(c) {
+    var bctx = c.bgCtx, w = c.w, h = c.h;
+    if (!bctx || w < 4 || h < 4) { c.staticDirty = true; return; }
+    var bw = Math.round(w * c.dpr), bh = Math.round(h * c.dpr);
+    if (c.bg.width !== bw || c.bg.height !== bh) { c.bg.width = bw; c.bg.height = bh; }
+    bctx.setTransform(c.dpr, 0, 0, c.dpr, 0, 0);
+    bctx.clearRect(0, 0, w, h);
 
-    ctx.clearRect(0, 0, w, h);
-    ctx.fillStyle = '#070c12';
-    ctx.fillRect(0, 0, w, h);
-
-    var padL = 5, padR = 6, padT = 16, padB = 11;
+    var padL = 5, padR = 6, padT = 18, padB = 12;
     var pw = Math.max(4, w - padL - padR);
     var ph = Math.max(4, h - padT - padB);
     var ft = sim.flightTime || 1;
 
+    bctx.fillStyle = '#070c12';
+    bctx.fillRect(0, 0, w, h);
+
     // 水平网格
-    ctx.strokeStyle = 'rgba(120,180,200,0.09)';
-    ctx.lineWidth = 1;
+    bctx.strokeStyle = 'rgba(120,180,200,0.09)';
+    bctx.lineWidth = 1;
     for (var g = 0; g <= 4; g++) {
       var gy = Math.round(padT + ph * g / 4) + 0.5;
-      ctx.beginPath();
-      ctx.moveTo(padL, gy);
-      ctx.lineTo(w - padR, gy);
-      ctx.stroke();
+      bctx.beginPath();
+      bctx.moveTo(padL, gy);
+      bctx.lineTo(w - padR, gy);
+      bctx.stroke();
     }
 
     // 零线
     if (c.min < 0 && c.max > 0) {
       var zy = Math.round(yOf(c, 0, padT, ph)) + 0.5;
-      ctx.strokeStyle = 'rgba(140,200,220,0.18)';
-      ctx.beginPath();
-      ctx.moveTo(padL, zy);
-      ctx.lineTo(w - padR, zy);
-      ctx.stroke();
+      bctx.strokeStyle = 'rgba(140,200,220,0.18)';
+      bctx.beginPath();
+      bctx.moveTo(padL, zy);
+      bctx.lineTo(w - padR, zy);
+      bctx.stroke();
     }
 
     // 起爆时刻
     if (sim.boom && sim.boom.t > 0) {
       var bx = padL + (sim.boom.t / ft) * pw;
-      ctx.strokeStyle = 'rgba(255,180,58,0.25)';
-      ctx.setLineDash([2, 3]);
-      ctx.beginPath();
-      ctx.moveTo(bx, padT);
-      ctx.lineTo(bx, padT + ph);
-      ctx.stroke();
-      ctx.setLineDash([]);
+      bctx.strokeStyle = 'rgba(255,180,58,0.25)';
+      bctx.setLineDash([2, 3]);
+      bctx.beginPath();
+      bctx.moveTo(bx, padT);
+      bctx.lineTo(bx, padT + ph);
+      bctx.stroke();
+      bctx.setLineDash([]);
     }
 
-    // 副轴（马赫数，先画，置于底层）
+    // 副轴（马赫数）与主曲线的全量暗底
+    if (c.sec) strokeSeries(bctx, c, c.sec, c.def.color2, 0.30, 1e9, padL, padT, pw, ph, true, false);
+    for (var li = 0; li < c.lines.length; li++) {
+      var col = c.def.colors ? c.def.colors[li] : c.def.color;
+      strokeSeries(bctx, c, c.lines[li], col, 0.26, 1e9, padL, padT, pw, ph, false, false);
+    }
+
+    // 刻度值（8px 在 1024/1280 屏几乎不可读，统一升到 9px 并提亮到 AA 对比）
+    bctx.font = '9px ' + MONO;
+    bctx.fillStyle = '#7d95a2';
+    bctx.textAlign = 'right';
+    bctx.fillText('\u2264 ' + fmtTick(c.max), w - padR - 1, padT + 8);
+    bctx.fillText(fmtTick(c.min), w - padR - 1, padT + ph - 1);
+    bctx.textAlign = 'left';
+
+    if (c.isLast) {
+      bctx.fillStyle = '#7d95a2';
+      bctx.font = '9px ' + MONO;
+      bctx.fillText('0', padL, h - 2);
+      bctx.textAlign = 'right';
+      bctx.fillText('t / s', w - padR, h - 2);
+      bctx.textAlign = 'left';
+    }
+
+    c.staticDirty = false;
+  }
+
+  function drawCell(c) {
+    var ctx = c.ctx, w = c.w, h = c.h;
+    if (!ctx || w < 4 || h < 4) return;
+    if (c.staticDirty || !c.bg.width) renderStatic(c);
+    ctx.setTransform(c.dpr, 0, 0, c.dpr, 0, 0);
+    ctx.clearRect(0, 0, w, h);
+    ctx.drawImage(c.bg, 0, 0, w, h);
+
+    var padL = 5, padR = 6, padT = 18, padB = 12;
+    var pw = Math.max(4, w - padL - padR);
+    var ph = Math.max(4, h - padT - padB);
+    var ft = sim.flightTime || 1;
+
+    // 副轴（马赫数）：已飞过部分
     if (c.sec) {
-      strokeSeries(ctx, c, c.sec, c.def.color2, 0.30, 1e9, padL, padT, pw, ph, true, false);
       strokeSeries(ctx, c, c.sec, c.def.color2, 0.72, curT, padL, padT, pw, ph, true, false);
     }
 
-    // 主曲线：全量暗、已飞过亮
-    for (var li = 0; li < c.lines.length; li++) {
-      var col = c.def.colors ? c.def.colors[li] : c.def.color;
-      strokeSeries(ctx, c, c.lines[li], col, 0.26, 1e9, padL, padT, pw, ph, false, false);
-    }
+    // 主曲线：已飞过部分（高亮 + 发光）
     for (var lj = 0; lj < c.lines.length; lj++) {
       var col2 = c.def.colors ? c.def.colors[lj] : c.def.color;
       strokeSeries(ctx, c, c.lines[lj], col2, 0.95, curT, padL, padT, pw, ph, false, true);
@@ -4339,12 +4798,10 @@ input:focus-visible {
     ctx.lineTo(Math.round(cx) + 0.5, padT + ph);
     ctx.stroke();
 
-    // 当前值点
+    // 当前值点（用原始样本值而非降采样，保证精确）
     var sample = sampleAt(curT);
     if (sample) {
       if (c.lines.length === 1) {
-        var v0 = c.lines[0];
-        // 用原始样本值而非降采样，保证精确
         var dv = c.def.pick(sample);
         if (isFinite(dv)) {
           var dy = yOf(c, dv, padT, ph);
@@ -4366,23 +4823,6 @@ input:focus-visible {
           ctx.fill();
         }
       }
-    }
-
-    // 刻度值
-    ctx.font = '8px ' + MONO;
-    ctx.fillStyle = '#6b8794';
-    ctx.textAlign = 'right';
-    ctx.fillText(fmtTick(c.max), w - padR - 1, padT + 8);
-    ctx.fillText(fmtTick(c.min), w - padR - 1, padT + ph - 1);
-    ctx.textAlign = 'left';
-
-    if (c.isLast) {
-      ctx.fillStyle = '#546c78';
-      ctx.font = '8px ' + MONO;
-      ctx.fillText('0', padL, h - 2);
-      ctx.textAlign = 'right';
-      ctx.fillText('t / s', w - padR, h - 2);
-      ctx.textAlign = 'left';
     }
   }
 
@@ -4438,6 +4878,7 @@ input:focus-visible {
       cellEl.className = 'chart-cell';
 
       var cv = document.createElement('canvas');
+      var bg = document.createElement('canvas');
       cellEl.appendChild(cv);
 
       var tag = document.createElement('div');
@@ -4457,6 +4898,9 @@ input:focus-visible {
         el: cellEl,
         cv: cv,
         ctx: cv.getContext('2d'),
+        bg: bg,
+        bgCtx: bg.getContext('2d'),
+        staticDirty: true,
         curEl: cur,
         w: 0, h: 0, dpr: 1,
         ts: [], lines: [], sec: null,
@@ -4491,6 +4935,7 @@ input:focus-visible {
       c.cv.width = Math.round(w * dpr);
       c.cv.height = Math.round(h * dpr);
       c.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      c.staticDirty = true;   // 尺寸变化 → 静态层需重建
     });
     drawAll();
   }
@@ -4566,7 +5011,7 @@ input:focus-visible {
     valV0: $('val-v0'), valAngle: $('val-angle'), valBoom: $('val-boom'), valWind: $('val-wind'),
     statRange: $('stat-range'), statAlt: $('stat-alt'), statMach: $('stat-mach'),
     statDrift: $('stat-drift'), statVimp: $('stat-vimp'), statVimpLabel: $('stat-vimp-label'),
-    statR90: $('stat-r90'),
+    statR90: $('stat-r90'), statR50: $('stat-r50'),
     fragModel: $('frag-model'),
     windChip: $('wind-chip'),
     overlay: $('overlay'), panelEnv: $('panel-env'), panelModel: $('panel-model'),
@@ -4586,14 +5031,51 @@ input:focus-visible {
   var lastHud = {};
 
   /* ------------------------------ 仿真调度 ------------------------------ */
+  /* 物理内核是同步计算（默认参数下约 200–400 ms），直接调用会冻结界面。
+   * 先把状态栏切到"解算中"并让浏览器绘制一帧，再在下一个宏任务里实际计算。 */
+  var computeTimer = 0;
+  var pendingAutoplay = true;
+  var solving = false;
+  /* 解算耗时 SOLVED xxms 的保护截止时刻（performance.now）：状态码按阶段刷新时
+   * 若不留保护窗口，SOLVED 会在下一帧就被 SYS.READY/SIM.FLIGHT 覆盖，用户看不到解算耗时。 */
+  var statusHoldUntil = 0;
+  var lastStatusMode = '';   // 状态文字缓存：同值不写 DOM（静止时消除无谓的样式重算）
+
   function runSim(autoplay) {
     // 立即重算前取消尚未触发的滑块防抖回调，避免预设切换后重复计算。
     clearTimeout(simTimer);
     simTimer = 0;
+    clearTimeout(computeTimer);
     clearTimeout(showToast._t);
+    statusHoldUntil = 0;   // 新解算开始：解除上一次 SOLVED 码的保护窗口
     el.toast.classList.remove('show');
+    pendingAutoplay = autoplay !== false;
+    solving = true;
+    el.statusDot.className = 'dot armed';
+    el.statusMode.textContent = '解算中…';
+    el.statusCode.textContent = 'SOLVING';
+    computeTimer = setTimeout(function () {
+      computeTimer = 0;
+      doCompute(pendingAutoplay);
+    }, 32);
+  }
+
+  function doCompute(autoplay) {
     var t0 = performance.now();
-    sim = Ballistics.simulate(cfg);
+    var next;
+    try {
+      next = Ballistics.simulate(cfg);
+    } catch (err) {
+      // 参数越界/积分发散不能让页面直接失效：保留上一次结果并给出提示
+      solving = false;
+      showToast('解算失败：' + (err && err.message ? err.message : String(err)));
+      el.statusMode.textContent = '参数非法';
+      el.statusCode.textContent = 'ERROR';
+      el.statusDot.className = 'dot boom';
+      return;
+    }
+    solving = false;
+    sim = next;
     var calcMs = performance.now() - t0;
 
     simTime = 0;
@@ -4625,10 +5107,7 @@ input:focus-visible {
     updateEnvSummary();
 
     el.statusCode.textContent = 'SOLVED ' + calcMs.toFixed(0) + 'ms';
-    clearTimeout(runSim._t);
-    runSim._t = setTimeout(function () {
-      if (el.statusCode.textContent.indexOf('SOLVED') === 0) el.statusCode.textContent = 'SYS.READY';
-    }, 2600);
+    statusHoldUntil = performance.now() + 2600;   // 保护 2.6 s，之后由 updateStatus 切回阶段码
   }
 
   function scheduleSim() {
@@ -4645,6 +5124,9 @@ input:focus-visible {
     if (i < 0) i = 0;
     if (i >= s.length - 1) return s[s.length - 1];
     var a = s[i], b = s[i + 1], u = f - i;
+    // sg 在静稳定弹（Sg = Infinity）上不可插值：Infinity - Infinity = NaN，
+    // 直接用 isFinite 判定后取端值，避免 HUD 出现 "NaN"。
+    var sgV = (isFinite(a.sg) && isFinite(b.sg)) ? a.sg + (b.sg - a.sg) * u : a.sg;
     return {
       t: t,
       x: a.x + (b.x - a.x) * u,
@@ -4657,10 +5139,14 @@ input:focus-visible {
       mach: a.mach + (b.mach - a.mach) * u,
       alpha: a.alpha + (b.alpha - a.alpha) * u,
       beta: a.beta + (b.beta - a.beta) * u,
+      alphaT: a.alphaT + (b.alphaT - a.alphaT) * u,
       theta: a.theta + (b.theta - a.theta) * u,
       qdyn: a.qdyn + (b.qdyn - a.qdyn) * u,
       wx: a.wx + (b.wx - a.wx) * u,
-      sg: a.sg + (b.sg - a.sg) * u
+      sg: sgV,
+      // 静稳定裕度随马赫数变化；内核已逐样本给出，必须参与插值，
+      // 否则 HUD 永远显示炮口值（旧实现即如此）。
+      staticMargin: a.staticMargin + (b.staticMargin - a.staticMargin) * u
     };
   }
 
@@ -4680,7 +5166,9 @@ input:focus-visible {
       ? sampleAt(Math.max(0, sim.boom.t - 0.004))
       : sampleAt(Math.min(simTime, sim.flightTime));
 
-    setText(el.hudT, 't', simTime.toFixed(2));
+    // 飞行时间在起爆后冻结在弹道飞行时间上：仿真还要继续播放破片飞散，
+    // 但"飞行时间"继续增长会被误读（旧实现会一路涨到 60+ s）。
+    setText(el.hudT, 't', Math.min(simTime, sim.flightTime).toFixed(2));
     setText(el.hudH, 'h', after ? sim.boom.y.toFixed(1) : Math.max(0, st.y).toFixed(st.y < 100 ? 1 : 0));
     setText(el.hudV, 'v', (after ? sim.boom.speed : st.speed).toFixed(0));
     setText(el.hudMach, 'mach', st.mach.toFixed(2));
@@ -4692,7 +5180,9 @@ input:focus-visible {
     if (sim.spinStabilized) {
       setText(el.hudSg, 'sg', (isFinite(st.sg) ? st.sg.toFixed(2) : '—'));
     } else {
-      setText(el.hudSg, 'sg', (st && isFinite(st.staticMargin) ? st.staticMargin : sim.staticMargin).toFixed(2));
+      // 静稳定裕度随马赫数变化（内核逐样本给出 staticMargin）
+      var smv = st && isFinite(st.staticMargin) ? st.staticMargin : sim.staticMargin;
+      setText(el.hudSg, 'sg', isFinite(smv) ? smv.toFixed(2) : '—');
     }
   }
 
@@ -4705,30 +5195,51 @@ input:focus-visible {
     el.statVimpLabel.textContent = sim.detonated === false ? '截断速度' : (sim.boom.impact ? '落点速度' : '起爆速度');
     el.statVimp.textContent = sim.detonated === false ? '—' : sim.impactSpeed.toFixed(0) + ' m/s';
     el.statR90.textContent = sim.detonated === false ? '—' : sim.fragments.r90.toFixed(0) + ' m';
+    if (el.statR50) el.statR50.textContent = sim.detonated === false ? '—' : 'R50 ' + sim.fragments.r50.toFixed(0) + ' m';
     var fr = sim.fragments;
-    el.fragModel.textContent =
-      'MOTT μ ' + (fr.mu * 1000).toFixed(1) + ' g · 均值 ' + (fr.meanMass * 1000).toFixed(1) +
-      ' g · GURNEY ' + fr.vGurney.toFixed(0) + ' m/s · 自转 ' + (fr.spin || 0).toFixed(0) +
-      ' rad/s · 破片 ' + fr.count;
+    // 截断工况（未起爆）时破片结果为 0，直接显示"无破片统计"，避免 0 值被误读为真实结果
+    if (sim.detonated === false) {
+      el.fragModel.textContent = '未起爆 — 无破片统计（截断工况，R50/R90 不适用）';
+    } else {
+      el.fragModel.textContent =
+        'MOTT μ ' + (fr.mu * 1000).toFixed(1) + ' g · 均值 ' + (fr.meanMass * 1000).toFixed(1) +
+        ' g · GURNEY ' + fr.vGurney.toFixed(0) + ' m/s · 自转 ' + (fr.spin || 0).toFixed(0) +
+        ' rad/s · 破片 ' + fr.count + ' · 有效 ' + fr.effectiveCount +
+        (fr.unlanded > 0 ? ' · 未落地 ' + fr.unlanded + '（不计入 R50/R90）' : '');
+    }
   }
 
   /* ------------------------------ 状态显示 ------------------------------ */
   function updateStatus() {
     if (!sim) return;
+    if (solving) return;   // 解算中由 runSim 直接写状态栏，避免被逐帧刷新覆盖
     var dot = el.statusDot;
-    dot.className = 'dot';
-
+    // 状态码随阶段变化（旧实现恒为 SYS.READY，飞行/破片阶段完全看不出阶段）
+    var cls = 'dot', mode, code;
     if (simTime + 1e-6 >= totalTime) {
-      dot.classList.add('done');
-      el.statusMode.textContent = sim.detonated === false ? '仿真截断（未起爆）' : '仿真完成';
+      cls += ' done';
+      mode = sim.detonated === false ? '仿真截断（未起爆）' : '仿真完成';
+      code = 'SIM.DONE';
     } else if (sim.detonated !== false && simTime >= sim.boom.t) {
-      dot.classList.add('boom');
-      el.statusMode.textContent = '破片飞散中';
+      cls += ' boom';
+      mode = '破片飞散 T+' + Math.max(0, simTime - sim.boom.t).toFixed(1) + 's';
+      code = 'SIM.FRAG';
     } else if (simTime > 0.05) {
-      dot.classList.add('armed');
-      el.statusMode.textContent = '弹道飞行中';
+      cls += ' armed';
+      mode = '弹道飞行中';
+      code = 'SIM.FLIGHT';
     } else {
-      el.statusMode.textContent = '待发射';
+      mode = '待发射';
+      code = 'SYS.READY';
+    }
+    // 同值不写 DOM：静止/完成后每帧刷新状态栏不再触发样式重算
+    if (dot.className !== cls) dot.className = cls;
+    if (lastStatusMode !== mode) {
+      lastStatusMode = mode;
+      el.statusMode.textContent = mode;
+    }
+    if (performance.now() >= statusHoldUntil && el.statusCode.textContent !== code) {
+      el.statusCode.textContent = code;
     }
   }
 
@@ -4751,7 +5262,8 @@ input:focus-visible {
 
   function updateWindChip() {
     if (!el.windChip) return;
-    var txt = cfg.env.useWind ? '风 ' + windText() : '风场已关闭';
+    // windText() 自身已含"无风/右风/逆风"语义，再拼前缀会得到"风 无风"
+    var txt = cfg.env.useWind ? windText() : '风场已关闭';
     if (cfg.env.useCoriolis) txt += ' · 科氏 ' + Math.abs(cfg.env.latitude).toFixed(0) + (cfg.env.latitude >= 0 ? '°N' : '°S');
     el.windChip.textContent = txt;
   }
@@ -4761,7 +5273,7 @@ input:focus-visible {
     el.envSummary.textContent =
       (sim && sim.presetName ? sim.presetName + ' · ' : '') +
       'ISA 大气 ' + cfg.env.tempC.toFixed(0) + '°C · 纬度 ' + cfg.env.latitude.toFixed(0) + '° · ' +
-      (cfg.env.useWind ? '风 ' + windText() : '风场关闭') + ' · ' + (cfg.twist > 0 ? ('缠距 1:' + cfg.twist) : '不旋转') +
+      (cfg.env.useWind ? windText() : '风场关闭') + ' · ' + (cfg.twist > 0 ? ('缠距 1:' + cfg.twist) : '不旋转') +
       ' · 破片 ' + cfg.fragCount + ' 片 · 种子 #' + cfg.seed +
       (cfg.env.useCoriolis ? ' · 科氏力开' : ' · 科氏力关');
   }
@@ -4882,7 +5394,9 @@ input:focus-visible {
       : '当前弹型：120mm 旋转稳定杀爆弹代表弹（线膛炮，1:18 缠距；气动系数按 105mm M1 同类换算，动/静稳定性由 Sg 判定）';
 
     Array.prototype.forEach.call(el.presetSeg.children, function (b) {
-      b.classList.toggle('active', b.dataset.preset === presetId);
+      var on = b.dataset.preset === presetId;
+      b.classList.toggle('active', on);
+      if (on) setPressed(el.presetSeg, b);
     });
 
     syncEnvUI();
@@ -4900,7 +5414,8 @@ input:focus-visible {
   /* ------------------------------ UI 绑定 ------------------------------ */
   el.btnPlay.addEventListener('click', togglePlay);
 
-  el.btnReset.addEventListener('click', function () {
+  /* 复位播放进度（不重算）：重置按钮与 R 快捷键共用 */
+  function resetPlayback() {
     simTime = 0;
     boomShown = false;
     playing = true;
@@ -4911,7 +5426,9 @@ input:focus-visible {
     el.toast.classList.remove('show');
     if (window.Scene3D) Scene3D.setTime(0);
     if (window.Charts) Charts.setTime(0);
-  });
+  }
+
+  el.btnReset.addEventListener('click', resetPlayback);
 
   el.speedSeg.addEventListener('click', function (e) {
     var btn = e.target.closest('button');
@@ -4920,6 +5437,7 @@ input:focus-visible {
     Array.prototype.forEach.call(el.speedSeg.children, function (b) {
       b.classList.toggle('active', b === btn);
     });
+    setPressed(el.speedSeg, btn);
   });
 
   el.camControls.addEventListener('click', function (e) {
@@ -4929,11 +5447,22 @@ input:focus-visible {
     if (window.Scene3D) Scene3D.setCameraMode(btn.dataset.mode);
   });
 
+  /* 分段按钮的 aria-pressed 与 .active 同步（读屏可播报按下状态） */
+  function setPressed(container, activeBtn) {
+    Array.prototype.forEach.call(container.children, function (b) {
+      b.setAttribute('aria-pressed', b === activeBtn ? 'true' : 'false');
+    });
+  }
+
   /* 相机按钮高亮与实际模式保持一致（重算后 setData 会切回跟随） */
   function syncCamButtons(mode) {
+    var active = null;
     Array.prototype.forEach.call(el.camControls.children, function (b) {
-      b.classList.toggle('active', b.dataset.mode === mode);
+      var on = b.dataset.mode === mode;
+      b.classList.toggle('active', on);
+      if (on) active = b;
     });
+    setPressed(el.camControls, active);
   }
 
   function bindSlider(input, label, key, fmt, rebuild) {
@@ -5068,9 +5597,22 @@ input:focus-visible {
       }
       return;
     }
-    if (e.code === 'Space' && e.target === document.body) {
+    if (e.code === 'Space' && (e.target === document.body || e.target === el.canvas)) {
       e.preventDefault();
       togglePlay();
+      return;
+    }
+    // 仅输入类控件内不劫持按键；按钮聚焦时 R / 1 / 2 / 3 仍可用
+    // （旧实现要求 target 必须是 body/canvas，用户点过任意按钮后快捷键静默失效）
+    if (/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)) return;
+    if (e.key === 'r' || e.key === 'R') {
+      e.preventDefault();
+      resetPlayback();
+    } else if (e.key === '1' || e.key === '2' || e.key === '3') {
+      var modes = ['follow', 'global', 'orbit'];
+      var mode = modes[Number(e.key) - 1];
+      syncCamButtons(mode);
+      if (window.Scene3D) Scene3D.setCameraMode(mode);
     }
   });
 
@@ -5082,7 +5624,9 @@ input:focus-visible {
   /* ------------------------------ 启动 ------------------------------ */
   if (window.Scene3D) Scene3D.init(el.canvas);
   applyPresetUI('mortar120', false);
-  runSim(true);
+  // 尊重系统"减少动态效果"偏好：不自动播放，改为停在 t=0 等用户点播放
+  var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  runSim(!reduceMotion);
   updatePlayBtn();
   requestAnimationFrame(loop);
 
